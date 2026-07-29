@@ -1,0 +1,7 @@
+native:
+  - key: elevation_cost_multiplier
+    maps_to: day_miles_mountain
+  - key: volcanic_highland_ecology
+    description: Crop/forest assumptions differ from lowland jungle
+    maps_to: climate_botany evidence + edge.terrain
+unmapped_for_now: []

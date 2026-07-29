@@ -1,0 +1,20 @@
+base_model: mesoamerica
+overrides:
+  assumptions:
+    - id: highland-nephi-core
+      statement: Primary Nephite homeland emphasizes highland Guatemala plateau environments
+      category: place_identification
+      status: core
+    - id: highland-elevation-idiom
+      statement: "up to Nephi" reads as true elevation gain more often than pure idiom
+      category: terrain
+      status: optional
+  places:
+    - id: nephi
+      real_world: Highland Guatemala (emphasized)
+    - id: zarahemla
+      real_world: Still debated; may shift relative to highland Nephi (author-specific)
+native_new:
+  - key: elevation_cost_multiplier
+    description: Travel days increase more aggressively with elevation gain
+    maps_to: day_miles_mountain + edge terrain

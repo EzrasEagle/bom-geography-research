@@ -1,0 +1,13 @@
+assumptions:
+  - id: internal-no-gps
+    statement: No modern lat/lng required
+    category: distance_scale
+    status: core
+  - id: day-march-default
+    statement: Default day journey band is user-set (seed 15–20 mi open)
+    category: distance_scale
+    status: optional
+  - id: alma22-spine
+    statement: Alma 22:27–34 is the spine of relative north–south and seas/neck
+    category: place_identification
+    status: core

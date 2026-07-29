@@ -1,0 +1,14 @@
+constraints:
+  - id: meso-neck-seas
+    from: sea-west
+    to: sea-east
+    type: narrow_feature
+    value: Tehuantepec separates Pacific and Gulf systems
+    strength: hard
+    inherits_from: internal c-seas-neck
+  - id: meso-nephi-high
+    from: nephi
+    to: zarahemla
+    type: direction
+    value: Nephi highlands south/up relative to Zarahemla lowlands
+    strength: soft

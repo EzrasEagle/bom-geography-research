@@ -1,0 +1,13 @@
+constraints:
+  - id: heart-sidon-spine
+    from: zarahemla
+    to: sidon
+    type: adjacent
+    value: Zarahemla oriented to Mississippi system
+    strength: hard
+  - id: heart-cumorah-north
+    from: zarahemla
+    to: cumorah
+    type: direction
+    value: Cumorah in NY relative to Midwest stage (long-range vs limited-model tension)
+    strength: soft

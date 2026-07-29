@@ -1,0 +1,45 @@
+constraints:
+  - id: c-nephi-zarahemla-dir
+    from: nephi
+    to: zarahemla
+    type: direction
+    value: generally northward from Nephi toward Zarahemla (common internal reading)
+    strength: soft
+    source_verses: [Omni 1:12-13, Mosiah 7]
+  - id: c-zarahemla-sidon
+    from: zarahemla
+    to: sidon
+    type: adjacent
+    value: oriented to River Sidon
+    strength: hard
+    source_verses: [Alma 2:15]
+  - id: c-bountiful-desolation
+    from: bountiful-nw
+    to: desolation
+    type: adjacent
+    value: meet near narrow neck
+    strength: hard
+    source_verses: [Alma 22:31-32]
+  - id: c-neck-dayhalf
+    from: narrow-neck
+    to: bountiful-nw
+    type: days_travel
+    value: 1.5
+    unit: days
+    strength: hard
+    source_verses: [Alma 22:32]
+    notes: "day and a half journey for a Nephite — exact endpoints debated"
+  - id: c-seas-neck
+    from: sea-west
+    to: sea-east
+    type: narrow_feature
+    value: narrow neck between seas motif
+    strength: hard
+    source_verses: [Alma 22:32]
+  - id: c-jershon-east
+    from: jershon
+    to: sea-east
+    type: adjacent
+    value: by east sea (common reading)
+    strength: soft
+    source_verses: [Alma 27:22]

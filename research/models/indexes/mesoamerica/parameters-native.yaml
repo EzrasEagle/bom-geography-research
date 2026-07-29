@@ -1,0 +1,19 @@
+native:
+  - key: directional_skew
+    description: Some limited maps discuss how “north” in text maps to real azimuths
+    maps_to: direction_rotation_deg
+  - key: grijalva_vs_usumacinta
+    description: Sidon river fork inside Mesoamerican family
+    maps_to: place.sidon.real_world
+  - key: two_cumorah_theory
+    description: NY hill as repository only vs final battle hill
+    maps_to: place.cumorah.real_world + assumption
+  - key: cement_northward
+    description: Hel 3 cement used as Mesoamerican parallel
+    maps_to: evidence_item archaeology
+  - key: population_urbanism
+    description: City scale arguments
+    maps_to: culture_demography evidence
+unmapped_for_now:
+  - key: detailed_war_campaign_paths
+    description: Chapter-by-chapter Alma campaign routes in full apparatus

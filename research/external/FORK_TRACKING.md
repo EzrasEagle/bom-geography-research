@@ -74,3 +74,15 @@ See also machine-readable: [`tracked-repos.yaml`](./tracked-repos.yaml)
 - Monthly: check upstream commits on adapter/fork rows  
 - Quarterly: scan awesome-gis + BoM geography search for new repos  
 - On each research session: skill may recommend new upstreams  
+
+
+## Terrain Lab (preferred over SimCity)
+
+| Name | Upstream | Status | Why |
+| --- | --- | --- | --- |
+| react-leaflet / MapLibre | leaflet/maplibre ecosystems | planned_adapter | Real basemap + terrain |
+| mapdraw | https://github.com/mapdraw/mapdraw | reference | Draw corridors on real maps |
+| awesome-frontend-gis | https://github.com/joewdavies/awesome-frontend-gis | watch | Tool catalog |
+| 3DEP / HydroSHEDS | USGS / hydrosheds.org | data-pipeline | Elevation + rivers |
+
+See TERRAIN_LAB.md.

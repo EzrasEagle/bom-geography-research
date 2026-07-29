@@ -1,0 +1,10 @@
+sources:
+  - id: bom-text
+    type: scripture
+    citation: Book of Mormon (standard chapter/verse)
+  - id: bom-map-constraints
+    type: software
+    url: https://github.com/edwardsjohnmartin/bom-map-constraints
+  - id: bom-graph-db
+    type: software
+    url: https://github.com/BillPrisbrey/Book-of-Mormon-Geography

@@ -1,0 +1,13 @@
+places:
+  - id: nephi
+    name_text: Land of Nephi
+    real_world: Highland Guatemala (emphasized)
+  - id: zarahemla
+    name_text: Zarahemla
+    real_world: Author-specific; often still within broader southern Mexico–Guatemala field
+  - id: narrow-neck
+    name_text: Narrow neck
+    real_world: Often still Tehuantepec in limited highland variants (confirm per author)
+  - id: sidon
+    name_text: River Sidon
+    real_world: Variant; may differ from pure Grijalva claim

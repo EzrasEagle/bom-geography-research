@@ -1,0 +1,13 @@
+assumptions:
+  - id: baja-seed-climate
+    statement: 1 Ne 18:24 requires Levant-like climate near landing
+    category: climate
+    status: core
+  - id: baja-peninsula
+    statement: Primary lands on Baja peninsula
+    category: place_identification
+    status: core
+  - id: baja-dual-seas
+    statement: Pacific + Gulf of California satisfy east/west seas
+    category: hydrology
+    status: core

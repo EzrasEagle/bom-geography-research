@@ -1,0 +1,9 @@
+assumptions:
+  - id: highland-nephi-core
+    statement: Nephite core culture landscape is highland-emphasized
+    category: place_identification
+    status: core
+  - id: limited-still
+    statement: Still limited Mesoamerican stage (not Heartland)
+    category: distance_scale
+    status: core

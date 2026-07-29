@@ -1,0 +1,46 @@
+places:
+  - id: nephi
+    name_text: Land/City of Nephi
+    real_world: null
+  - id: zarahemla
+    name_text: Zarahemla
+    real_world: null
+  - id: sidon
+    name_text: River Sidon
+    real_world: null
+  - id: bountiful-nw
+    name_text: Bountiful (New World)
+    real_world: null
+  - id: desolation
+    name_text: Desolation
+    real_world: null
+  - id: narrow-neck
+    name_text: Narrow neck of land / narrow pass
+    real_world: null
+  - id: manti
+    name_text: Manti
+    real_world: null
+  - id: jershon
+    name_text: Jershon
+    real_world: null
+  - id: cumorah
+    name_text: Cumorah / Ramah
+    real_world: null
+  - id: sea-east
+    name_text: Sea east
+    real_world: null
+  - id: sea-west
+    name_text: Sea west
+    real_world: null
+  - id: land-northward
+    name_text: Land northward
+    real_world: null
+  - id: land-southward
+    name_text: Land southward
+    real_world: null
+  - id: waters-mormon
+    name_text: Waters of Mormon
+    real_world: null
+  - id: hill-shim
+    name_text: Hill Shim
+    real_world: null

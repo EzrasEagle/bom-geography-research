@@ -1,0 +1,13 @@
+native:
+  - key: great_lakes_as_seas
+    description: Whether lakes count as seas east/west
+    maps_to: place.sea-east.real_world
+  - key: hopewell_date_window
+    description: Calendar correlation to Nephite timeline
+    maps_to: evidence_item archaeology + chronology assumption
+  - key: mississippi_floodplain_travel
+    description: Riverine travel speed assumptions
+    maps_to: day_miles_* + transport
+unmapped_for_now:
+  - key: variant_neck_definitions
+    description: Multiple incompatible neck proposals inside Heartland family

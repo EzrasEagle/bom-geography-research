@@ -1,0 +1,11 @@
+native:
+  - key: mediterranean_latitude_band
+    description: ~30–33° climate analogy to Jerusalem/Levant
+    maps_to: climate_botany + landing place
+  - key: arid_hydrology
+    description: Sidon may be seasonal — challenges “major river war” readings
+    maps_to: place.sidon + hydrology assumption
+  - key: peninsula_scale
+    description: Max N–S distance capped by peninsula length
+    maps_to: global_scale + distance_scale
+unmapped_for_now: []

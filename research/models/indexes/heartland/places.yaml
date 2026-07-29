@@ -1,0 +1,31 @@
+places:
+  - id: sidon
+    name_text: River Sidon
+    real_world: Mississippi River (typical)
+  - id: cumorah
+    name_text: Cumorah
+    real_world: Hill Cumorah, New York
+  - id: zarahemla
+    name_text: Zarahemla
+    real_world: Upper Mississippi / Midwest candidates (variant-specific)
+  - id: nephi
+    name_text: Land of Nephi
+    real_world: Southeastern / southern candidates (variant-specific)
+  - id: narrow-neck
+    name_text: Narrow neck
+    real_world: Great Lakes / Niagara-type corridors (highly variant)
+  - id: landing
+    name_text: Landing
+    real_world: Gulf or Atlantic approaches (variant-specific)
+  - id: sea-east
+    name_text: Sea east
+    real_world: Atlantic or Great Lakes (variant)
+  - id: sea-west
+    name_text: Sea west
+    real_world: Great Lakes or other (variant)
+  - id: bountiful-nw
+    name_text: Bountiful
+    real_world: Variant Midwest/Great Lakes placements
+  - id: desolation
+    name_text: Desolation
+    real_world: Variant

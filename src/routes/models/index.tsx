@@ -12,7 +12,10 @@ function ModelsPage() {
         <h1 className="font-serif text-3xl font-semibold">Geography models</h1>
         <p className="text-sm text-ink-soft max-w-2xl">
           Profiles summarize each model’s map and arguments. Claims on individual verses live on the
-          verse records so you can compare without conflating frameworks.
+          verse records so you can compare without conflating frameworks.{" "}
+          <Link to="/models/indexes" className="text-accent hover:underline">
+            Open index packs & harvest order →
+          </Link>
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

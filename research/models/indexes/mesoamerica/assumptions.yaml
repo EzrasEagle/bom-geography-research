@@ -1,0 +1,21 @@
+assumptions:
+  - id: meso-limited
+    statement: Limited geography (~few hundred miles stage)
+    category: distance_scale
+    status: core
+  - id: meso-neck-tehuantepec
+    statement: Narrow neck ≈ Isthmus of Tehuantepec
+    category: narrow_neck
+    status: core
+  - id: meso-sidon-grijalva
+    statement: Sidon ≈ Grijalva (variant Usumacinta exists)
+    category: hydrology
+    status: core
+  - id: meso-cumorah-south
+    statement: Final battle Cumorah in southern Mexico region
+    category: cumorah
+    status: core
+  - id: meso-culture-parallel
+    statement: Mesoamerican complex societies are valid external correlation targets
+    category: archaeology
+    status: core

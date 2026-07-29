@@ -1,0 +1,25 @@
+places:
+  - id: landing
+    name_text: Promised land landing
+    real_world: NW Baja / Mediterranean climate band
+  - id: narrow-neck
+    name_text: Narrow neck
+    real_world: Peninsular constrictions (model-specific)
+  - id: sea-east
+    name_text: Sea east
+    real_world: Gulf of California
+  - id: sea-west
+    name_text: Sea west
+    real_world: Pacific Ocean
+  - id: nephi
+    name_text: Land of Nephi
+    real_world: Southern/central Baja candidates (variant)
+  - id: zarahemla
+    name_text: Zarahemla
+    real_world: Baja candidates (variant)
+  - id: sidon
+    name_text: River Sidon
+    real_world: Seasonal drainage / debated
+  - id: cumorah
+    name_text: Cumorah
+    real_world: Northern peninsula highlands (model-specific)

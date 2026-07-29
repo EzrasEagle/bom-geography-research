@@ -1,0 +1,10 @@
+sources:
+  - id: sorenson-1985
+    citation: "Sorenson, John L. An Ancient American Setting for the Book of Mormon. 1985."
+    type: book
+  - id: sorenson-map-2000
+    citation: "Sorenson, John L. Mormon’s Map. FARMS, 2000."
+    type: book
+  - id: sorenson-codex-2013
+    citation: "Sorenson, John L. Mormon’s Codex. 2013."
+    type: book

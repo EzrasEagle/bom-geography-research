@@ -1,0 +1,14 @@
+constraints:
+  - id: baja-seas
+    from: sea-west
+    to: sea-east
+    type: narrow_feature
+    value: Peninsula between Pacific and Gulf
+    strength: hard
+  - id: baja-landing-climate
+    from: landing
+    to: landing
+    type: same_region
+    value: Mediterranean/arid landing band
+    strength: soft
+    source_verses: [1 Ne 18:24]

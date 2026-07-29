@@ -133,6 +133,29 @@ export const models: ModelProfile[] = [
     criticisms: ["Large-city descriptions", "Jaredite archaeology on Baja", "Major river Sidon"],
   },
   {
+    id: "meso-highland",
+    name: "Mesoamerican Highland-emphasis variants",
+    category: "mesoamerica",
+    status: "active",
+    summary:
+      "Limited Mesoamerican theater with stronger highland emphasis for the Nephite core (often highland Guatemala). Indexed as a diff pack against Sorenson-style mappings to test micro place swaps.",
+    coreMap: {
+      landSouthward: "Highland-emphasized southern highlands",
+      landNorthward: "Still Mesoamerican north-of-neck candidates",
+      narrowNeck: "Often Tehuantepec (confirm per author)",
+      sidon: "Variant within Mesoamerican rivers",
+      landing: "Pacific Mesoamerica candidates",
+      cumorah: "Southern limited-model candidates",
+    },
+    keyClaims: [
+      "Elevation readings of up/down are stronger",
+      "Nephi core is highland ecology",
+      "Still limited, not Heartland",
+    ],
+    strengths: ["Fine-grained elevation fit", "Clear micro-diff test case vs Sorenson-style"],
+    criticisms: ["Not a single unified book brand", "Must attach specific authors as harvested"],
+  },
+  {
     id: "south-america",
     name: "South America / Chile–Peru variants",
     category: "south_america",
@@ -438,6 +461,7 @@ export const assumptions: Assumption[] = [
   { id: "baja-seed-climate", modelId: "baja", statement: "Jerusalem seeds growing exceedingly requires Levant-like Mediterranean/arid climate near landing", category: "climate", status: "core" },
   { id: "baja-peninsula", modelId: "baja", statement: "Primary lands lie on the Baja California peninsula (seas east and west)", category: "place_identification", status: "core" },
   { id: "baja-neck-peninsula", modelId: "baja", statement: "Narrow neck / narrow areas map to peninsular constrictions", category: "narrow_neck", status: "core" },
+  { id: "highland-nephi-core", modelId: "meso-highland", statement: "Nephite core landscape is highland-emphasized (e.g. highland Guatemala)", category: "place_identification", status: "core" },
   { id: "sa-chile-landing", modelId: "south-america", statement: "Landing near Chilean coast ~30–33°S (climate analogy)", category: "landing", status: "core" },
   { id: "internal-no-gps", modelId: "internal", statement: "No modern lat/lng required; only relative constraints from the text", category: "distance_scale", status: "core" },
   { id: "day-march-15-20", modelId: "internal", statement: "Default working band: 1 day journey ≈ 15–20 miles on open terrain (user-adjustable)", category: "distance_scale", status: "optional", notes: "Change this assumption in Map Lab / My Models to stress-test distance graphs." },

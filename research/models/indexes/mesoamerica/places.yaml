@@ -1,0 +1,31 @@
+places:
+  - id: narrow-neck
+    name_text: Narrow neck of land
+    real_world: Isthmus of Tehuantepec (typical Sorenson-style)
+  - id: sidon
+    name_text: River Sidon
+    real_world: Grijalva River (common); Usumacinta in some variants
+  - id: zarahemla
+    name_text: Zarahemla
+    real_world: Chiapas / Grijalva depression candidates (author-specific)
+  - id: nephi
+    name_text: Land of Nephi
+    real_world: Highland Guatemala / southern highlands candidates
+  - id: bountiful-nw
+    name_text: Bountiful
+    real_world: North/east of neck region (Gulf-adjacent candidates vary)
+  - id: desolation
+    name_text: Desolation
+    real_world: North of neck (toward Gulf / northward lands)
+  - id: cumorah
+    name_text: Cumorah (final)
+    real_world: Southern Mexico hill country (not NY) in many limited models
+  - id: landing
+    name_text: Lehi landing
+    real_world: Pacific Mesoamerica coast candidates
+  - id: sea-east
+    name_text: Sea east
+    real_world: Gulf of Mexico / Caribbean side (model-dependent labeling)
+  - id: sea-west
+    name_text: Sea west
+    real_world: Pacific

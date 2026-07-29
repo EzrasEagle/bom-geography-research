@@ -1,0 +1,7 @@
+constraints:
+  - id: highland-nephi-up
+    from: zarahemla
+    to: nephi
+    type: direction
+    value: up/south into highlands (stronger elevation reading)
+    strength: soft

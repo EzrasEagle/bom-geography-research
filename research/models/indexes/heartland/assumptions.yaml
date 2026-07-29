@@ -1,0 +1,17 @@
+assumptions:
+  - id: heart-cumorah-ny
+    statement: Final Cumorah = New York hill of modern tradition
+    category: cumorah
+    status: core
+  - id: heart-sidon-miss
+    statement: Sidon ≈ Mississippi
+    category: hydrology
+    status: core
+  - id: heart-hopewell
+    statement: Hopewell horizon is primary archaeological correlation window
+    category: archaeology
+    status: core
+  - id: heart-promised-us
+    statement: Prophetic “this land” language ties specially to the United States (extra-textual weight varies)
+    category: other
+    status: optional

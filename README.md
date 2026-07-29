@@ -24,6 +24,11 @@ Start from **well-published geography models**, make every **assumption** explic
 | Compare | Side-by-side model claims |
 | Sources | Bibliography + **fork tracking** |
 
+## Filling models (indexing)
+We **index** models discover-as-you-go rather than forcing a perfect dump into one schema. Start order: Internal → Sorenson-style Mesoamerica → Highland variant → Heartland → Baja. See `research/models/INDEXING_METHOD.md`, `RICHNESS_RANKING.md`, and packs under `research/models/indexes/`.
+
+Map Lab supports **macro** (whole-graph) and **micro** (edge-by-edge) adjustments. Real topography = Terrain Lab path (`research/external/TERRAIN_LAB.md`), not SimCity.
+
 ## Data layout
 See `VISION.md`, `ROADMAP.md`, `LIMITATIONS.md`, and `prompts/rebuild/MASTER_SPEC.md`.
 

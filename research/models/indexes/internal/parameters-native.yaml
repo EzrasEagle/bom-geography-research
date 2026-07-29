@@ -1,0 +1,12 @@
+# Parameters this tradition uses that may exceed generic fields
+native:
+  - key: nephite_day_half_journey
+    description: Alma 22:32 day-and-a-half measure — endpoint definitions vary
+    maps_to: edge.*.days
+  - key: up_down_idiom
+    description: "up to Nephi / down to Zarahemla" elevation or political idiom
+    maps_to: place.*.elevation_band OR unmapped
+  - key: wilderness_as_corridor
+    description: Wilderness strips as travel barriers not empty space
+    maps_to: edge.*.terrain
+unmapped_for_now: []

@@ -1,15 +1,29 @@
-# Registry of geography models tracked in this project
 models:
-  - id: mesoamerica
-    file: mesoamerica.md
-  - id: heartland
-    file: heartland.md
-  - id: baja
-    file: baja.md
-  - id: south-america
-    file: south-america.md
-  - id: malay
-    file: malay.md
   - id: internal
     file: internal.md
-# Add new models here; each gets research/models/<id>.md + data/catalog rows
+    index: indexes/internal
+    richness_rank: 1
+  - id: mesoamerica
+    file: mesoamerica.md
+    index: indexes/mesoamerica
+    richness_rank: 2
+  - id: meso-highland
+    file: meso-highland.md
+    index: indexes/meso-highland
+    richness_rank: 3
+  - id: heartland
+    file: heartland.md
+    index: indexes/heartland
+    richness_rank: 4
+  - id: baja
+    file: baja.md
+    index: indexes/baja
+    richness_rank: 5
+  - id: south-america
+    file: south-america.md
+    index: null
+    richness_rank: 6
+  - id: malay
+    file: malay.md
+    index: null
+    richness_rank: 7

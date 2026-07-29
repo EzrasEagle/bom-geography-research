@@ -18,6 +18,7 @@ import { Route as InsightsInsightIdRouteImport } from './routes/insights/$insigh
 import { Route as MapLabIndexRouteImport } from './routes/map-lab/index'
 import { Route as ModelsIndexRouteImport } from './routes/models/index'
 import { Route as ModelsModelIdRouteImport } from './routes/models/$modelId'
+import { Route as ModelsIndexesRouteImport } from './routes/models/indexes'
 import { Route as MyModelsIndexRouteImport } from './routes/my-models/index'
 import { Route as ReaderIndexRouteImport } from './routes/reader/index'
 import { Route as VersesIndexRouteImport } from './routes/verses/index'
@@ -68,6 +69,11 @@ const ModelsModelIdRoute = ModelsModelIdRouteImport.update({
   path: '/models/$modelId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModelsIndexesRoute = ModelsIndexesRouteImport.update({
+  id: '/models/indexes',
+  path: '/models/indexes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyModelsIndexRoute = MyModelsIndexRouteImport.update({
   id: '/my-models/',
   path: '/my-models/',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/sources': typeof SourcesRoute
   '/insights/$insightId': typeof InsightsInsightIdRoute
   '/models/$modelId': typeof ModelsModelIdRoute
+  '/models/indexes': typeof ModelsIndexesRoute
   '/verses/$verseId': typeof VersesVerseIdRoute
   '/insights/': typeof InsightsIndexRoute
   '/map-lab/': typeof MapLabIndexRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/sources': typeof SourcesRoute
   '/insights/$insightId': typeof InsightsInsightIdRoute
   '/models/$modelId': typeof ModelsModelIdRoute
+  '/models/indexes': typeof ModelsIndexesRoute
   '/verses/$verseId': typeof VersesVerseIdRoute
   '/insights': typeof InsightsIndexRoute
   '/map-lab': typeof MapLabIndexRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/sources': typeof SourcesRoute
   '/insights/$insightId': typeof InsightsInsightIdRoute
   '/models/$modelId': typeof ModelsModelIdRoute
+  '/models/indexes': typeof ModelsIndexesRoute
   '/verses/$verseId': typeof VersesVerseIdRoute
   '/insights/': typeof InsightsIndexRoute
   '/map-lab/': typeof MapLabIndexRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/insights/$insightId'
     | '/models/$modelId'
+    | '/models/indexes'
     | '/verses/$verseId'
     | '/insights/'
     | '/map-lab/'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/insights/$insightId'
     | '/models/$modelId'
+    | '/models/indexes'
     | '/verses/$verseId'
     | '/insights'
     | '/map-lab'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/insights/$insightId'
     | '/models/$modelId'
+    | '/models/indexes'
     | '/verses/$verseId'
     | '/insights/'
     | '/map-lab/'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   SourcesRoute: typeof SourcesRoute
   InsightsInsightIdRoute: typeof InsightsInsightIdRoute
   ModelsModelIdRoute: typeof ModelsModelIdRoute
+  ModelsIndexesRoute: typeof ModelsIndexesRoute
   VersesVerseIdRoute: typeof VersesVerseIdRoute
   InsightsIndexRoute: typeof InsightsIndexRoute
   MapLabIndexRoute: typeof MapLabIndexRoute
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelsModelIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/models/indexes': {
+      id: '/models/indexes'
+      path: '/models/indexes'
+      fullPath: '/models/indexes'
+      preLoaderRoute: typeof ModelsIndexesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my-models/': {
       id: '/my-models/'
       path: '/my-models'
@@ -302,6 +322,7 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesRoute: SourcesRoute,
   InsightsInsightIdRoute: InsightsInsightIdRoute,
   ModelsModelIdRoute: ModelsModelIdRoute,
+  ModelsIndexesRoute: ModelsIndexesRoute,
   VersesVerseIdRoute: VersesVerseIdRoute,
   InsightsIndexRoute: InsightsIndexRoute,
   MapLabIndexRoute: MapLabIndexRoute,
