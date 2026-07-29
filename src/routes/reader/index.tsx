@@ -20,6 +20,19 @@ import {
   versesForFeature,
   type CorpusVerse,
 } from "@/data/scripture-corpus";
+import {
+  NEPHI_ZARAHEMLA_TRAVEL_NOTES,
+  suggestionsForVerse,
+  type AssociationSuggestion,
+} from "@/data/suggested-associations";
+import {
+  acceptSuggestion,
+  loadAssociations,
+  saveAssociations,
+  spanLabel,
+  type UserAssociation,
+} from "@/lib/user-associations";
+import { placeLabel } from "@/lib/place-connections";
 
 type ReaderSearch = {
   q?: string;
@@ -101,6 +114,8 @@ function ReaderPage() {
   const [hoverVerse, setHoverVerse] = useState<number | null>(null);
   const [customTag, setCustomTag] = useState("");
   const [customFeatureName, setCustomFeatureName] = useState("");
+  const [userAssocs, setUserAssocs] = useState<UserAssociation[]>([]);
+  const [acceptedFlash, setAcceptedFlash] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -109,6 +124,7 @@ function ReaderPage() {
     } catch {
       /* ignore */
     }
+    setUserAssocs(loadAssociations());
   }, []);
 
   useEffect(() => {
@@ -165,6 +181,54 @@ function ReaderPage() {
     () => (current ? lexiconHitsInText(current.text) : []),
     [current],
   );
+  const verseSuggestions = useMemo(
+    () =>
+      current
+        ? suggestionsForVerse(current.book, current.chapter, current.verse)
+        : [],
+    [current],
+  );
+  const assocsOnVerse = useMemo(() => {
+    if (!current) return [];
+    return userAssocs.filter(
+      (a) =>
+        a.book === current.book &&
+        a.chapter === current.chapter &&
+        a.verse === current.verse,
+    );
+  }, [userAssocs, current]);
+
+  function oneClickAccept(sug: AssociationSuggestion) {
+    const row = acceptSuggestion(sug, {
+      pathDistance: { quality: "unknown", note: "Marked unknown from source verse" },
+      pathTime: { quality: "unknown", note: "Marked unknown from source verse" },
+    });
+    const next = [row, ...userAssocs.filter((a) => a.sourceSuggestionId !== sug.id)];
+    setUserAssocs(next);
+    saveAssociations(next);
+    // also create a tag for continuity
+    setTags((prev) => [
+      {
+        id: `${Date.now()}`,
+        book: sug.book,
+        chapter: sug.chapter,
+        verse: sug.verse,
+        wordPhrase: sug.tags[0],
+        tags: [...sug.tags, "path", "distance-unknown", "time-unknown"],
+        note: sug.summary,
+        domain: "textual_geography",
+        featureIds: [
+          ...new Set(sug.legs.flatMap((l) => [l.fromFeatureId, l.toFeatureId])),
+        ],
+        scope: "personal",
+        createdAt: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    setAcceptedFlash(sug.id);
+    window.setTimeout(() => setAcceptedFlash(null), 2000);
+  }
+
 
   const lexiconInChapter = useMemo(() => {
     const hits = new Map<string, ReturnType<typeof lookupLexicon>>();
@@ -495,6 +559,46 @@ function ReaderPage() {
                       <div className="font-semibold text-ink font-sans">
                         {row.book} {row.chapter}:{row.verse} · context
                       </div>
+                      {userAssocs.some(
+                        (a) =>
+                          a.book === row.book &&
+                          a.chapter === row.chapter &&
+                          a.verse === row.verse,
+                      ) && (
+                        <div>
+                          <span className="text-muted uppercase tracking-wide">Associations · </span>
+                          {userAssocs
+                            .filter(
+                              (a) =>
+                                a.book === row.book &&
+                                a.chapter === row.chapter &&
+                                a.verse === row.verse,
+                            )
+                            .map((a) => a.title)
+                            .join("; ")}
+                          <span className="text-muted">
+                            {" "}
+                            (dist {spanLabel(
+                              userAssocs.find(
+                                (a) =>
+                                  a.book === row.book &&
+                                  a.chapter === row.chapter &&
+                                  a.verse === row.verse,
+                              )!.pathDistance,
+                            )}
+                            , time{" "}
+                            {spanLabel(
+                              userAssocs.find(
+                                (a) =>
+                                  a.book === row.book &&
+                                  a.chapter === row.chapter &&
+                                  a.verse === row.verse,
+                              )!.pathTime,
+                            )}
+                            )
+                          </span>
+                        </div>
+                      )}
                       {(tagsOnVerse.get(row.verse) ?? []).length > 0 && (
                         <div>
                           <span className="text-muted uppercase tracking-wide">Your tags · </span>
@@ -667,6 +771,132 @@ function ReaderPage() {
               <strong>Wilderness</strong> + <strong>Land/City of Nephi</strong>, save proximity.
             </p>
           </Card>
+
+          {/* One-click association suggestions */}
+          {verseSuggestions.length > 0 && (
+            <Card className="p-5 space-y-3 border-accent/30">
+              <h2 className="font-semibold text-sm">Suggested associations</h2>
+              <p className="text-[11px] text-muted leading-relaxed">
+                One click creates the path with <strong>distance unknown</strong> and{" "}
+                <strong>time unknown</strong> unless the verse states otherwise. Related travel /
+                lost-party refs are kept for later distance proposals.
+              </p>
+              {verseSuggestions.map((sug) => {
+                const already = userAssocs.some((a) => a.sourceSuggestionId === sug.id);
+                return (
+                  <div
+                    key={sug.id}
+                    className="rounded-[var(--radius)] border border-border bg-surface-2/50 p-3 space-y-2"
+                  >
+                    <div className="font-medium text-sm">{sug.title}</div>
+                    <p className="text-xs text-ink-soft leading-relaxed">{sug.summary}</p>
+                    <div className="space-y-1.5">
+                      {sug.legs.map((leg, i) => (
+                        <div key={i} className="text-xs rounded bg-surface border border-border/60 px-2 py-1.5">
+                          <span className="font-medium text-accent">
+                            {placeLabel(leg.fromFeatureId)} → {placeLabel(leg.toFeatureId)}
+                          </span>
+                          <span className="text-muted"> · {leg.kind}</span>
+                          {leg.viaPhrase && (
+                            <div className="text-ink-soft italic">“{leg.viaPhrase}”</div>
+                          )}
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            <Badge tone={leg.distance.quality === "unknown" ? "claim" : "teal"}>
+                              Distance: {spanLabel(leg.distance)}
+                            </Badge>
+                            <Badge tone={leg.time.quality === "unknown" ? "claim" : "teal"}>
+                              Time: {spanLabel(leg.time)}
+                            </Badge>
+                            {leg.elevation && leg.elevation !== "unknown" && (
+                              <Badge>{leg.elevation === "down" ? "↓ down" : "↑ up"}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {sug.relatedRefs.length > 0 && (
+                      <div className="text-[11px] space-y-0.5">
+                        <div className="text-muted font-semibold uppercase tracking-wide">
+                          Related travel / lost parties
+                        </div>
+                        {sug.relatedRefs.map((r) => (
+                          <div key={r.ref + r.note}>
+                            <span className="font-medium text-ink">{r.ref}</span>
+                            <span className="text-muted"> — {r.note}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(current?.book === "Omni" &&
+                      (current.verse === 12 || current.verse === 13 || current.verse === 27)) && (
+                      <div className="text-[11px] border-t border-border pt-2 space-y-0.5">
+                        <div className="text-muted font-semibold uppercase">
+                          Nephi ↔ Zarahemla travel notes
+                        </div>
+                        {NEPHI_ZARAHEMLA_TRAVEL_NOTES.map((n) => (
+                          <div key={n.id}>
+                            <span className="text-ink-soft">{n.claim}</span>
+                            <span className="text-muted"> ({n.refs.join("; ")})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={already}
+                      onClick={() => oneClickAccept(sug)}
+                      className="w-full rounded-[var(--radius)] bg-accent px-3 py-2.5 text-sm font-medium text-accent-fg disabled:opacity-50"
+                    >
+                      {already
+                        ? "Association saved"
+                        : acceptedFlash === sug.id
+                          ? "Created — distance & time unknown"
+                          : "Create association (1 click)"}
+                    </button>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
+
+          {assocsOnVerse.length > 0 && (
+            <Card className="p-4 space-y-2">
+              <h2 className="font-semibold text-sm">Saved on this verse</h2>
+              {assocsOnVerse.map((a) => (
+                <div key={a.id} className="text-xs border border-border rounded p-2 space-y-1">
+                  <div className="font-medium">{a.title}</div>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge tone="claim">Distance: {spanLabel(a.pathDistance)}</Badge>
+                    <Badge tone="claim">Time: {spanLabel(a.pathTime)}</Badge>
+                  </div>
+                  <Link to="/map-lab" className="text-accent hover:underline">
+                    View corridor on Map Lab →
+                  </Link>
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {userAssocs.length > 0 && assocsOnVerse.length === 0 && (
+            <Card className="p-4 space-y-1">
+              <h2 className="font-semibold text-sm">All saved associations</h2>
+              <p className="text-[11px] text-muted">{userAssocs.length} total</p>
+              {userAssocs.slice(0, 5).map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className="block text-xs text-left text-accent hover:underline"
+                  onClick={() => {
+                    setBook(a.book);
+                    setChapter(a.chapter);
+                    setSelectedVerse(a.verse);
+                  }}
+                >
+                  {a.book} {a.chapter}:{a.verse} — {a.title}
+                </button>
+              ))}
+            </Card>
+          )}
 
           {/* Dynamic lexicon: curated + any-word external lookup */}
           <Card className="p-5 space-y-3">

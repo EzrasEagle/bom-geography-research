@@ -21,6 +21,7 @@ import {
   type ObjectLayer,
 } from "@/data/object-taxonomy";
 import { lookupLexicon } from "@/data/lexicon";
+import { loadAssociations, spanLabel } from "@/lib/user-associations";
 import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
@@ -68,6 +69,8 @@ function MapLabPage() {
   const [dossierOpen, setDossierOpen] = useState(true);
   const [visibleLayers, setVisibleLayers] = useState<ObjectLayer[]>([...DEFAULT_VISIBLE_LAYERS]);
   const [showClimateLayer, setShowClimateLayer] = useState(false);
+  const [assocCount, setAssocCount] = useState(0);
+  const [assocForObject, setAssocForObject] = useState<{ title: string; dist: string; time: string }[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(true);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -100,6 +103,26 @@ function MapLabPage() {
     setPack(p);
     setLoaded(true);
   }, []);
+
+  useEffect(() => {
+    const all = loadAssociations();
+    setAssocCount(all.length);
+  }, [objectId, loaded]);
+
+  useEffect(() => {
+    if (!objectId) return;
+    const all = loadAssociations();
+    const hit = all.filter((a) =>
+      a.legs.some((l) => l.fromFeatureId === objectId || l.toFeatureId === objectId),
+    );
+    setAssocForObject(
+      hit.map((a) => ({
+        title: a.title,
+        dist: spanLabel(a.pathDistance),
+        time: spanLabel(a.pathTime),
+      })),
+    );
+  }, [objectId, loaded, assocCount]);
 
   function switchModel(id: string) {
     const user = userModels.find((u) => u.id === id);
