@@ -9,6 +9,11 @@ import {
   getPlaceDossier,
 } from "@/data/place-scripture";
 import {
+  assumptionsForIds,
+  getPlaceConnectionBundle,
+  placeLabel,
+} from "@/lib/place-connections";
+import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
   type Macro,
@@ -201,6 +206,15 @@ function MapLabPage() {
   const redCount = edges.filter((e) => e.conflict && e.enabled).length;
 
   const focusPlaceId = selectedPlace ?? hoverPlace;
+  const objectId = selectedPlace ?? places[0]?.id ?? null;
+  const objectBundle = useMemo(
+    () => (objectId ? getPlaceConnectionBundle(objectId) : null),
+    [objectId],
+  );
+  const objectAssumptions = useMemo(
+    () => (objectBundle ? assumptionsForIds(objectBundle.assumptionIds) : []),
+    [objectBundle],
+  );
   const placeDossier = focusPlaceId ? getPlaceDossier(focusPlaceId) : undefined;
   const edgeDossier = useMemo(() => {
     const e = edges.find((x) => x.id === (hoverEdge || selectedEdge));
@@ -336,6 +350,192 @@ function MapLabPage() {
         </span>
       </div>
 
+      {/* Object connection box — every link to/from the selected geographic object */}
+      <Card className="p-4 md:p-5 space-y-3 border-accent/25">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+          <div>
+            <h2 className="font-semibold text-base">Object · connections</h2>
+            <p className="text-xs text-muted mt-0.5">
+              Each place is a first-class object. This box lists every map edge, related feature,
+              scripture, and assumption tied to it.
+            </p>
+          </div>
+          <label className="text-xs space-y-1 min-w-[12rem]">
+            <span className="text-muted">Object</span>
+            <select
+              value={objectId ?? ""}
+              onChange={(e) => setSelectedPlace(e.target.value)}
+              className="w-full rounded-[var(--radius)] border border-border bg-surface px-2 py-2 text-sm font-medium"
+            >
+              {places.map((pl) => (
+                <option key={pl.id} value={pl.id}>
+                  {pl.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {objectBundle && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-serif text-xl font-semibold text-ink">{objectBundle.name}</span>
+              <Badge tone="teal">{objectBundle.kind}</Badge>
+              <Badge tone="claim">{objectBundle.edgesIn.length + objectBundle.edgesOut.length} edges</Badge>
+              <Badge>{objectBundle.neighborIds.length} neighbors</Badge>
+              <Badge>{objectBundle.scriptureCount} dossier refs</Badge>
+              <Badge>{objectBundle.corpusVerses.length} corpus</Badge>
+            </div>
+            {objectBundle.summary && (
+              <p className="text-sm text-ink-soft leading-relaxed">{objectBundle.summary}</p>
+            )}
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-[var(--radius)] bg-surface-2/80 p-3 space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Connections out (this → other)
+                </h3>
+                {objectBundle.edgesOut.length === 0 && (
+                  <p className="text-xs text-muted">None in constraint graph</p>
+                )}
+                <ul className="space-y-1.5">
+                  {objectBundle.edgesOut.map((e) => (
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        className="text-left text-sm w-full hover:bg-surface rounded px-1 py-0.5"
+                        onClick={() => {
+                          setSelectedEdge(e.id);
+                          setSelectedPlace(e.to);
+                        }}
+                      >
+                        <span className="text-accent font-medium">→ {placeLabel(e.to)}</span>
+                        <span className="text-muted"> · {e.type}</span>
+                        <div className="text-xs text-ink-soft">{String(e.value)}</div>
+                        {e.sourceVerse && (
+                          <div className="text-xs text-muted">{e.sourceVerse}</div>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[var(--radius)] bg-surface-2/80 p-3 space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Connections in (other → this)
+                </h3>
+                {objectBundle.edgesIn.length === 0 && (
+                  <p className="text-xs text-muted">None in constraint graph</p>
+                )}
+                <ul className="space-y-1.5">
+                  {objectBundle.edgesIn.map((e) => (
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        className="text-left text-sm w-full hover:bg-surface rounded px-1 py-0.5"
+                        onClick={() => {
+                          setSelectedEdge(e.id);
+                          setSelectedPlace(e.from);
+                        }}
+                      >
+                        <span className="text-accent font-medium">{placeLabel(e.from)} →</span>
+                        <span className="text-muted"> · {e.type}</span>
+                        <div className="text-xs text-ink-soft">{String(e.value)}</div>
+                        {e.sourceVerse && (
+                          <div className="text-xs text-muted">{e.sourceVerse}</div>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="rounded-[var(--radius)] border border-border p-3 space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Related objects (dossier + neighbors)
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {objectBundle.neighborIds.map((nid) => (
+                  <button
+                    key={nid}
+                    type="button"
+                    onClick={() => setSelectedPlace(nid)}
+                    className="rounded-full border border-border bg-chip px-2.5 py-1 text-xs hover:border-accent hover:text-accent"
+                  >
+                    {placeLabel(nid)}
+                  </button>
+                ))}
+                {objectBundle.neighborIds.length === 0 && (
+                  <span className="text-xs text-muted">No neighbors linked yet</span>
+                )}
+              </div>
+            </div>
+
+            {objectAssumptions.length > 0 && (
+              <div className="rounded-[var(--radius)] border border-border p-3 space-y-1.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Assumptions that often load this object
+                </h3>
+                <ul className="space-y-1">
+                  {objectAssumptions.map((a) => (
+                    <li key={a.id} className="text-xs">
+                      <Badge className="mr-1">{a.modelId}</Badge>
+                      {a.statement}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {objectBundle.corpusVerses.length > 0 && (
+              <div className="rounded-[var(--radius)] border border-border p-3 space-y-1.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Corpus verses (working index)
+                </h3>
+                <ul className="space-y-1 max-h-28 overflow-auto">
+                  {objectBundle.corpusVerses.map((v) => (
+                    <li key={v.id} className="text-xs">
+                      <Link
+                        to="/reader"
+                        search={{
+                          book: v.book,
+                          chapter: v.chapter,
+                          verse: v.verse,
+                          feature: objectBundle.id,
+                        }}
+                        className="text-accent hover:underline font-medium"
+                      >
+                        {v.book} {v.chapter}:{v.verse}
+                      </Link>
+                      <span className="text-muted"> — {v.text.slice(0, 80)}…</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Link
+                to="/map-lab/feature/$featureId"
+                params={{ featureId: objectBundle.id }}
+                className="rounded-[var(--radius)] bg-accent px-3 py-2 text-sm text-accent-fg font-medium"
+              >
+                Full object dossier
+              </Link>
+              <Link
+                to="/reader"
+                search={{ feature: objectBundle.id, q: objectBundle.name.split(/[\s/]/)[0] }}
+                className="rounded-[var(--radius)] border border-border px-3 py-2 text-sm"
+              >
+                Word index / tag in Reader
+              </Link>
+            </div>
+          </div>
+        )}
+      </Card>
+
+
       <div className="grid gap-4 xl:grid-cols-[1fr_18rem_18rem]">
         <Card className="p-3 md:p-4 overflow-x-auto">
           <svg
@@ -387,8 +587,9 @@ function MapLabPage() {
             {places.map((p) => {
               const pos = displayLayout[p.id] ?? { x: 260, y: 180 };
               const isSea = p.kind === "sea";
-              const selected = selectedPlace === p.id;
+              const selected = selectedPlace === p.id || objectId === p.id;
               const hovered = hoverPlace === p.id;
+              const isNeighbor = objectBundle?.neighborIds.includes(p.id) ?? false;
               const dossier = getPlaceDossier(p.id);
               const nRefs = dossier?.scriptures.length ?? 0;
               return (
@@ -425,8 +626,8 @@ function MapLabPage() {
                       cy={pos.y}
                       r={p.kind === "river" ? 8 : 10}
                       fill={p.kind === "river" ? "#1e3a5f" : "#9a3412"}
-                      stroke={selected || hovered ? "#f59e0b" : "white"}
-                      strokeWidth={selected || hovered ? 3 : 1}
+                      stroke={selected || hovered ? "#f59e0b" : isNeighbor ? "#0f766e" : "white"}
+                      strokeWidth={selected || hovered ? 3 : isNeighbor ? 2.5 : 1}
                     />
                   )}
                   {nRefs > 0 && (
