@@ -457,6 +457,30 @@ export const placeDossiers: Record<string, FeatureDossier> = {
     related: [],
   },
 
+
+  wilderness: {
+    id: "wilderness",
+    name: "Wilderness",
+    kind: "wilderness",
+    summary:
+      "Soft-boundary, multi-instance corridor/region (uncultivated or uninhabited land). Omni 1:12–13: out of the land of Nephi into the wilderness, then down into Zarahemla. Not a single fixed polygon by default — many wildernesses may exist.",
+    scriptures: [
+      bom("Omni", 1, "12–13", "Flee Nephi into the wilderness; through the wilderness down to Zarahemla.", {
+        verseAnchor: "12",
+        tags: ["wilderness", "nephi", "zarahemla"],
+      }),
+      bom("Omni", 1, "27–29", "Went up into the wilderness to return to Nephi.", {
+        verseAnchor: "27",
+        tags: ["wilderness", "up"],
+      }),
+    ],
+    relatedFeatureIds: ["nephi", "zarahemla"],
+    edgeIds: [],
+    assumptionIds: [],
+    related: [
+      { label: "Reader Omni 1", href: "/reader?book=Omni&chapter=1&verse=13&q=wilderness&feature=wilderness", kind: "catalog_verse" },
+    ],
+  },
   "climate-whirlwind": {
     id: "climate-whirlwind",
     name: "Whirlwinds / tempests",

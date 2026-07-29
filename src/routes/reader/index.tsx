@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Search } from "lucide-react";
+import { BookOpen, ExternalLink, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { evidenceDomains, places, verses } from "@/data/catalog";
 import { getPlaceDossier } from "@/data/place-scripture";
+import { lexiconHitsInText, lookupLexicon } from "@/data/lexicon";
 import {
   booksInCorpus,
   chaptersForBook,
@@ -39,39 +40,38 @@ type UserTag = {
   book: string;
   chapter: number;
   verse: number;
-  /** Optional word span within the verse text */
+  /** Exact words from the text when possible */
   wordPhrase?: string;
   tags: string[];
   note: string;
   domain: string;
-  /** Map feature association */
   featureIds: string[];
   scope: "personal" | "suggest_shared";
   createdAt: string;
 };
 
-const STORAGE_KEY = "bom-atlas-reader-tags-v2";
+const STORAGE_KEY = "bom-atlas-reader-tags-v3";
 
+/** Prefer BoM phraseology as tag labels */
 const SUGGESTED_TAGS = [
-  "landing",
-  "voyage",
-  "seed-grow",
-  "climate",
+  "wilderness",
+  "land of Nephi",
+  "land of Zarahemla",
+  "came down",
+  "went up",
+  "narrow neck of land",
+  "narrow pass",
+  "sea east",
+  "sea west",
   "whirlwind",
-  "storm",
-  "seasons",
-  "agriculture",
-  "war-timing",
-  "ore",
-  "animals",
-  "promised-land",
-  "narrow-neck",
+  "tempest",
+  "great waters",
+  "promised land",
+  "seasons of peace",
+  "seasons of serious war",
   "high-signal",
   "conflict-candidate",
-  "elevation-up",
-  "elevation-down",
-  "along-river",
-  "hazard-sphere",
+  "proximity",
 ];
 
 function ReaderPage() {
@@ -79,32 +79,27 @@ function ReaderPage() {
   const navigate = Route.useNavigate();
 
   const books = booksInCorpus();
-  const [book, setBook] = useState(search.book ?? "1 Nephi");
-  const [chapter, setChapter] = useState(search.chapter ?? 18);
-  const [selectedVerse, setSelectedVerse] = useState(search.verse ?? 23);
+  const [book, setBook] = useState(search.book ?? "Omni");
+  const [chapter, setChapter] = useState(search.chapter ?? 1);
+  const [selectedVerse, setSelectedVerse] = useState(search.verse ?? 13);
   const [wordQuery, setWordQuery] = useState(search.q ?? "");
   const [activeFeature, setActiveFeature] = useState(search.feature ?? "");
   const [tags, setTags] = useState<UserTag[]>([]);
   const [note, setNote] = useState("");
-  const [domain, setDomain] = useState(
-    search.feature?.startsWith("climate") ? "climate_botany" : "textual_geography",
-  );
-  const [picked, setPicked] = useState<string[]>(
-    search.feature?.includes("whirlwind")
-      ? ["whirlwind", "climate"]
-      : search.feature
-        ? ["high-signal"]
-        : ["landing"],
-  );
+  const [domain, setDomain] = useState("textual_geography");
+  const [picked, setPicked] = useState<string[]>(["wilderness"]);
   const [wordPhrase, setWordPhrase] = useState(search.q ?? "");
   const [scope, setScope] = useState<"personal" | "suggest_shared">("personal");
   const [featurePick, setFeaturePick] = useState<string[]>(
-    search.feature ? [search.feature] : [],
+    search.feature ? [search.feature] : ["wilderness"],
   );
+  const [hoverVerse, setHoverVerse] = useState<number | null>(null);
+  const [customTag, setCustomTag] = useState("");
+  const [customFeatureName, setCustomFeatureName] = useState("");
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem("bom-atlas-reader-tags-v2");
       if (raw) setTags(JSON.parse(raw) as UserTag[]);
     } catch {
       /* ignore */
@@ -115,7 +110,6 @@ function ReaderPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tags));
   }, [tags]);
 
-  // Sync from URL when deep-linked
   useEffect(() => {
     if (search.book) setBook(search.book);
     if (search.chapter) setChapter(search.chapter);
@@ -143,15 +137,32 @@ function ReaderPage() {
   const current =
     chapterVerses.find((v) => v.verse === selectedVerse) ?? chapterVerses[0] ?? null;
 
-  const catalogHit = useMemo(() => {
-    if (!current) return undefined;
-    return verses.find(
-      (v) =>
-        v.book === current.book &&
-        v.chapter === current.chapter &&
-        v.verseStart === current.verse,
-    );
-  }, [current]);
+  const tagsOnVerse = useMemo(() => {
+    const map = new Map<number, UserTag[]>();
+    for (const t of tags) {
+      if (t.book === book && t.chapter === chapter) {
+        const arr = map.get(t.verse) ?? [];
+        arr.push(t);
+        map.set(t.verse, arr);
+      }
+    }
+    return map;
+  }, [tags, book, chapter]);
+
+  const lexiconForSelection = useMemo(
+    () => lookupLexicon(wordPhrase) ?? (current ? lexiconHitsInText(current.text)[0] : undefined),
+    [wordPhrase, current],
+  );
+
+  const lexiconInChapter = useMemo(() => {
+    const hits = new Map<string, ReturnType<typeof lookupLexicon>>();
+    for (const v of chapterVerses) {
+      for (const e of lexiconHitsInText(v.text)) {
+        hits.set(e.term, e);
+      }
+    }
+    return [...hits.values()].filter(Boolean);
+  }, [chapterVerses]);
 
   function goToVerse(v: CorpusVerse) {
     setBook(v.book);
@@ -170,6 +181,7 @@ function ReaderPage() {
 
   function runWordSearch(q: string) {
     setWordQuery(q);
+    setWordPhrase(q);
     const hits = searchWord(q);
     if (hits[0]) {
       setBook(hits[0].book);
@@ -187,6 +199,24 @@ function ReaderPage() {
     });
   }
 
+  function onTextSelect() {
+    const sel = window.getSelection()?.toString().trim();
+    if (sel && sel.length < 80) {
+      setWordPhrase(sel);
+      // Prefer exact phrase as a tag chip
+      if (!picked.includes(sel) && sel.length > 2) {
+        setPicked((p) => [...p, sel]);
+      }
+      const lex = lookupLexicon(sel);
+      if (lex) {
+        // soft map feature guess
+        if (lex.term === "wilderness" && !featurePick.includes("wilderness")) {
+          setFeaturePick((f) => [...f, "wilderness"]);
+        }
+      }
+    }
+  }
+
   function toggleTag(t: string) {
     setPicked((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }
@@ -195,6 +225,14 @@ function ReaderPage() {
     setFeaturePick((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  }
+
+  function addCustomTag() {
+    const t = customTag.trim();
+    if (!t) return;
+    if (!picked.includes(t)) setPicked((p) => [...p, t]);
+    setWordPhrase(t);
+    setCustomTag("");
   }
 
   function saveTag() {
@@ -216,21 +254,41 @@ function ReaderPage() {
     setNote("");
   }
 
-  const featureOptions = places.map((p) => ({
-    id: p.id,
-    name: p.name,
-    climate: p.id.startsWith("climate"),
-  }));
+  /** Quick associate: selected phrase + features (e.g. wilderness near Nephi) */
+  function saveProximityAssociation() {
+    if (!current) return;
+    const phrase = wordPhrase || "wilderness";
+    const feats = featurePick.length ? featurePick : ["wilderness", "nephi"];
+    setTags((prev) => [
+      {
+        id: `${Date.now()}`,
+        book: current.book,
+        chapter: current.chapter,
+        verse: current.verse,
+        wordPhrase: phrase,
+        tags: [phrase, "proximity", ...picked.filter((t) => t !== phrase)],
+        note:
+          note ||
+          `Association: ${phrase} in proximity to ${feats.map((f) => places.find((p) => p.id === f)?.name ?? f).join(", ")}`,
+        domain: "textual_geography",
+        featureIds: feats,
+        scope,
+        createdAt: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+  }
+
+  const featureOptions = places;
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="font-serif text-3xl font-semibold">Reader · tag · word index</h1>
+        <h1 className="font-serif text-3xl font-semibold">Reader · full chapter · tags</h1>
         <p className="text-sm text-ink-soft max-w-3xl leading-relaxed">
-          Read working excerpts, jump by <strong className="text-ink">word index</strong> (every hit
-          for “Zarahemla”, “whirlwind”…), open official full chapters, and tag verses/phrases with{" "}
-          <strong className="text-ink">map features</strong> (cities, seas, climate, seasons). Tags
-          stay in this browser and feed model work.
+          Full chapter text when available (Omni 1 complete). Select words in a verse to tag with{" "}
+          <em>the text’s own phrase</em>. Soft features like <strong className="text-ink">wilderness</strong>{" "}
+          can associate with many lands. Lexicon: 1828 Webster + KJV sense for key terms.
         </p>
       </div>
 
@@ -244,10 +302,8 @@ function ReaderPage() {
           <input
             value={wordQuery}
             onChange={(e) => setWordQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") runWordSearch(wordQuery);
-            }}
-            placeholder='Search corpus: Zarahemla, Sidon, whirlwind, grain…'
+            onKeyDown={(e) => e.key === "Enter" && runWordSearch(wordQuery)}
+            placeholder="Zarahemla, wilderness, narrow pass…"
             className="flex-1 rounded-[var(--radius)] border border-border bg-surface px-3 py-2.5 text-sm"
           />
           <button
@@ -259,24 +315,21 @@ function ReaderPage() {
           </button>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {["Zarahemla", "Sidon", "Bountiful", "Cumorah", "whirlwind", "tempest", "seasons", "grain", "narrow"].map(
-            (w) => (
-              <button
-                key={w}
-                type="button"
-                onClick={() => runWordSearch(w)}
-                className="rounded-full border border-border px-2.5 py-1 text-xs hover:bg-surface-2"
-              >
-                {w}
-              </button>
-            ),
-          )}
+          {["wilderness", "Zarahemla", "land of Nephi", "came down", "whirlwind", "narrow"].map((w) => (
+            <button
+              key={w}
+              type="button"
+              onClick={() => runWordSearch(w)}
+              className="rounded-full border border-border px-2.5 py-1 text-xs hover:bg-surface-2"
+            >
+              {w}
+            </button>
+          ))}
         </div>
         {wordQuery.trim() && (
-          <div className="max-h-48 overflow-auto space-y-1 border-t border-border pt-2">
+          <div className="max-h-40 overflow-auto space-y-1 border-t border-border pt-2">
             <p className="text-xs text-muted">
-              {wordHits.length} hit{wordHits.length === 1 ? "" : "s"} in working corpus (
-              {corpus.length} verses loaded)
+              {wordHits.length} hit{wordHits.length === 1 ? "" : "s"} · corpus {corpus.length} verses
             </p>
             {wordHits.map((h) => (
               <button
@@ -290,21 +343,15 @@ function ReaderPage() {
                 <span className="font-medium text-accent">
                   {h.book} {h.chapter}:{h.verse}
                 </span>
-                <span className="text-ink-soft"> — {h.text.slice(0, 100)}…</span>
+                <span className="text-ink-soft"> — {h.text.slice(0, 110)}…</span>
               </button>
             ))}
-            {wordHits.length === 0 && (
-              <p className="text-xs text-muted">
-                No corpus hit. Expand scripture-corpus.ts while indexing, or open official text by
-                reference.
-              </p>
-            )}
           </div>
         )}
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        {/* Chapter reader */}
+      <div className="grid gap-6 xl:grid-cols-[1.25fr_0.85fr]">
+        {/* Full chapter */}
         <Card className="p-5 space-y-4">
           <div className="flex flex-wrap gap-2 items-end">
             <label className="text-xs space-y-1">
@@ -333,13 +380,16 @@ function ReaderPage() {
                 onChange={(e) => setChapter(Number(e.target.value))}
                 className="block rounded border border-border bg-surface px-2 py-2 text-sm"
               >
-                {chapterList.map((c) => (
+                {(chapterList.length ? chapterList : [chapter]).map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
                 ))}
               </select>
             </label>
+            <Badge tone="claim">
+              {chapterVerses.length} verses loaded
+            </Badge>
             {current && (
               <a
                 href={current.studyUrl}
@@ -347,92 +397,187 @@ function ReaderPage() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-sm text-accent hover:underline ml-auto"
               >
-                Full official chapter <ExternalLink className="h-3.5 w-3.5" />
+                Official edition <ExternalLink className="h-3.5 w-3.5" />
               </a>
             )}
           </div>
 
+          <p className="text-xs text-muted">
+            Select text inside a verse to set the tag phrase. Verses with tags show a count badge.
+            Hover a verse for a full-text popup if the line is long. Omni 1 is complete (vv. 1–30).
+          </p>
+
           {activeFeature && (
-            <div className="rounded-[var(--radius)] bg-teal-soft/50 border border-teal/20 p-3 text-sm space-y-1">
-              <div className="font-medium text-teal">
-                Linked feature: {getPlaceDossier(activeFeature)?.name ?? activeFeature}
-              </div>
-              <p className="text-xs text-muted">
-                {featureHits.length} corpus verses pre-associated · tags can attach more
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  to="/map-lab/feature/$featureId"
-                  params={{ featureId: activeFeature }}
-                  className="text-xs text-accent hover:underline"
-                >
-                  Feature dossier →
-                </Link>
-                <Link to="/map-lab" className="text-xs text-accent hover:underline">
-                  Map Lab →
-                </Link>
-              </div>
+            <div className="rounded-[var(--radius)] bg-teal-soft/50 border border-teal/20 p-3 text-sm">
+              Linked feature:{" "}
+              <strong>{getPlaceDossier(activeFeature)?.name ?? activeFeature}</strong>
+              <span className="text-muted"> · {featureHits.length} pre-linked corpus verses</span>
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[70vh] overflow-auto pr-1" onMouseUp={onTextSelect}>
             {chapterVerses.length === 0 && (
               <p className="text-sm text-muted">
-                No excerpts for this chapter in the working corpus yet. Use word index or open the
-                official text, then tag by reference when we add the verse.
+                Full text for this chapter not in the working corpus yet. Use official link; we expand
+                chapter-by-chapter (Omni 1 is complete).
               </p>
             )}
             {chapterVerses.map((row) => {
               const active = selectedVerse === row.verse;
-              const inCatalog = verses.some(
-                (v) =>
-                  v.book === row.book && v.chapter === row.chapter && v.verseStart === row.verse,
-              );
+              const vt = tagsOnVerse.get(row.verse) ?? [];
+              const hasTag = vt.length > 0;
+              const highlighted =
+                wordQuery.trim() &&
+                row.text.toLowerCase().includes(wordQuery.trim().toLowerCase());
               return (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => goToVerse(row)}
-                  className={`w-full text-left rounded-[var(--radius)] border p-3 transition-colors ${
-                    active ? "border-accent bg-orange-50/50" : "border-border bg-surface hover:bg-surface-2"
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-muted">v{row.verse}</span>
-                    {inCatalog && <Badge tone="claim">catalog</Badge>}
-                    {row.featureIds?.map((f) => (
-                      <Badge key={f} tone="teal">
-                        {f.replace("climate-", "")}
-                      </Badge>
-                    ))}
-                  </div>
-                  <p className="scripture text-sm">{row.text}</p>
-                </button>
+                <div key={row.id} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => goToVerse(row)}
+                    onMouseEnter={() => setHoverVerse(row.verse)}
+                    onMouseLeave={() => setHoverVerse((h) => (h === row.verse ? null : h))}
+                    className={`w-full text-left rounded-[var(--radius)] border p-3 transition-colors ${
+                      active
+                        ? "border-accent bg-orange-50/60"
+                        : hasTag
+                          ? "border-teal/40 bg-teal-soft/20"
+                          : "border-border bg-surface hover:bg-surface-2"
+                    } ${highlighted ? "ring-1 ring-accent/30" : ""}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      <span className="text-xs font-semibold text-muted tabular-nums">
+                        {row.verse}
+                      </span>
+                      {hasTag && (
+                        <Badge tone="teal">
+                          {vt.length} tag{vt.length > 1 ? "s" : ""}
+                        </Badge>
+                      )}
+                      {vt.flatMap((t) => t.wordPhrase ? [t.wordPhrase] : t.tags.slice(0, 1)).slice(0, 3).map((x) => (
+                        <Badge key={x}>{x}</Badge>
+                      ))}
+                      {row.featureIds?.map((f) => (
+                        <Badge key={f} tone="claim">
+                          {f}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="scripture text-[15px] leading-relaxed select-text">{row.text}</p>
+                    {hasTag && (
+                      <div className="mt-2 space-y-1 border-t border-border/50 pt-2">
+                        {vt.map((t) => (
+                          <div key={t.id} className="text-[11px] text-muted">
+                            {t.wordPhrase && (
+                              <span className="text-accent font-medium">“{t.wordPhrase}” · </span>
+                            )}
+                            {t.tags.join(", ")}
+                            {t.featureIds.length > 0 && (
+                              <span> → {t.featureIds.join(", ")}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                  {hoverVerse === row.verse && row.text.length > 180 && (
+                    <div className="absolute z-20 left-2 right-2 top-full mt-1 rounded-[var(--radius)] border border-border bg-surface shadow-lg p-3 text-sm scripture leading-relaxed pointer-events-none">
+                      <span className="text-xs text-muted font-sans not-italic">
+                        Full verse {row.book} {row.chapter}:{row.verse}
+                      </span>
+                      <p className="mt-1">{row.text}</p>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         </Card>
 
-        {/* Tagging panel */}
+        {/* Tag + lexicon panel */}
         <div className="space-y-4">
           <Card className="p-5 space-y-3">
-            <h2 className="font-semibold">
+            <h2 className="font-semibold flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-accent" />
               Tag{" "}
               {current
                 ? `${current.book} ${current.chapter}:${current.verse}`
                 : "a verse"}
             </h2>
             <label className="block text-sm space-y-1">
-              <span className="text-muted">Word / phrase in verse (optional)</span>
+              <span className="text-muted">Selected words (from text — preferred tag label)</span>
               <input
                 value={wordPhrase}
                 onChange={(e) => setWordPhrase(e.target.value)}
                 className="w-full rounded border border-border px-3 py-2 text-sm"
-                placeholder="e.g. Zarahemla, whirlwind"
+                placeholder="Select in verse or type: wilderness"
               />
             </label>
+            <div className="flex gap-2">
+              <input
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value)}
+                placeholder="New tag using text’s phrase…"
+                className="flex-1 rounded border border-border px-2 py-1.5 text-sm"
+              />
+              <button
+                type="button"
+                onClick={addCustomTag}
+                className="rounded border border-border px-2 text-sm"
+              >
+                Add tag
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {SUGGESTED_TAGS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => toggleTag(t)}
+                  className={`rounded-full px-2.5 py-1 text-xs border ${
+                    picked.includes(t)
+                      ? "border-accent bg-accent text-accent-fg"
+                      : "border-border bg-chip text-ink-soft"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+              {picked
+                .filter((t) => !SUGGESTED_TAGS.includes(t))
+                .map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => toggleTag(t)}
+                    className="rounded-full px-2.5 py-1 text-xs border border-accent bg-accent text-accent-fg"
+                  >
+                    {t}
+                  </button>
+                ))}
+            </div>
+            <div>
+              <div className="text-xs text-muted mb-1">
+                Associate map features (soft regions OK — many wildernesses)
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-auto">
+                {featureOptions.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => toggleFeature(f.id)}
+                    className={`rounded-full px-2.5 py-1 text-xs border ${
+                      featurePick.includes(f.id)
+                        ? "border-teal bg-teal text-white"
+                        : "border-border bg-chip text-ink-soft"
+                    }`}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            </div>
             <label className="block text-sm space-y-1">
-              <span className="text-muted">Evidence domain</span>
+              <span className="text-muted">Domain</span>
               <select
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
@@ -445,119 +590,130 @@ function ReaderPage() {
                 ))}
               </select>
             </label>
-            <div>
-              <div className="text-xs text-muted mb-1">Tags</div>
-              <div className="flex flex-wrap gap-1.5">
-                {SUGGESTED_TAGS.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => toggleTag(t)}
-                    className={`rounded-full px-2.5 py-1 text-xs border ${
-                      picked.includes(t)
-                        ? "border-accent bg-accent text-accent-fg"
-                        : "border-border bg-chip text-ink-soft"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted mb-1">Associate map features (cities, climate…)</div>
-              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-auto">
-                {featureOptions.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => toggleFeature(f.id)}
-                    className={`rounded-full px-2.5 py-1 text-xs border ${
-                      featurePick.includes(f.id)
-                        ? f.climate
-                          ? "border-teal bg-teal text-white"
-                          : "border-accent bg-accent text-accent-fg"
-                        : "border-border bg-chip text-ink-soft"
-                    }`}
-                  >
-                    {f.name}
-                  </button>
-                ))}
-              </div>
-            </div>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Why tag this? Conflict with a model? Seasonal war pause?"
+              placeholder="e.g. land of Nephi in proximity to wilderness corridor toward Zarahemla"
               rows={3}
               className="w-full rounded border border-border px-3 py-2 text-sm"
             />
-            <div className="flex flex-wrap gap-3 text-sm">
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={scope === "personal"}
-                  onChange={() => setScope("personal")}
-                />
-                Personal
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={scope === "suggest_shared"}
-                  onChange={() => setScope("suggest_shared")}
-                />
-                Suggest shared
-              </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={saveTag}
+                disabled={!current}
+                className="rounded-[var(--radius)] bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg disabled:opacity-50"
+              >
+                Save tag
+              </button>
+              <button
+                type="button"
+                onClick={saveProximityAssociation}
+                disabled={!current}
+                className="rounded-[var(--radius)] border border-teal px-3 py-2.5 text-sm text-teal disabled:opacity-50"
+              >
+                Save proximity association
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={saveTag}
-              disabled={!current}
-              className="rounded-[var(--radius)] bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg disabled:opacity-50"
-            >
-              Save tag
-            </button>
-            {catalogHit && (
-              <Link
-                to="/verses/$verseId"
-                params={{ verseId: catalogHit.id }}
-                className="block text-sm text-accent hover:underline"
-              >
-                Open comparative catalog ({catalogHit.modelClaims.length} model claims) →
-              </Link>
+            <p className="text-[11px] text-muted">
+              Example: select “wilderness” in Omni 1:13, associate features{" "}
+              <strong>Wilderness</strong> + <strong>Land/City of Nephi</strong>, save proximity.
+            </p>
+          </Card>
+
+          {/* Lexicon 1820s + KJV */}
+          <Card className="p-5 space-y-3">
+            <h2 className="font-semibold text-sm">1820s dictionary · KJV sense</h2>
+            {lexiconForSelection ? (
+              <div className="space-y-2 text-sm">
+                <div className="font-serif text-lg font-semibold">{lexiconForSelection.term}</div>
+                <div>
+                  <div className="text-xs font-semibold text-muted uppercase">Webster 1828</div>
+                  <p className="text-ink-soft leading-relaxed">{lexiconForSelection.webster1828}</p>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-muted uppercase">KJV / biblical usage</div>
+                  <p className="text-ink-soft leading-relaxed">{lexiconForSelection.kjvNotes}</p>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-muted uppercase">Ambiguity for maps</div>
+                  <p className="text-ink-soft leading-relaxed">{lexiconForSelection.ambiguity}</p>
+                </div>
+                {lexiconForSelection.relatedTerms && (
+                  <div className="flex flex-wrap gap-1">
+                    {lexiconForSelection.relatedTerms.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => {
+                          setWordPhrase(r);
+                          runWordSearch(r);
+                        }}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {lexiconForSelection.sources.map((s) =>
+                  s.url ? (
+                    <a
+                      key={s.label}
+                      href={s.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-xs text-accent hover:underline"
+                    >
+                      {s.label} ↗
+                    </a>
+                  ) : (
+                    <span key={s.label} className="block text-xs text-muted">
+                      {s.label}
+                    </span>
+                  ),
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">
+                Select a known term (wilderness, narrow pass, sea east…) to load lexicon notes.
+              </p>
             )}
-            {current && (
-              <a
-                href={current.studyUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
-              >
-                Official full text for this verse <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+            {lexiconInChapter.length > 0 && (
+              <div className="border-t border-border pt-2">
+                <div className="text-xs text-muted mb-1">Terms in this chapter</div>
+                <div className="flex flex-wrap gap-1">
+                  {lexiconInChapter.map((e) =>
+                    e ? (
+                      <button
+                        key={e.term}
+                        type="button"
+                        onClick={() => setWordPhrase(e.term)}
+                        className="rounded-full border border-border px-2 py-0.5 text-xs hover:border-accent"
+                      >
+                        {e.term}
+                      </button>
+                    ) : null,
+                  )}
+                </div>
+              </div>
             )}
           </Card>
 
           <Card className="p-5 space-y-2">
-            <h2 className="font-semibold text-sm">Your tags (this browser)</h2>
+            <h2 className="font-semibold text-sm">Your tags</h2>
             {tags.length === 0 && <p className="text-sm text-muted">None yet.</p>}
-            <ul className="space-y-2 max-h-56 overflow-auto">
+            <ul className="space-y-2 max-h-48 overflow-auto">
               {tags.map((t) => (
                 <li key={t.id} className="text-sm border-b border-border/50 pb-2">
                   <button
                     type="button"
                     className="font-medium text-accent hover:underline"
-                    onClick={() =>
-                      goToVerse({
-                        id: "",
-                        book: t.book,
-                        chapter: t.chapter,
-                        verse: t.verse,
-                        text: "",
-                        studyUrl: "",
-                      })
-                    }
+                    onClick={() => {
+                      setBook(t.book);
+                      setChapter(t.chapter);
+                      setSelectedVerse(t.verse);
+                    }}
                   >
                     {t.book} {t.chapter}:{t.verse}
                   </button>
@@ -574,21 +730,13 @@ function ReaderPage() {
                       </Badge>
                     ))}
                   </div>
-                  {t.note && <p className="text-muted mt-1 text-xs">{t.note}</p>}
+                  {t.note && <p className="text-xs text-muted mt-1">{t.note}</p>}
                 </li>
               ))}
             </ul>
           </Card>
         </div>
       </div>
-
-      <Card className="p-4 text-xs text-muted space-y-1">
-        <p>
-          Working corpus: {corpus.length} verses (excerpts for research). Full chapters via official
-          links. Add verses to <code className="bg-surface-2 px-1 rounded">src/data/scripture-corpus.ts</code>{" "}
-          as you index models — the word index grows automatically.
-        </p>
-      </Card>
     </div>
   );
 }

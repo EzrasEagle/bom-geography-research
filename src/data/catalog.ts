@@ -485,6 +485,7 @@ export const places: PlaceNode[] = [
   { id: "climate-storms", name: "Storms / great storm", kind: "other" },
   { id: "climate-seasons", name: "Seasons / seasonal timing", kind: "other" },
   { id: "climate-agriculture", name: "Agriculture / grain / famine", kind: "other" },
+  { id: "wilderness", name: "Wilderness (soft region / corridor)", kind: "wilderness" },
 ];
 
 /** Seed constraints (internal). Conflicts intentionally possible when day-scale changes. */

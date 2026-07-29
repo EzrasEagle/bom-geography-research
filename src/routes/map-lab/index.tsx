@@ -20,6 +20,7 @@ import {
   layerOf,
   type ObjectLayer,
 } from "@/data/object-taxonomy";
+import { lookupLexicon } from "@/data/lexicon";
 import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
@@ -457,6 +458,28 @@ function MapLabPage() {
             {objectBundle.summary && (
               <p className="text-sm text-ink-soft leading-relaxed">{objectBundle.summary}</p>
             )}
+            {lookupLexicon(objectBundle.name) || lookupLexicon(objectBundle.id.replace(/-/g, " ")) ? (
+              <div className="rounded-[var(--radius)] bg-surface-2/90 border border-border p-3 text-xs space-y-1">
+                <div className="font-semibold text-muted uppercase tracking-wide">1820s · KJV lexicon</div>
+                {(() => {
+                  const lex =
+                    lookupLexicon(objectBundle.name) ||
+                    lookupLexicon(objectBundle.id.replace(/-/g, " ")) ||
+                    lookupLexicon(
+                      objectBundle.name.split("(")[0].trim(),
+                    );
+                  if (!lex) return null;
+                  return (
+                    <>
+                      <div className="font-medium text-ink">{lex.term}</div>
+                      <p className="text-ink-soft">{lex.webster1828}</p>
+                      <p className="text-muted"><span className="font-medium">KJV:</span> {lex.kjvNotes}</p>
+                      <p className="text-muted"><span className="font-medium">Map:</span> {lex.ambiguity}</p>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : null}
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-[var(--radius)] bg-surface-2/80 p-3 space-y-2">

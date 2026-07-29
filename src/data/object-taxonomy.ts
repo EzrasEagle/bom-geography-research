@@ -103,6 +103,7 @@ export const placeTaxonomy: Record<
   "climate-storms": { layer: "climate", role: "hazard" },
   "climate-seasons": { layer: "season", role: "seasonal" },
   "climate-agriculture": { layer: "season", role: "agriculture" },
+  wilderness: { layer: "region", role: "wilderness", elevationBand: "unknown" },
 };
 
 export function taxonomyFor(id: string) {

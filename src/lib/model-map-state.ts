@@ -63,6 +63,7 @@ export const LAYOUT_INTERNAL: Record<string, Point> = {
   "climate-storms": { x: 440, y: 250 },
   "climate-seasons": { x: 400, y: 300 },
   "climate-agriculture": { x: 380, y: 270 },
+  wilderness: { x: 220, y: 220 },
 };
 
 /** Model-specific default layouts (schematic — not GPS). */
@@ -86,6 +87,7 @@ export const MODEL_DEFAULT_LAYOUTS: Record<string, Record<string, Point>> = {
     "climate-storms": { x: 440, y: 250 },
     "climate-seasons": { x: 400, y: 300 },
     "climate-agriculture": { x: 380, y: 270 },
+    wilderness: { x: 220, y: 220 },
   },
   "meso-highland": {
     "sea-west": { x: 50, y: 210 },
@@ -104,6 +106,7 @@ export const MODEL_DEFAULT_LAYOUTS: Record<string, Record<string, Point>> = {
     "climate-storms": { x: 440, y: 250 },
     "climate-seasons": { x: 400, y: 300 },
     "climate-agriculture": { x: 380, y: 270 },
+    wilderness: { x: 220, y: 220 },
   },
   // North American long stage: Cumorah far NE, Sidon as N–S spine
   heartland: {
@@ -155,7 +158,11 @@ export function cloneLayout(src: Record<string, Point>): Record<string, Point> {
 
 export function defaultLayoutForModel(modelId: string): Record<string, Point> {
   const base = MODEL_DEFAULT_LAYOUTS[modelId] ?? LAYOUT_INTERNAL;
-  return cloneLayout(base);
+  const out = cloneLayout(base);
+  for (const [k, v] of Object.entries(LAYOUT_INTERNAL)) {
+    if (!out[k]) out[k] = { ...v };
+  }
+  return out;
 }
 
 export function emptyPack(modelId: string): ModelMapPackage {

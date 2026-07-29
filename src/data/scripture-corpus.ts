@@ -16,6 +16,8 @@ export type CorpusVerse = {
   studyUrl: string;
 };
 
+import { OMNI_1 } from "./chapters/omni-1";
+
 function url(bookPath: string, chapter: number, verse?: number) {
   const anchor = verse ? `&id=p${verse}#p${verse}` : "";
   return `https://www.churchofjesuschrist.org/study/scriptures/bofm/${bookPath}/${chapter}?lang=eng${anchor}`;
@@ -23,6 +25,7 @@ function url(bookPath: string, chapter: number, verse?: number) {
 
 /** Seed corpus — expand continuously while indexing models */
 export const corpus: CorpusVerse[] = [
+  ...OMNI_1,
   // Landing / climate
   {
     id: "1ne-18-23",
@@ -65,26 +68,8 @@ export const corpus: CorpusVerse[] = [
     studyUrl: url("1-ne", 17, 5),
   },
   // Zarahemla / Nephi
-  {
-    id: "omni-1-12",
-    book: "Omni",
-    chapter: 1,
-    verse: 12,
-    text: "Behold, I am Amaleki, the son of Abinadom. Behold, I will speak unto you somewhat concerning Mosiah, who was made king over the land of Zarahemla…",
-    featureIds: ["zarahemla"],
-    domains: ["textual_geography"],
-    studyUrl: url("omni", 1, 12),
-  },
-  {
-    id: "omni-1-13",
-    book: "Omni",
-    chapter: 1,
-    verse: 13,
-    text: "…he being warned of the Lord that he should flee out of the land of Nephi, and as many as would hearken unto the voice of the Lord should also depart out of the land with him, into the wilderness…",
-    featureIds: ["nephi", "zarahemla"],
-    domains: ["textual_geography"],
-    studyUrl: url("omni", 1, 13),
-  },
+  
+  
   {
     id: "mosiah-7-1",
     book: "Mosiah",

@@ -30,6 +30,35 @@ export type PlaceRelation = {
  * For rivers: cities → along → sidon; for hazards: cities → affected_by → whirlwind.
  */
 export const placeRelations: PlaceRelation[] = [
+  // Wilderness soft corridors (many instances; soft boundaries)
+  {
+    id: "r-nephi-wild",
+    from: "nephi",
+    to: "wilderness",
+    kind: "near",
+    sourceVerse: "Omni 1:12–13",
+    note: "Flee land of Nephi into the wilderness — proximity / departure corridor",
+    strength: "hard",
+  },
+  {
+    id: "r-wild-zara",
+    from: "wilderness",
+    to: "zarahemla",
+    kind: "near",
+    sourceVerse: "Omni 1:13",
+    note: "Led through the wilderness until they came down into Zarahemla",
+    strength: "hard",
+  },
+  {
+    id: "r-wild-down-zara",
+    from: "wilderness",
+    to: "zarahemla",
+    kind: "down_to",
+    sourceVerse: "Omni 1:13",
+    note: "came down into the land of Zarahemla",
+    strength: "soft",
+  },
+
   // River Sidon path candidates (cities/lands that mention Sidon)
   {
     id: "r-zara-sidon",
