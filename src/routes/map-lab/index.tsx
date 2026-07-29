@@ -104,26 +104,6 @@ function MapLabPage() {
     setLoaded(true);
   }, []);
 
-  useEffect(() => {
-    const all = loadAssociations();
-    setAssocCount(all.length);
-  }, [objectId, loaded]);
-
-  useEffect(() => {
-    if (!objectId) return;
-    const all = loadAssociations();
-    const hit = all.filter((a) =>
-      a.legs.some((l) => l.fromFeatureId === objectId || l.toFeatureId === objectId),
-    );
-    setAssocForObject(
-      hit.map((a) => ({
-        title: a.title,
-        dist: spanLabel(a.pathDistance),
-        time: spanLabel(a.pathTime),
-      })),
-    );
-  }, [objectId, loaded, assocCount]);
-
   function switchModel(id: string) {
     const user = userModels.find((u) => u.id === id);
     const base = user?.forkedFrom ?? id;
@@ -265,6 +245,30 @@ function MapLabPage() {
     () => (objectBundle ? assumptionsForIds(objectBundle.assumptionIds) : []),
     [objectBundle],
   );
+
+  useEffect(() => {
+    const all = loadAssociations();
+    setAssocCount(all.length);
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!objectId) {
+      setAssocForObject([]);
+      return;
+    }
+    const all = loadAssociations();
+    const hit = all.filter((a) =>
+      a.legs.some((l) => l.fromFeatureId === objectId || l.toFeatureId === objectId),
+    );
+    setAssocForObject(
+      hit.map((a) => ({
+        title: a.title,
+        dist: spanLabel(a.pathDistance),
+        time: spanLabel(a.pathTime),
+      })),
+    );
+    setAssocCount(all.length);
+  }, [objectId, loaded]);
   const placeDossier = focusPlaceId ? getPlaceDossier(focusPlaceId) : undefined;
   const edgeDossier = useMemo(() => {
     const e = edges.find((x) => x.id === (hoverEdge || selectedEdge));
