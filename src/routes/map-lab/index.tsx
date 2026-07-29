@@ -22,6 +22,8 @@ import {
 } from "@/data/object-taxonomy";
 import { lookupLexicon } from "@/data/lexicon";
 import { loadAssociations, spanLabel } from "@/lib/user-associations";
+import { allTravelPaths, pathsForFeature, type TravelPath } from "@/data/travel-paths";
+import { pathToSvgD, resolveWaypoints } from "@/lib/path-geometry";
 import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
@@ -70,6 +72,9 @@ function MapLabPage() {
   const [visibleLayers, setVisibleLayers] = useState<ObjectLayer[]>([...DEFAULT_VISIBLE_LAYERS]);
   const [showClimateLayer, setShowClimateLayer] = useState(false);
   const [assocCount, setAssocCount] = useState(0);
+  const [showPaths, setShowPaths] = useState(true);
+  const [selectedPathId, setSelectedPathId] = useState<string | null>("path-limhi-lost-to-desolation");
+  const [pathFilter, setPathFilter] = useState<"all" | "feature">("all");
   const [assocForObject, setAssocForObject] = useState<{ title: string; dist: string; time: string }[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(true);
@@ -270,6 +275,36 @@ function MapLabPage() {
     setAssocCount(all.length);
   }, [objectId, loaded]);
   const placeDossier = focusPlaceId ? getPlaceDossier(focusPlaceId) : undefined;
+
+  const activePaths = useMemo(() => {
+    let list = allTravelPaths();
+    if (pathFilter === "feature" && objectId) {
+      list = pathsForFeature(objectId);
+    }
+    return list;
+  }, [pathFilter, objectId]);
+
+  const pathDraw = useMemo(() => {
+    return activePaths.map((path) => {
+      // resolve in model space then transform each point for display
+      const modelPts = resolveWaypoints(path, layout);
+      const displayPts = modelPts.map((pt) => {
+        const transformed = applyMacroTransform(
+          { _: { x: pt.x, y: pt.y } },
+          macro.directionRotation,
+          macro.globalScale,
+        )._;
+        return { ...pt, x: transformed.x, y: transformed.y };
+      });
+      return {
+        path,
+        displayPts,
+        dMain: pathToSvgD(displayPts, "main"),
+        dGhost: pathToSvgD(displayPts, "intended_ghost"),
+      };
+    });
+  }, [activePaths, layout, macro.directionRotation, macro.globalScale]);
+
   const edgeDossier = useMemo(() => {
     const e = edges.find((x) => x.id === (hoverEdge || selectedEdge));
     if (!e) return null;
@@ -366,6 +401,10 @@ function MapLabPage() {
           <label className="inline-flex items-center gap-2 text-sm px-2">
             <input type="checkbox" checked={editMode} onChange={(e) => setEditMode(e.target.checked)} />
             Drag places
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm px-2">
+            <input type="checkbox" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
+            Multi-paths
           </label>
           <button
             type="button"
@@ -748,6 +787,107 @@ function MapLabPage() {
         )}
       </Card>
 
+      {/* Multi-path route panel */}
+      {showPaths && (
+        <Card className="p-4 md:p-5 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="font-semibold text-base">Travel paths (multi-route)</h2>
+              <p className="text-xs text-muted mt-0.5 max-w-2xl">
+                Separate historical marches — not one static edge for all refs. Shared wilderness
+                trunks can branch (intended destination ≠ actual). Curves are abstract now; later
+                waypoints snap to real contours.
+              </p>
+            </div>
+            <label className="text-xs space-y-1">
+              <span className="text-muted">Filter</span>
+              <select
+                value={pathFilter}
+                onChange={(e) => setPathFilter(e.target.value as "all" | "feature")}
+                className="block rounded border border-border bg-surface px-2 py-1.5"
+              >
+                <option value="all">All paths</option>
+                <option value="feature">Paths touching selected object</option>
+              </select>
+            </label>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {activePaths.map((path) => {
+              const sel = selectedPathId === path.id;
+              return (
+                <button
+                  key={path.id}
+                  type="button"
+                  onClick={() => setSelectedPathId(path.id)}
+                  className={`text-left rounded-[var(--radius)] border p-3 space-y-1 ${
+                    sel ? "border-accent bg-orange-50/50" : "border-border bg-surface-2/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block h-2.5 w-6 rounded-full"
+                      style={{
+                        background: path.color,
+                        opacity: path.style === "dotted" ? 0.7 : 1,
+                      }}
+                    />
+                    <span className="font-medium text-sm">{path.name}</span>
+                  </div>
+                  <p className="text-[11px] text-ink-soft leading-relaxed">{path.summary}</p>
+                  <div className="flex flex-wrap gap-1 text-[10px]">
+                    {path.intendedDestinationId && (
+                      <Badge>intended: {path.intendedDestinationId}</Badge>
+                    )}
+                    {path.actualDestinationId && (
+                      <Badge tone="teal">actual: {path.actualDestinationId}</Badge>
+                    )}
+                    <Badge tone="claim">dist {path.distance.quality}</Badge>
+                    <Badge tone="claim">time {path.time.quality}</Badge>
+                  </div>
+                  <div className="text-[10px] text-muted">{path.sourceRefs.join(" · ")}</div>
+                </button>
+              );
+            })}
+          </div>
+          {selectedPathId && (
+            <div className="rounded-[var(--radius)] border border-border p-3 text-xs space-y-1">
+              <div className="font-semibold text-muted uppercase tracking-wide">Selected path detail</div>
+              {(() => {
+                const path = activePaths.find((x) => x.id === selectedPathId);
+                if (!path) return null;
+                return (
+                  <>
+                    <p className="text-ink-soft">{path.summary}</p>
+                    <ol className="list-decimal pl-4 space-y-0.5">
+                      {path.waypoints.map((w, i) => (
+                        <li key={i}>
+                          {w.role && <span className="text-muted">[{w.role}] </span>}
+                          {w.label ?? w.featureId}
+                          {w.featureId && (
+                            <button
+                              type="button"
+                              className="text-accent hover:underline ml-1"
+                              onClick={() => w.featureId && setSelectedPlace(w.featureId)}
+                            >
+                              focus
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                    {path.sharesTrunkWith && path.sharesTrunkWith.length > 0 && (
+                      <p className="text-muted">
+                        Shares corridor family with: {path.sharesTrunkWith.join(", ")}
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </Card>
+      )}
+
 
       <div className="grid gap-4 xl:grid-cols-[1fr_18rem_18rem]">
         <Card className="p-3 md:p-4 overflow-x-auto">
@@ -796,6 +936,58 @@ function MapLabPage() {
                 </line>
               );
             })}
+
+            {/* Multi-path routes (curves; intended vs actual) */}
+            {showPaths &&
+              pathDraw.map(({ path, dMain, dGhost, displayPts }) => {
+                const sel = selectedPathId === path.id;
+                const dash =
+                  path.style === "dashed" ? "8 5" : path.style === "dotted" ? "2 5" : undefined;
+                return (
+                  <g key={path.id} className="cursor-pointer" onClick={() => setSelectedPathId(path.id)}>
+                    {dMain && (
+                      <path
+                        d={dMain}
+                        fill="none"
+                        stroke={path.color}
+                        strokeWidth={sel ? 4 : 2.5}
+                        strokeDasharray={dash}
+                        opacity={sel ? 1 : 0.75}
+                      />
+                    )}
+                    {dGhost && (
+                      <path
+                        d={dGhost}
+                        fill="none"
+                        stroke={path.color}
+                        strokeWidth={1.5}
+                        strokeDasharray="4 4"
+                        opacity={0.45}
+                      />
+                    )}
+                    <title>
+                      {path.name}
+                      {path.intendedDestinationId
+                        ? ` · intended ${path.intendedDestinationId}`
+                        : ""}
+                      {path.actualDestinationId ? ` · actual ${path.actualDestinationId}` : ""}
+                    </title>
+                    {displayPts
+                      .filter((pt) => pt.role === "branch")
+                      .map((pt, i) => (
+                        <circle
+                          key={i}
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={5}
+                          fill="#fffdf8"
+                          stroke={path.color}
+                          strokeWidth={2}
+                        />
+                      ))}
+                  </g>
+                );
+              })}
 
             {places.filter((p) => effectiveLayers.has(layerOf(p.id)) || objectId === p.id).map((p) => {
               const pos = displayLayout[p.id] ?? { x: 260, y: 180 };

@@ -40,6 +40,43 @@ export type AssociationSuggestion = {
 /** Seed suggestions — expand while indexing */
 export const associationSuggestions: AssociationSuggestion[] = [
   {
+    id: "sug-limhi-lost",
+    book: "Mosiah",
+    chapter: 8,
+    verse: 8,
+    title: "Limhi party: intended Zarahemla → lost → Desolation (branch path)",
+    summary:
+      "Search for Zarahemla; lost in wilderness; find dry bones / records in land associated with Desolation. Model as multi-path: shares Nephi–Zarahemla wilderness trunk then diverges. Distance/time unknown. See Map Lab travel path path-limhi-lost-to-desolation.",
+    tags: ["lost_party", "wilderness", "land of Desolation", "intended_vs_actual"],
+    legs: [
+      {
+        fromFeatureId: "nephi",
+        toFeatureId: "wilderness",
+        viaPhrase: "lost in the wilderness",
+        kind: "path",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+        elevation: "unknown",
+      },
+      {
+        fromFeatureId: "wilderness",
+        toFeatureId: "desolation",
+        viaPhrase: "discovered a land of many waters / bones (Desolation association)",
+        kind: "lost_party",
+        distance: { quality: "unknown", note: "Branch away from Zarahemla-bound trunk" },
+        time: { quality: "unknown" },
+        elevation: "unknown",
+      },
+    ],
+    relatedRefs: [
+      { ref: "Mosiah 8:7–11", note: "Full lost expedition report" },
+      { ref: "Mosiah 21:25–27", note: "Parallel account" },
+      { ref: "Omni 1:12–13", note: "Main Nephi–Zarahemla wilderness trunk (shared corridor family)" },
+      { ref: "Alma 22:30–31", note: "Desolation / bones of people who had been destroyed" },
+    ],
+  },
+
+  {
     id: "sug-omni-1-13-path",
     book: "Omni",
     chapter: 1,
