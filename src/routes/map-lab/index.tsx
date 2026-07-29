@@ -2,7 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { ExternalLink } from "lucide-react";
 import { assumptions, constraints as seedConstraints, models, places } from "@/data/catalog";
+import {
+  buildEdgeDossier,
+  getPlaceDossier,
+} from "@/data/place-scripture";
 import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
@@ -10,7 +15,6 @@ import {
   type ModelMapPackage,
   type Point,
   applyMacroTransform,
-  cloneLayout,
   defaultLayoutForModel,
   defaultMacro,
   loadPack,
@@ -46,6 +50,9 @@ function MapLabPage() {
   const [pack, setPack] = useState<ModelMapPackage>(() => loadPack("internal"));
   const [selectedEdge, setSelectedEdge] = useState(seedConstraints[0]?.id ?? "");
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
+  const [hoverPlace, setHoverPlace] = useState<string | null>(null);
+  const [hoverEdge, setHoverEdge] = useState<string | null>(null);
+  const [dossierOpen, setDossierOpen] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(true);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -192,6 +199,15 @@ function MapLabPage() {
 
   const selected = edges.find((e) => e.id === selectedEdge) ?? edges[0];
   const redCount = edges.filter((e) => e.conflict && e.enabled).length;
+
+  const focusPlaceId = selectedPlace ?? hoverPlace;
+  const placeDossier = focusPlaceId ? getPlaceDossier(focusPlaceId) : undefined;
+  const edgeDossier = useMemo(() => {
+    const e = edges.find((x) => x.id === (hoverEdge || selectedEdge));
+    if (!e) return null;
+    return buildEdgeDossier(e.id, e.from, e.to, e.value, e.sourceVerse);
+  }, [edges, hoverEdge, selectedEdge]);
+
 
   const onPointerDownPlace = useCallback(
     (id: string, e: React.PointerEvent) => {
@@ -350,11 +366,21 @@ function MapLabPage() {
                   x2={b.x}
                   y2={b.y}
                   stroke={e.color}
-                  strokeWidth={active ? 4 : e.strength === "hard" ? 2.5 : 1.5}
+                  strokeWidth={active || hoverEdge === e.id ? 4 : e.strength === "hard" ? 2.5 : 1.5}
                   strokeDasharray={e.strength === "soft" ? "4 3" : undefined}
                   className="cursor-pointer"
-                  onClick={() => setSelectedEdge(e.id)}
-                />
+                  onClick={() => {
+                    setSelectedEdge(e.id);
+                    setSelectedPlace(null);
+                  }}
+                  onPointerEnter={() => setHoverEdge(e.id)}
+                  onPointerLeave={() => setHoverEdge((h) => (h === e.id ? null : h))}
+                >
+                  <title>
+                    {e.from} → {e.to}: {String(e.value)}
+                    {e.sourceVerse ? ` · ${e.sourceVerse}` : ""}
+                  </title>
+                </line>
               );
             })}
 
@@ -362,13 +388,25 @@ function MapLabPage() {
               const pos = displayLayout[p.id] ?? { x: 260, y: 180 };
               const isSea = p.kind === "sea";
               const selected = selectedPlace === p.id;
+              const hovered = hoverPlace === p.id;
+              const dossier = getPlaceDossier(p.id);
+              const nRefs = dossier?.scriptures.length ?? 0;
               return (
                 <g
                   key={p.id}
                   className={editMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
                   onPointerDown={(e) => onPointerDownPlace(p.id, e)}
-                  onClick={() => setSelectedPlace(p.id)}
+                  onClick={() => {
+                    setSelectedPlace(p.id);
+                    setDossierOpen(true);
+                  }}
+                  onPointerEnter={() => setHoverPlace(p.id)}
+                  onPointerLeave={() => setHoverPlace((h) => (h === p.id ? null : h))}
                 >
+                  <title>
+                    {p.name}
+                    {nRefs ? ` · ${nRefs} scripture refs — click for dossier` : " · click for details"}
+                  </title>
                   {isSea ? (
                     <rect
                       x={pos.x - 14}
@@ -378,8 +416,8 @@ function MapLabPage() {
                       rx={4}
                       fill="#0f766e"
                       opacity={0.85}
-                      stroke={selected ? "#9a3412" : "transparent"}
-                      strokeWidth={2}
+                      stroke={selected || hovered ? "#9a3412" : "transparent"}
+                      strokeWidth={selected || hovered ? 2.5 : 2}
                     />
                   ) : (
                     <circle
@@ -387,9 +425,31 @@ function MapLabPage() {
                       cy={pos.y}
                       r={p.kind === "river" ? 8 : 10}
                       fill={p.kind === "river" ? "#1e3a5f" : "#9a3412"}
-                      stroke={selected ? "#f59e0b" : "white"}
-                      strokeWidth={selected ? 3 : 1}
+                      stroke={selected || hovered ? "#f59e0b" : "white"}
+                      strokeWidth={selected || hovered ? 3 : 1}
                     />
+                  )}
+                  {nRefs > 0 && (
+                    <circle
+                      cx={pos.x + (isSea ? 12 : 8)}
+                      cy={pos.y - (isSea ? 8 : 8)}
+                      r={7}
+                      fill="#fffdf8"
+                      stroke="#9a3412"
+                      strokeWidth={1}
+                    />
+                  )}
+                  {nRefs > 0 && (
+                    <text
+                      x={pos.x + (isSea ? 12 : 8)}
+                      y={pos.y - (isSea ? 8 : 8) + 3}
+                      textAnchor="middle"
+                      fontSize="8"
+                      fill="#9a3412"
+                      className="select-none pointer-events-none font-semibold"
+                    >
+                      {nRefs}
+                    </text>
                   )}
                   <text
                     x={pos.x + 12}
@@ -406,9 +466,41 @@ function MapLabPage() {
           </svg>
           <p className="text-xs text-muted mt-2">
             {editMode
-              ? "Drag any city, river, hill, or sea. Positions save into the active model package."
-              : "Drag disabled — enable “Drag places” to move features."}
+              ? "Drag places to move them. Hover for scripture counts; click a place or edge for the dossier panel."
+              : "Drag disabled — enable “Drag places” to move features. Hover/click still opens scripture dossiers."}
           </p>
+          {(hoverPlace || hoverEdge) && (
+            <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface-2/90 p-3 text-xs space-y-1">
+              {hoverPlace && getPlaceDossier(hoverPlace) && (
+                <>
+                  <div className="font-semibold text-sm text-ink">{getPlaceDossier(hoverPlace)!.name}</div>
+                  <div className="text-muted line-clamp-2">{getPlaceDossier(hoverPlace)!.summary}</div>
+                  <div className="text-accent font-medium">
+                    {getPlaceDossier(hoverPlace)!.scriptures.length} scriptures · click marker for full dossier
+                  </div>
+                  <ul className="list-disc pl-4 text-ink-soft">
+                    {getPlaceDossier(hoverPlace)!.scriptures.slice(0, 3).map((s) => (
+                      <li key={s.ref}>{s.ref}</li>
+                    ))}
+                    {getPlaceDossier(hoverPlace)!.scriptures.length > 3 && (
+                      <li>+{getPlaceDossier(hoverPlace)!.scriptures.length - 3} more…</li>
+                    )}
+                  </ul>
+                </>
+              )}
+              {hoverEdge && !hoverPlace && edgeDossier && (
+                <>
+                  <div className="font-semibold text-sm text-ink">
+                    Connection: {edgeDossier.from} → {edgeDossier.to}
+                  </div>
+                  <div className="text-muted">{edgeDossier.summary}</div>
+                  <div className="text-accent font-medium">
+                    {edgeDossier.scriptures.length} related refs · click edge to pin in panel
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </Card>
 
         {/* MACRO */}
@@ -614,6 +706,149 @@ function MapLabPage() {
           )}
         </Card>
       </div>
+
+      {/* Scripture dossier for selected place or edge */}
+      <Card className="p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">
+            Scripture & sources dossier
+            {focusPlaceId && placeDossier ? ` · ${placeDossier.name}` : selected ? ` · edge ${selected.from}→${selected.to}` : ""}
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {focusPlaceId && (
+              <a
+                href={`/map-lab/feature/${focusPlaceId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
+              >
+                Open full page <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+            <button
+              type="button"
+              className="text-xs text-muted hover:text-ink"
+              onClick={() => setDossierOpen((o) => !o)}
+            >
+              {dossierOpen ? "Collapse" : "Expand"}
+            </button>
+          </div>
+        </div>
+        {dossierOpen && placeDossier && (
+          <div className="space-y-3">
+            <p className="text-sm text-ink-soft leading-relaxed">{placeDossier.summary}</p>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge tone="teal">{placeDossier.kind}</Badge>
+              <Badge tone="claim">{placeDossier.scriptures.length} verses</Badge>
+              <Badge>{placeDossier.edgeIds.length} map connections</Badge>
+            </div>
+            <ul className="space-y-2 max-h-72 overflow-auto">
+              {placeDossier.scriptures.map((s) => (
+                <li
+                  key={s.ref + s.note}
+                  className="text-sm border border-border rounded-[var(--radius-sm)] p-3 space-y-1"
+                >
+                  <div className="font-semibold">{s.ref}</div>
+                  <p className="text-ink-soft text-xs leading-relaxed">{s.note}</p>
+                  <div className="flex flex-wrap gap-3 text-xs pt-0.5">
+                    <a
+                      href={s.studyUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-accent hover:underline"
+                    >
+                      Official text <ExternalLink className="h-3 w-3" />
+                    </a>
+                    {s.catalogId && (
+                      <Link
+                        to="/verses/$verseId"
+                        params={{ verseId: s.catalogId }}
+                        className="text-accent hover:underline"
+                      >
+                        Atlas record
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {placeDossier.relatedFeatureIds.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center text-xs">
+                <span className="text-muted">Related:</span>
+                {placeDossier.relatedFeatureIds.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className="text-accent hover:underline"
+                    onClick={() => {
+                      setSelectedPlace(id);
+                      setHoverPlace(id);
+                    }}
+                  >
+                    {getPlaceDossier(id)?.name ?? id}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to="/map-lab/feature/$featureId"
+                params={{ featureId: placeDossier.id }}
+                target="_blank"
+                className="rounded-[var(--radius)] bg-accent px-3 py-2 text-sm text-accent-fg font-medium"
+              >
+                Full dossier (new context)
+              </Link>
+              <Link to="/my-models" className="rounded-[var(--radius)] border border-border px-3 py-2 text-sm">
+                Adjust assumptions
+              </Link>
+            </div>
+          </div>
+        )}
+        {dossierOpen && !placeDossier && edgeDossier && (
+          <div className="space-y-3">
+            <p className="text-sm text-ink-soft">{edgeDossier.summary}</p>
+            <ul className="space-y-2">
+              {edgeDossier.scriptures.map((s) => (
+                <li key={s.ref + s.note} className="text-sm border border-border rounded p-2">
+                  <div className="font-semibold">{s.ref}</div>
+                  <p className="text-xs text-muted">{s.note}</p>
+                  <a
+                    href={s.studyUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Official text ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2 text-sm">
+              <button
+                type="button"
+                className="text-accent hover:underline"
+                onClick={() => setSelectedPlace(edgeDossier.from)}
+              >
+                Open {edgeDossier.from}
+              </button>
+              <button
+                type="button"
+                className="text-accent hover:underline"
+                onClick={() => setSelectedPlace(edgeDossier.to)}
+              >
+                Open {edgeDossier.to}
+              </button>
+            </div>
+          </div>
+        )}
+        {dossierOpen && !placeDossier && !edgeDossier && (
+          <p className="text-sm text-muted">
+            Hover or click a place (e.g. sea east) or connection to see every scripture and source tied to
+            it.
+          </p>
+        )}
+      </Card>
 
       <Card className="p-4 text-sm text-ink-soft space-y-2">
         <h2 className="font-semibold text-ink text-sm">How integration works</h2>

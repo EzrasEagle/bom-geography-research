@@ -23,6 +23,7 @@ import { Route as MyModelsIndexRouteImport } from './routes/my-models/index'
 import { Route as ReaderIndexRouteImport } from './routes/reader/index'
 import { Route as VersesIndexRouteImport } from './routes/verses/index'
 import { Route as VersesVerseIdRouteImport } from './routes/verses/$verseId'
+import { Route as MapLabFeatureFeatureIdRouteImport } from './routes/map-lab/feature/$featureId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,6 +95,11 @@ const VersesVerseIdRoute = VersesVerseIdRouteImport.update({
   path: '/verses/$verseId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MapLabFeatureFeatureIdRoute = MapLabFeatureFeatureIdRouteImport.update({
+  id: '/map-lab/feature/$featureId',
+  path: '/map-lab/feature/$featureId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/my-models/': typeof MyModelsIndexRoute
   '/reader/': typeof ReaderIndexRoute
   '/verses/': typeof VersesIndexRoute
+  '/map-lab/feature/$featureId': typeof MapLabFeatureFeatureIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/my-models': typeof MyModelsIndexRoute
   '/reader': typeof ReaderIndexRoute
   '/verses': typeof VersesIndexRoute
+  '/map-lab/feature/$featureId': typeof MapLabFeatureFeatureIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/my-models/': typeof MyModelsIndexRoute
   '/reader/': typeof ReaderIndexRoute
   '/verses/': typeof VersesIndexRoute
+  '/map-lab/feature/$featureId': typeof MapLabFeatureFeatureIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/my-models/'
     | '/reader/'
     | '/verses/'
+    | '/map-lab/feature/$featureId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/my-models'
     | '/reader'
     | '/verses'
+    | '/map-lab/feature/$featureId'
   id:
     | '__root__'
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/my-models/'
     | '/reader/'
     | '/verses/'
+    | '/map-lab/feature/$featureId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   MyModelsIndexRoute: typeof MyModelsIndexRoute
   ReaderIndexRoute: typeof ReaderIndexRoute
   VersesIndexRoute: typeof VersesIndexRoute
+  MapLabFeatureFeatureIdRoute: typeof MapLabFeatureFeatureIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VersesVerseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/map-lab/feature/$featureId': {
+      id: '/map-lab/feature/$featureId'
+      path: '/map-lab/feature/$featureId'
+      fullPath: '/map-lab/feature/$featureId'
+      preLoaderRoute: typeof MapLabFeatureFeatureIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -330,6 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyModelsIndexRoute: MyModelsIndexRoute,
   ReaderIndexRoute: ReaderIndexRoute,
   VersesIndexRoute: VersesIndexRoute,
+  MapLabFeatureFeatureIdRoute: MapLabFeatureFeatureIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
