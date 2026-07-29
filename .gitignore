@@ -12,3 +12,6 @@ dist/
 screenshots/*.png
 .local/
 data/pg/
+
+.vercel/
+.output/
