@@ -1,35 +1,48 @@
 /**
  * Geographic objects as a graph: each place id is a node; connections are
- * edges, related features, scriptures, assumptions, corpus hits, and tags.
- *
- * Existing structures already support this view — this module only *assembles*
- * them. No schema rewrite required.
+ * edges, related features, scriptures, assumptions, corpus hits, relations,
+ * and spheres of influence.
  */
 
 import { assumptions, constraints, places, type GeoConstraint } from "@/data/catalog";
 import { getPlaceDossier } from "@/data/place-scripture";
+import { layerOf, taxonomyFor, type ObjectLayer } from "@/data/object-taxonomy";
+import {
+  elevationLinksFor,
+  pathMentionsFor,
+  sphereOf,
+  type PlaceRelation,
+} from "@/data/place-relations";
 import { versesForFeature, type CorpusVerse } from "@/data/scripture-corpus";
 
 export type PlaceConnectionBundle = {
   id: string;
   name: string;
   kind: string;
-  /** Edges where this place is from or to */
+  layer: ObjectLayer;
+  elevationBand?: string;
   edgesIn: GeoConstraint[];
   edgesOut: GeoConstraint[];
-  /** All unique neighbor place ids */
   neighborIds: string[];
   relatedFeatureIds: string[];
   assumptionIds: string[];
   scriptureCount: number;
   corpusVerses: CorpusVerse[];
   summary?: string;
+  /** Soft graph: mentions, affected_by, along, up/down */
+  relations: PlaceRelation[];
+  sphereMemberIds: string[];
+  elevationLinks: PlaceRelation[];
+  /** If this is a river, places that mention/along it */
+  pathMentions: PlaceRelation[];
 };
 
 export function getPlaceConnectionBundle(placeId: string): PlaceConnectionBundle | null {
   const place = places.find((p) => p.id === placeId);
   if (!place) return null;
   const d = getPlaceDossier(placeId);
+  const tax = taxonomyFor(placeId);
+  const { relations, memberIds } = sphereOf(placeId);
 
   const edgesOut = constraints.filter((c) => c.from === placeId);
   const edgesIn = constraints.filter((c) => c.to === placeId);
@@ -38,6 +51,7 @@ export function getPlaceConnectionBundle(placeId: string): PlaceConnectionBundle
       ...edgesOut.map((e) => e.to),
       ...edgesIn.map((e) => e.from),
       ...(d?.relatedFeatureIds ?? []),
+      ...memberIds,
     ]),
   ].filter((id) => id !== placeId);
 
@@ -45,6 +59,8 @@ export function getPlaceConnectionBundle(placeId: string): PlaceConnectionBundle
     id: placeId,
     name: place.name,
     kind: place.kind,
+    layer: tax.layer,
+    elevationBand: tax.elevationBand,
     edgesIn,
     edgesOut,
     neighborIds,
@@ -53,6 +69,10 @@ export function getPlaceConnectionBundle(placeId: string): PlaceConnectionBundle
     scriptureCount: d?.scriptures.length ?? 0,
     corpusVerses: versesForFeature(placeId),
     summary: d?.summary,
+    relations,
+    sphereMemberIds: memberIds,
+    elevationLinks: elevationLinksFor(placeId),
+    pathMentions: pathMentionsFor(placeId),
   };
 }
 
@@ -62,4 +82,9 @@ export function assumptionsForIds(ids: string[]) {
 
 export function placeLabel(id: string) {
   return places.find((p) => p.id === id)?.name ?? id;
+}
+
+export function placesInLayers(layers: ObjectLayer[]) {
+  const set = new Set(layers);
+  return places.filter((p) => set.has(layerOf(p.id)));
 }

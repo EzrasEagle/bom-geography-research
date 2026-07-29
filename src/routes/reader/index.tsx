@@ -68,6 +68,10 @@ const SUGGESTED_TAGS = [
   "narrow-neck",
   "high-signal",
   "conflict-candidate",
+  "elevation-up",
+  "elevation-down",
+  "along-river",
+  "hazard-sphere",
 ];
 
 function ReaderPage() {

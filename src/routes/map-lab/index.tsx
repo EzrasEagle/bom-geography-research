@@ -14,6 +14,13 @@ import {
   placeLabel,
 } from "@/lib/place-connections";
 import {
+  ALL_LAYERS,
+  DEFAULT_VISIBLE_LAYERS,
+  LAYER_META,
+  layerOf,
+  type ObjectLayer,
+} from "@/data/object-taxonomy";
+import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
   type Macro,
@@ -58,6 +65,8 @@ function MapLabPage() {
   const [hoverPlace, setHoverPlace] = useState<string | null>(null);
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [dossierOpen, setDossierOpen] = useState(true);
+  const [visibleLayers, setVisibleLayers] = useState<ObjectLayer[]>([...DEFAULT_VISIBLE_LAYERS]);
+  const [showClimateLayer, setShowClimateLayer] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(true);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -206,7 +215,24 @@ function MapLabPage() {
   const redCount = edges.filter((e) => e.conflict && e.enabled).length;
 
   const focusPlaceId = selectedPlace ?? hoverPlace;
-  const objectId = selectedPlace ?? places[0]?.id ?? null;
+  const effectiveLayers = useMemo(() => {
+    const s = new Set(visibleLayers);
+    if (showClimateLayer) {
+      s.add("climate");
+      s.add("season");
+    }
+    return s;
+  }, [visibleLayers, showClimateLayer]);
+
+  const pickerPlaces = useMemo(
+    () => places.filter((pl) => effectiveLayers.has(layerOf(pl.id))),
+    [effectiveLayers],
+  );
+
+  const objectId =
+    selectedPlace && effectiveLayers.has(layerOf(selectedPlace))
+      ? selectedPlace
+      : pickerPlaces[0]?.id ?? places[0]?.id ?? null;
   const objectBundle = useMemo(
     () => (objectId ? getPlaceConnectionBundle(objectId) : null),
     [objectId],
@@ -361,26 +387,68 @@ function MapLabPage() {
             </p>
           </div>
           <label className="text-xs space-y-1 min-w-[12rem]">
-            <span className="text-muted">Object</span>
+            <span className="text-muted">Object (filtered by layer)</span>
             <select
               value={objectId ?? ""}
               onChange={(e) => setSelectedPlace(e.target.value)}
               className="w-full rounded-[var(--radius)] border border-border bg-surface px-2 py-2 text-sm font-medium"
             >
-              {places.map((pl) => (
-                <option key={pl.id} value={pl.id}>
-                  {pl.name}
-                </option>
+              {ALL_LAYERS.filter((L) => effectiveLayers.has(L)).map((L) => (
+                <optgroup key={L} label={LAYER_META[L].label}>
+                  {pickerPlaces
+                    .filter((pl) => layerOf(pl.id) === L)
+                    .map((pl) => (
+                      <option key={pl.id} value={pl.id}>
+                        {pl.name}
+                      </option>
+                    ))}
+                </optgroup>
               ))}
             </select>
           </label>
         </div>
 
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-xs text-muted mr-1">Show layers:</span>
+          {ALL_LAYERS.map((L) => {
+            const on = effectiveLayers.has(L);
+            return (
+              <button
+                key={L}
+                type="button"
+                onClick={() => {
+                  if (L === "climate" || L === "season") {
+                    setShowClimateLayer(!showClimateLayer);
+                    return;
+                  }
+                  setVisibleLayers((prev) =>
+                    prev.includes(L) ? prev.filter((x) => x !== L) : [...prev, L],
+                  );
+                }}
+                className={`rounded-full px-2.5 py-1 text-[11px] border ${
+                  on ? "border-accent bg-accent/10 text-ink font-medium" : "border-border text-muted"
+                }`}
+                title={LAYER_META[L].description}
+              >
+                {LAYER_META[L].label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-muted">
+          Soft categories only — climate can still link to cities. Whirlwinds are not mixed into the
+          settlement list unless you enable the Climate layer.
+        </p>
+
         {objectBundle && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-serif text-xl font-semibold text-ink">{objectBundle.name}</span>
-              <Badge tone="teal">{objectBundle.kind}</Badge>
+              <Badge tone="teal">{objectBundle.layer}</Badge>
+              <Badge>{objectBundle.kind}</Badge>
+              {objectBundle.elevationBand && objectBundle.elevationBand !== "unknown" && (
+                <Badge tone="claim">elev: {objectBundle.elevationBand}</Badge>
+              )}
               <Badge tone="claim">{objectBundle.edgesIn.length + objectBundle.edgesOut.length} edges</Badge>
               <Badge>{objectBundle.neighborIds.length} neighbors</Badge>
               <Badge>{objectBundle.scriptureCount} dossier refs</Badge>
@@ -471,6 +539,101 @@ function MapLabPage() {
                 )}
               </div>
             </div>
+
+            {/* Sphere of influence + river path + elevation */}
+            {objectBundle.sphereMemberIds.length > 0 && (
+              <div className="rounded-[var(--radius)] border border-teal/30 bg-teal-soft/20 p-3 space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-teal">
+                  Sphere of influence / mentions
+                </h3>
+                <p className="text-[11px] text-muted">
+                  Every other object textually or relationally tied to this one (e.g. cities in a
+                  whirlwind narrative; places that mention Sidon).
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {objectBundle.sphereMemberIds.map((nid) => (
+                    <button
+                      key={nid}
+                      type="button"
+                      onClick={() => setSelectedPlace(nid)}
+                      className="rounded-full border border-teal/40 bg-surface px-2.5 py-1 text-xs hover:bg-teal-soft"
+                    >
+                      {placeLabel(nid)}
+                      <span className="text-muted ml-1">({layerOf(nid)})</span>
+                    </button>
+                  ))}
+                </div>
+                <ul className="space-y-1 max-h-28 overflow-auto">
+                  {objectBundle.relations.map((r) => (
+                    <li key={r.id} className="text-xs text-ink-soft">
+                      <span className="font-medium text-ink">
+                        {placeLabel(r.from)} —{r.kind}→ {placeLabel(r.to)}
+                      </span>
+                      {r.sourceVerse && <span className="text-muted"> · {r.sourceVerse}</span>}
+                      {r.note && <div className="text-muted pl-2">{r.note}</div>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {objectBundle.pathMentions.length > 0 && (
+              <div className="rounded-[var(--radius)] border border-border p-3 space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Path candidates (along / mentions → this)
+                </h3>
+                <p className="text-[11px] text-muted">
+                  For rivers: every city/land that should sit on a possible course. Use elevation
+                  drop between them as a future hard constraint.
+                </p>
+                <ol className="list-decimal pl-4 space-y-1">
+                  {objectBundle.pathMentions.map((r) => (
+                    <li key={r.id} className="text-xs">
+                      <button
+                        type="button"
+                        className="text-accent hover:underline font-medium"
+                        onClick={() => setSelectedPlace(r.from)}
+                      >
+                        {placeLabel(r.from)}
+                      </button>
+                      <span className="text-muted"> · {r.sourceVerse}</span>
+                      {r.note && <span className="text-ink-soft"> — {r.note}</span>}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {(objectBundle.elevationLinks.length > 0 || objectBundle.elevationBand) && (
+              <div className="rounded-[var(--radius)] border border-border p-3 space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Elevation
+                </h3>
+                {objectBundle.elevationBand && (
+                  <p className="text-xs">
+                    Working band:{" "}
+                    <Badge tone="claim">{objectBundle.elevationBand}</Badge>
+                    <span className="text-muted"> (model-adjustable)</span>
+                  </p>
+                )}
+                <ul className="space-y-1">
+                  {objectBundle.elevationLinks.map((r) => (
+                    <li key={r.id} className="text-xs">
+                      <span className="font-medium">
+                        {placeLabel(r.from)} {r.kind === "up_to" ? "↑ up to" : "↓ down to"}{" "}
+                        {placeLabel(r.to)}
+                      </span>
+                      {r.sourceVerse && <span className="text-muted"> · {r.sourceVerse}</span>}
+                      {r.note && <div className="text-muted">{r.note}</div>}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-muted">
+                  Tag more up/down verses in the Reader with the elevation domain; they feed this
+                  list as relations grow.
+                </p>
+              </div>
+            )}
 
             {objectAssumptions.length > 0 && (
               <div className="rounded-[var(--radius)] border border-border p-3 space-y-1.5">
@@ -584,12 +747,13 @@ function MapLabPage() {
               );
             })}
 
-            {places.map((p) => {
+            {places.filter((p) => effectiveLayers.has(layerOf(p.id)) || objectId === p.id).map((p) => {
               const pos = displayLayout[p.id] ?? { x: 260, y: 180 };
               const isSea = p.kind === "sea";
               const selected = selectedPlace === p.id || objectId === p.id;
               const hovered = hoverPlace === p.id;
               const isNeighbor = objectBundle?.neighborIds.includes(p.id) ?? false;
+              const inSphere = objectBundle?.sphereMemberIds.includes(p.id) ?? false;
               const dossier = getPlaceDossier(p.id);
               const nRefs = dossier?.scriptures.length ?? 0;
               return (
@@ -626,8 +790,8 @@ function MapLabPage() {
                       cy={pos.y}
                       r={p.kind === "river" ? 8 : 10}
                       fill={p.kind === "river" ? "#1e3a5f" : "#9a3412"}
-                      stroke={selected || hovered ? "#f59e0b" : isNeighbor ? "#0f766e" : "white"}
-                      strokeWidth={selected || hovered ? 3 : isNeighbor ? 2.5 : 1}
+                      stroke={selected || hovered ? "#f59e0b" : inSphere ? "#0369a1" : isNeighbor ? "#0f766e" : "white"}
+                      strokeWidth={selected || hovered ? 3 : inSphere ? 2.5 : isNeighbor ? 2 : 1}
                     />
                   )}
                   {nRefs > 0 && (
