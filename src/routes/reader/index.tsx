@@ -5,7 +5,12 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { evidenceDomains, places, verses } from "@/data/catalog";
 import { getPlaceDossier } from "@/data/place-scripture";
-import { lexiconHitsInText, lookupLexicon } from "@/data/lexicon";
+import {
+  dynamicLexiconLookup,
+  lexiconHitsInText,
+  lookupLexicon,
+  priorityEntries,
+} from "@/data/lexicon";
 import {
   booksInCorpus,
   chaptersForBook,
@@ -149,9 +154,16 @@ function ReaderPage() {
     return map;
   }, [tags, book, chapter]);
 
-  const lexiconForSelection = useMemo(
-    () => lookupLexicon(wordPhrase) ?? (current ? lexiconHitsInText(current.text)[0] : undefined),
-    [wordPhrase, current],
+  const dynamicLex = useMemo(() => dynamicLexiconLookup(wordPhrase), [wordPhrase]);
+  const lexiconForSelection = dynamicLex.curated;
+  const corpusConcordance = useMemo(() => {
+    const q = wordPhrase.trim();
+    if (!q || q.length < 2) return [];
+    return searchWord(q);
+  }, [wordPhrase]);
+  const verseLexHits = useMemo(
+    () => (current ? lexiconHitsInText(current.text) : []),
+    [current],
   );
 
   const lexiconInChapter = useMemo(() => {
@@ -403,8 +415,7 @@ function ReaderPage() {
           </div>
 
           <p className="text-xs text-muted">
-            Select text inside a verse to set the tag phrase. Verses with tags show a count badge.
-            Hover a verse for a full-text popup if the line is long. Omni 1 is complete (vv. 1–30).
+            Full verse text stays in the row. Hover opens a context panel (features, tags, lexicon terms, links)—not a second copy of the text. Select any word for dynamic dictionary/KJV/concordance lookup.
           </p>
 
           {activeFeature && (
@@ -479,12 +490,48 @@ function ReaderPage() {
                       </div>
                     )}
                   </button>
-                  {hoverVerse === row.verse && row.text.length > 180 && (
-                    <div className="absolute z-20 left-2 right-2 top-full mt-1 rounded-[var(--radius)] border border-border bg-surface shadow-lg p-3 text-sm scripture leading-relaxed pointer-events-none">
-                      <span className="text-xs text-muted font-sans not-italic">
-                        Full verse {row.book} {row.chapter}:{row.verse}
-                      </span>
-                      <p className="mt-1">{row.text}</p>
+                  {hoverVerse === row.verse && (
+                    <div className="absolute z-20 left-2 right-2 top-full mt-1 rounded-[var(--radius)] border border-border bg-surface shadow-lg p-3 text-xs space-y-2 pointer-events-none">
+                      <div className="font-semibold text-ink font-sans">
+                        {row.book} {row.chapter}:{row.verse} · context
+                      </div>
+                      {(tagsOnVerse.get(row.verse) ?? []).length > 0 && (
+                        <div>
+                          <span className="text-muted uppercase tracking-wide">Your tags · </span>
+                          {(tagsOnVerse.get(row.verse) ?? []).map((tg) => (
+                            <span key={tg.id} className="mr-1">
+                              {tg.wordPhrase ? `“${tg.wordPhrase}”` : tg.tags.join(", ")}
+                              {tg.featureIds.length ? ` → ${tg.featureIds.join(", ")}` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {row.featureIds && row.featureIds.length > 0 && (
+                        <div>
+                          <span className="text-muted uppercase tracking-wide">Map features · </span>
+                          {row.featureIds.join(", ")}
+                        </div>
+                      )}
+                      {lexiconHitsInText(row.text).length > 0 && (
+                        <div>
+                          <span className="text-muted uppercase tracking-wide">Key terms · </span>
+                          {lexiconHitsInText(row.text)
+                            .map((e) => e.term)
+                            .join(" · ")}
+                        </div>
+                      )}
+                      {lexiconHitsInText(row.text)[0] && (
+                        <p className="text-ink-soft leading-relaxed">
+                          <span className="font-medium text-ink">
+                            {lexiconHitsInText(row.text)[0]!.term}:
+                          </span>{" "}
+                          {lexiconHitsInText(row.text)[0]!.ambiguity}
+                        </p>
+                      )}
+                      <div className="text-muted">
+                        Click to select · highlight a word for dictionary panel · official link in
+                        sidebar
+                      </div>
                     </div>
                   )}
                 </div>
@@ -621,67 +668,139 @@ function ReaderPage() {
             </p>
           </Card>
 
-          {/* Lexicon 1820s + KJV */}
+          {/* Dynamic lexicon: curated + any-word external lookup */}
           <Card className="p-5 space-y-3">
-            <h2 className="font-semibold text-sm">1820s dictionary · KJV sense</h2>
-            {lexiconForSelection ? (
-              <div className="space-y-2 text-sm">
-                <div className="font-serif text-lg font-semibold">{lexiconForSelection.term}</div>
-                <div>
-                  <div className="text-xs font-semibold text-muted uppercase">Webster 1828</div>
-                  <p className="text-ink-soft leading-relaxed">{lexiconForSelection.webster1828}</p>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-muted uppercase">KJV / biblical usage</div>
-                  <p className="text-ink-soft leading-relaxed">{lexiconForSelection.kjvNotes}</p>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-muted uppercase">Ambiguity for maps</div>
-                  <p className="text-ink-soft leading-relaxed">{lexiconForSelection.ambiguity}</p>
-                </div>
-                {lexiconForSelection.relatedTerms && (
-                  <div className="flex flex-wrap gap-1">
-                    {lexiconForSelection.relatedTerms.map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => {
-                          setWordPhrase(r);
-                          runWordSearch(r);
-                        }}
-                        className="text-xs text-accent hover:underline"
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
+            <h2 className="font-semibold text-sm">Dictionary · KJV · concordance</h2>
+            <p className="text-[11px] text-muted leading-relaxed">
+              Select any word in a verse (or type below). Curated notes appear when we have them;
+              Webster 1828, KJV search, and concordance links work for every word.
+            </p>
+            <input
+              value={wordPhrase}
+              onChange={(e) => setWordPhrase(e.target.value)}
+              placeholder="Lookup word or phrase…"
+              className="w-full rounded border border-border px-3 py-2 text-sm"
+            />
+            <div className="flex flex-wrap gap-1">
+              <span className="text-[10px] text-muted self-center mr-1">Frequent:</span>
+              {priorityEntries().map((e) => (
+                <button
+                  key={e.term}
+                  type="button"
+                  onClick={() => setWordPhrase(e.term)}
+                  className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                    wordPhrase.toLowerCase() === e.term.toLowerCase()
+                      ? "border-accent bg-accent/10 text-ink"
+                      : "border-border hover:border-accent"
+                  }`}
+                >
+                  {e.term}
+                </button>
+              ))}
+            </div>
+            {verseLexHits.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[10px] text-muted self-center mr-1">In this verse:</span>
+                {verseLexHits.map((e) => (
+                  <button
+                    key={e.term}
+                    type="button"
+                    onClick={() => setWordPhrase(e.term)}
+                    className="rounded-full border border-teal/40 bg-teal-soft/40 px-2 py-0.5 text-[11px]"
+                  >
+                    {e.term}
+                  </button>
+                ))}
+              </div>
+            )}
+            {dynamicLex.query ? (
+              <div className="space-y-3 text-sm border-t border-border pt-3">
+                <div className="font-serif text-lg font-semibold">“{dynamicLex.query}”</div>
+                {lexiconForSelection ? (
+                  <>
+                    <div>
+                      <div className="text-xs font-semibold text-muted uppercase">Webster 1828 (curated)</div>
+                      <p className="text-ink-soft leading-relaxed">{lexiconForSelection.webster1828}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-muted uppercase">KJV / biblical usage</div>
+                      <p className="text-ink-soft leading-relaxed">{lexiconForSelection.kjvNotes}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-muted uppercase">Map ambiguity</div>
+                      <p className="text-ink-soft leading-relaxed">{lexiconForSelection.ambiguity}</p>
+                    </div>
+                    {lexiconForSelection.relatedTerms && (
+                      <div className="flex flex-wrap gap-1">
+                        {lexiconForSelection.relatedTerms.map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setWordPhrase(r)}
+                            className="text-xs text-accent hover:underline"
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-muted">
+                    No curated entry yet for this word — use external links below. We can promote
+                    frequent lookups into the curated lexicon as you study.
+                  </p>
                 )}
-                {lexiconForSelection.sources.map((s) =>
-                  s.url ? (
-                    <a
-                      key={s.label}
-                      href={s.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block text-xs text-accent hover:underline"
-                    >
-                      {s.label} ↗
-                    </a>
-                  ) : (
-                    <span key={s.label} className="block text-xs text-muted">
-                      {s.label}
-                    </span>
-                  ),
+                <div>
+                  <div className="text-xs font-semibold text-muted uppercase mb-1">
+                    Look up anywhere
+                  </div>
+                  <ul className="space-y-1">
+                    {dynamicLex.external.map((x) => (
+                      <li key={x.url}>
+                        <a
+                          href={x.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-accent hover:underline inline-flex items-center gap-1"
+                        >
+                          {x.label} <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <span className="text-[10px] text-muted ml-1">{x.kind}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {corpusConcordance.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold text-muted uppercase mb-1">
+                      Working corpus concordance ({corpusConcordance.length})
+                    </div>
+                    <ul className="max-h-28 overflow-auto space-y-1">
+                      {corpusConcordance.slice(0, 12).map((h) => (
+                        <li key={h.id}>
+                          <button
+                            type="button"
+                            onClick={() => goToVerse(h)}
+                            className="text-xs text-left text-accent hover:underline"
+                          >
+                            {h.book} {h.chapter}:{h.verse}
+                          </button>
+                          <span className="text-[11px] text-muted"> — {h.text.slice(0, 60)}…</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             ) : (
               <p className="text-sm text-muted">
-                Select a known term (wilderness, narrow pass, sea east…) to load lexicon notes.
+                Select a word in the verse text, or click a frequent term above.
               </p>
             )}
             {lexiconInChapter.length > 0 && (
               <div className="border-t border-border pt-2">
-                <div className="text-xs text-muted mb-1">Terms in this chapter</div>
+                <div className="text-xs text-muted mb-1">Curated terms in this chapter</div>
                 <div className="flex flex-wrap gap-1">
                   {lexiconInChapter.map((e) =>
                     e ? (
