@@ -110,7 +110,7 @@ function MyModelsPage() {
       <div className="space-y-2">
         <h1 className="font-serif text-3xl font-semibold">My models</h1>
         <p className="text-sm text-ink-soft max-w-2xl leading-relaxed">
-          Fork a published model, enable/disable its assumptions, add your own, and export JSON to share.
+          Fork a published model, enable/disable its assumptions, add your own, and export JSON to share. Spatial layout (drag cities/seas) is edited in Map Lab and saved per model id.
           v0 stores models in this browser only. Shared community publishing is Phase 2.
         </p>
       </div>
@@ -205,8 +205,18 @@ function MyModelsPage() {
               >
                 Export JSON
               </button>
-              <Link to="/map-lab" className="rounded-[var(--radius-sm)] bg-surface-2 px-3 py-2 text-sm text-accent">
-                Test in Map Lab →
+              <Link
+                to="/map-lab"
+                className="rounded-[var(--radius-sm)] bg-surface-2 px-3 py-2 text-sm text-accent"
+                onClick={() => {
+                  try {
+                    localStorage.setItem("bom-atlas-active-map-model-v1", active.id);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+              >
+                Open Map Lab for this model →
               </Link>
             </div>
           </Card>
