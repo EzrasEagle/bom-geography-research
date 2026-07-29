@@ -5,8 +5,11 @@ import { cn } from "@/lib/utils";
 const nav = [
   { to: "/", label: "Home", icon: Home },
   { to: "/framework", label: "Framework", icon: Layers },
+  { to: "/reader", label: "Reader", icon: BookOpen },
   { to: "/verses", label: "Verses", icon: BookOpen },
   { to: "/models", label: "Models", icon: Map },
+  { to: "/my-models", label: "My Models", icon: Layers },
+  { to: "/map-lab", label: "Map Lab", icon: Map },
   { to: "/insights", label: "Insights", icon: Lightbulb },
   { to: "/compare", label: "Compare", icon: GitCompare },
   { to: "/sources", label: "Sources", icon: Library },

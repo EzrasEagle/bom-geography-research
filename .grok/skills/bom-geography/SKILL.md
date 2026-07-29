@@ -1,26 +1,12 @@
 # Skill: bom-geography
 
 ## Triggers
-Book of Mormon geography, verse catalog, model claims, Baja/Heartland/Mesoamerica, insights track, sync GitHub Drive, continue research session, BoM atlas.
+Book of Mormon geography, Map Lab, assumptions, user models, verse catalog, Reader tags, fork tracking, Mesoamerica Heartland Baja, 116 pages, small plates.
 
-## Purpose
-Maintain the dual-track BoM geography research project: verse-by-verse catalog, model comparisons, independent insights, book framework, and app. Keep GitHub, Drive backup intent, and Grok session aligned.
-
-## Always do
-1. Read `prompts/session/CONTINUE.md` and `research/schema/tags.md` before cataloging.
-2. Use verse schema fields; never drop `model_claims` sources.
-3. Update **both** markdown under `research/verses/` **and** `data/catalog/*.csv`.
-4. Separate **model claims** from **insights**.
-5. After a batch: summarize counts; suggest next high-signal verses; suggest upstream external data if relevant.
-6. Neutrality: present competing claims; do not delete minority models.
-
-## Sync checklist
-- [ ] Files committed to `EzrasEagle/bom-geography-research`
-- [ ] Drive folder `BoM Geography Research` exists; user notified of backup paths
-- [ ] `research/external/tracked-repos.yaml` updated if new fork/data source found
-
-## Recommend while studying
-- Missing citations on a claim
-- New tags
-- New insight files when user supplies travel/climate/history notes
-- Cross-refs between verses
+## Always
+1. Keep Small Plates / 116 pages chronology correct (Mormon ~400 AD; loss 1828).
+2. Treat assumptions as first-class; update markdown + CSV + src/data/catalog.ts.
+3. Separate model claims, insights, user tags.
+4. Recommend high-signal verses from research/indexes/high-signal-verses.md.
+5. When suggesting GIS/sim code: prefer constraint+Leaflet over full SimCity forks.
+6. Sync: GitHub EzrasEagle/bom-geography-research; Drive BoM Geography Research.

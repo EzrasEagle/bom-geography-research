@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Model Assumption",
+  "description": "Explicit premise a model relies on. First-class and user-editable when forking.",
+  "type": "object",
+  "required": ["id", "model_id", "statement", "category", "status"],
+  "properties": {
+    "id": { "type": "string" },
+    "model_id": { "type": "string", "description": "Published model or user model id" },
+    "statement": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "distance_scale", "direction_convention", "place_identification",
+        "narrow_neck", "hydrology", "climate", "culture_level",
+        "cumorah", "landing", "population", "language", "genetics",
+        "archaeology", "chronology", "transport", "terrain", "other"
+      ]
+    },
+    "status": { "type": "string", "enum": ["core", "optional", "experimental", "rejected_by_user"] },
+    "depends_on": { "type": "array", "items": { "type": "string" } },
+    "supports_claims": { "type": "array", "items": { "type": "string" }, "description": "claim ids or verse claim keys" },
+    "conflicts_with": { "type": "array", "items": { "type": "string" } },
+    "user_editable": { "type": "boolean", "default": true },
+    "notes": { "type": "string" },
+    "sources": { "type": "array", "items": { "type": "string" } }
+  }
+}

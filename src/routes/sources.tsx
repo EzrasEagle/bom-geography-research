@@ -30,6 +30,14 @@ const external = [
       { name: "paleoda_sa", url: "https://github.com/mchoblet/paleoda_sa" },
     ],
   },
+  {
+    group: "Map / placement libraries (track)",
+    items: [
+      { name: "react-leaflet", url: "https://github.com/PaulLeCam/react-leaflet" },
+      { name: "simcity-threejs-clone (UX only)", url: "https://github.com/dgreenheck/simcity-threejs-clone" },
+      { name: "bom-map-constraints", url: "https://github.com/edwardsjohnmartin/bom-map-constraints" },
+    ],
+  },
 ];
 
 function SourcesPage() {
@@ -80,7 +88,8 @@ function SourcesPage() {
       <Card className="p-5 text-sm text-muted space-y-2">
         <p>
           Integration policy: prefer official data downloads and thin adapters over vendoring multi-GB
-          rasters. Document forks in research/external/forks.md and keep upstream URLs for future sync.
+          rasters. Full policy and tables: research/external/FORK_TRACKING.md and forks.md. City-builder
+          repos (SimCity clones) are UX inspiration only—the core is constraint graphs + GIS.
         </p>
       </Card>
     </div>

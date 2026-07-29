@@ -15,8 +15,11 @@ import { Route as FrameworkRouteImport } from './routes/framework'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as InsightsIndexRouteImport } from './routes/insights/index'
 import { Route as InsightsInsightIdRouteImport } from './routes/insights/$insightId'
+import { Route as MapLabIndexRouteImport } from './routes/map-lab/index'
 import { Route as ModelsIndexRouteImport } from './routes/models/index'
 import { Route as ModelsModelIdRouteImport } from './routes/models/$modelId'
+import { Route as MyModelsIndexRouteImport } from './routes/my-models/index'
+import { Route as ReaderIndexRouteImport } from './routes/reader/index'
 import { Route as VersesIndexRouteImport } from './routes/verses/index'
 import { Route as VersesVerseIdRouteImport } from './routes/verses/$verseId'
 
@@ -50,6 +53,11 @@ const InsightsInsightIdRoute = InsightsInsightIdRouteImport.update({
   path: '/insights/$insightId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MapLabIndexRoute = MapLabIndexRouteImport.update({
+  id: '/map-lab/',
+  path: '/map-lab/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModelsIndexRoute = ModelsIndexRouteImport.update({
   id: '/models/',
   path: '/models/',
@@ -58,6 +66,16 @@ const ModelsIndexRoute = ModelsIndexRouteImport.update({
 const ModelsModelIdRoute = ModelsModelIdRouteImport.update({
   id: '/models/$modelId',
   path: '/models/$modelId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyModelsIndexRoute = MyModelsIndexRouteImport.update({
+  id: '/my-models/',
+  path: '/my-models/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReaderIndexRoute = ReaderIndexRouteImport.update({
+  id: '/reader/',
+  path: '/reader/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VersesIndexRoute = VersesIndexRouteImport.update({
@@ -80,7 +98,10 @@ export interface FileRoutesByFullPath {
   '/models/$modelId': typeof ModelsModelIdRoute
   '/verses/$verseId': typeof VersesVerseIdRoute
   '/insights/': typeof InsightsIndexRoute
+  '/map-lab/': typeof MapLabIndexRoute
   '/models/': typeof ModelsIndexRoute
+  '/my-models/': typeof MyModelsIndexRoute
+  '/reader/': typeof ReaderIndexRoute
   '/verses/': typeof VersesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -92,7 +113,10 @@ export interface FileRoutesByTo {
   '/models/$modelId': typeof ModelsModelIdRoute
   '/verses/$verseId': typeof VersesVerseIdRoute
   '/insights': typeof InsightsIndexRoute
+  '/map-lab': typeof MapLabIndexRoute
   '/models': typeof ModelsIndexRoute
+  '/my-models': typeof MyModelsIndexRoute
+  '/reader': typeof ReaderIndexRoute
   '/verses': typeof VersesIndexRoute
 }
 export interface FileRoutesById {
@@ -105,7 +129,10 @@ export interface FileRoutesById {
   '/models/$modelId': typeof ModelsModelIdRoute
   '/verses/$verseId': typeof VersesVerseIdRoute
   '/insights/': typeof InsightsIndexRoute
+  '/map-lab/': typeof MapLabIndexRoute
   '/models/': typeof ModelsIndexRoute
+  '/my-models/': typeof MyModelsIndexRoute
+  '/reader/': typeof ReaderIndexRoute
   '/verses/': typeof VersesIndexRoute
 }
 export interface FileRouteTypes {
@@ -119,7 +146,10 @@ export interface FileRouteTypes {
     | '/models/$modelId'
     | '/verses/$verseId'
     | '/insights/'
+    | '/map-lab/'
     | '/models/'
+    | '/my-models/'
+    | '/reader/'
     | '/verses/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -131,7 +161,10 @@ export interface FileRouteTypes {
     | '/models/$modelId'
     | '/verses/$verseId'
     | '/insights'
+    | '/map-lab'
     | '/models'
+    | '/my-models'
+    | '/reader'
     | '/verses'
   id:
     | '__root__'
@@ -143,7 +176,10 @@ export interface FileRouteTypes {
     | '/models/$modelId'
     | '/verses/$verseId'
     | '/insights/'
+    | '/map-lab/'
     | '/models/'
+    | '/my-models/'
+    | '/reader/'
     | '/verses/'
   fileRoutesById: FileRoutesById
 }
@@ -156,7 +192,10 @@ export interface RootRouteChildren {
   ModelsModelIdRoute: typeof ModelsModelIdRoute
   VersesVerseIdRoute: typeof VersesVerseIdRoute
   InsightsIndexRoute: typeof InsightsIndexRoute
+  MapLabIndexRoute: typeof MapLabIndexRoute
   ModelsIndexRoute: typeof ModelsIndexRoute
+  MyModelsIndexRoute: typeof MyModelsIndexRoute
+  ReaderIndexRoute: typeof ReaderIndexRoute
   VersesIndexRoute: typeof VersesIndexRoute
 }
 
@@ -204,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InsightsInsightIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/map-lab/': {
+      id: '/map-lab/'
+      path: '/map-lab'
+      fullPath: '/map-lab/'
+      preLoaderRoute: typeof MapLabIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/models/': {
       id: '/models/'
       path: '/models'
@@ -216,6 +262,20 @@ declare module '@tanstack/react-router' {
       path: '/models/$modelId'
       fullPath: '/models/$modelId'
       preLoaderRoute: typeof ModelsModelIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-models/': {
+      id: '/my-models/'
+      path: '/my-models'
+      fullPath: '/my-models/'
+      preLoaderRoute: typeof MyModelsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reader/': {
+      id: '/reader/'
+      path: '/reader'
+      fullPath: '/reader/'
+      preLoaderRoute: typeof ReaderIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verses/': {
@@ -244,7 +304,10 @@ const rootRouteChildren: RootRouteChildren = {
   ModelsModelIdRoute: ModelsModelIdRoute,
   VersesVerseIdRoute: VersesVerseIdRoute,
   InsightsIndexRoute: InsightsIndexRoute,
+  MapLabIndexRoute: MapLabIndexRoute,
   ModelsIndexRoute: ModelsIndexRoute,
+  MyModelsIndexRoute: MyModelsIndexRoute,
+  ReaderIndexRoute: ReaderIndexRoute,
   VersesIndexRoute: VersesIndexRoute,
 }
 export const routeTree = rootRouteImport

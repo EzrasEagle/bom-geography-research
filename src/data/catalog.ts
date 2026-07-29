@@ -371,11 +371,13 @@ export const frameworkSections = [
   {
     id: "composition",
     title: "Textual composition layers",
-    body: `The Small Plates of Nephi (1 Nephi–Omni, plus Words of Mormon as bridge) were inserted largely intact after the 116-page loss. They preserve first-person and near-contemporary records—especially valuable for the Old World journey, voyage, landing, and first planting.
+    body: `Do not conflate two events ~1,400 years apart.
 
-Mormon’s abridgment (Mosiah–Mormon bulk) compresses centuries of large-plate history: rich for relative place graphs, sometimes schematic on distance.
+In ~A.D. 385–400, Mormon abridged the large plates and—finding the small plates of Nephi—included them with his record for a wise purpose (Words of Mormon 1:3–7). 1 Nephi–Omni thus preserve Nephi’s and successors’ records with minimal re-narration; Words of Mormon is Mormon’s bridge.
 
-Moroni finishes the record and abridges Ether; Jaredite geography and final Cumorah/Ramah statements are critical for model tests.`,
+In 1828, Joseph Smith’s manuscript of Mormon’s abridgment of the early large-plate material (Book of Lehi)—about 116 pages—was lost. The small plates, already on the plates from Mormon’s ancient editorial choice, supply that historical span in the published book. Mormon did not insert the small plates “because of” the modern loss.
+
+Geography signal: early travel, Old World Bountiful, voyage, landing, and seed-planting remain high-signal first-person data on the small plates. Mormon’s abridgment (Mosiah–Mormon) and Moroni/Ether add relative place graphs, wars, narrow neck, and Cumorah/Ramah.`,
   },
   {
     id: "dual-track",
@@ -393,6 +395,97 @@ Readers weigh both. Core data stays comparative; advocacy, if any, is labeled in
 
 Markdown under research/verses is the narrative form; data/catalog/*.csv is the spreadsheet mirror; this app reads the typed catalog mirror.`,
   },
+];
+
+
+
+export type Assumption = {
+  id: string;
+  modelId: string;
+  statement: string;
+  category: string;
+  status: "core" | "optional" | "experimental" | "rejected_by_user";
+  notes?: string;
+};
+
+export type PlaceNode = {
+  id: string;
+  name: string;
+  kind: "city" | "land" | "river" | "hill" | "sea" | "wilderness" | "other";
+};
+
+export type GeoConstraint = {
+  id: string;
+  from: string;
+  to: string;
+  type: "days_travel" | "direction" | "adjacent" | "river_between" | "narrow_feature" | "same_region";
+  value?: string | number;
+  sourceVerse?: string;
+  notes?: string;
+  /** soft | hard — hard conflicts paint red in Map Lab */
+  strength: "soft" | "hard";
+};
+
+/** Seed assumptions for published models (editable when forked in My Models). */
+export const assumptions: Assumption[] = [
+  { id: "meso-neck-tehuantepec", modelId: "mesoamerica", statement: "Narrow neck ≈ Isthmus of Tehuantepec", category: "narrow_neck", status: "core" },
+  { id: "meso-sidon-grijalva", modelId: "mesoamerica", statement: "River Sidon ≈ Grijalva (some authors: Usumacinta)", category: "hydrology", status: "core" },
+  { id: "meso-limited", modelId: "mesoamerica", statement: "Narrative stage is limited (~few hundred miles), not hemispheric", category: "distance_scale", status: "core" },
+  { id: "meso-cumorah-south", modelId: "mesoamerica", statement: "Final Cumorah of the text is in southern Mexico region (NY hill may be repository only in some versions)", category: "cumorah", status: "core" },
+  { id: "heart-sidon-miss", modelId: "heartland", statement: "River Sidon ≈ Mississippi River", category: "hydrology", status: "core" },
+  { id: "heart-cumorah-ny", modelId: "heartland", statement: "Hill Cumorah of the final battle = New York hill of modern tradition", category: "cumorah", status: "core" },
+  { id: "heart-hopewell", modelId: "heartland", statement: "Hopewell cultural horizon is a primary external correlation window", category: "archaeology", status: "core" },
+  { id: "baja-seed-climate", modelId: "baja", statement: "Jerusalem seeds growing exceedingly requires Levant-like Mediterranean/arid climate near landing", category: "climate", status: "core" },
+  { id: "baja-peninsula", modelId: "baja", statement: "Primary lands lie on the Baja California peninsula (seas east and west)", category: "place_identification", status: "core" },
+  { id: "baja-neck-peninsula", modelId: "baja", statement: "Narrow neck / narrow areas map to peninsular constrictions", category: "narrow_neck", status: "core" },
+  { id: "sa-chile-landing", modelId: "south-america", statement: "Landing near Chilean coast ~30–33°S (climate analogy)", category: "landing", status: "core" },
+  { id: "internal-no-gps", modelId: "internal", statement: "No modern lat/lng required; only relative constraints from the text", category: "distance_scale", status: "core" },
+  { id: "day-march-15-20", modelId: "internal", statement: "Default working band: 1 day journey ≈ 15–20 miles on open terrain (user-adjustable)", category: "distance_scale", status: "optional", notes: "Change this assumption in Map Lab / My Models to stress-test distance graphs." },
+];
+
+/** Minimal internal gazetteer for Map Lab v0 */
+export const places: PlaceNode[] = [
+  { id: "nephi", name: "Land/City of Nephi", kind: "land" },
+  { id: "zarahemla", name: "Zarahemla", kind: "city" },
+  { id: "sidon", name: "River Sidon", kind: "river" },
+  { id: "bountiful-nw", name: "Bountiful (New World)", kind: "land" },
+  { id: "desolation", name: "Desolation", kind: "land" },
+  { id: "narrow-neck", name: "Narrow neck / pass", kind: "other" },
+  { id: "manti", name: "Manti", kind: "city" },
+  { id: "jershon", name: "Jershon", kind: "land" },
+  { id: "cumorah", name: "Cumorah / Ramah", kind: "hill" },
+  { id: "landing", name: "Landing region", kind: "other" },
+  { id: "sea-east", name: "Sea east", kind: "sea" },
+  { id: "sea-west", name: "Sea west", kind: "sea" },
+];
+
+/** Seed constraints (internal). Conflicts intentionally possible when day-scale changes. */
+export const constraints: GeoConstraint[] = [
+  { id: "c1", from: "nephi", to: "zarahemla", type: "direction", value: "northish (down from Nephi highlands in many readings)", sourceVerse: "Omni/Mosiah narrative", strength: "soft" },
+  { id: "c2", from: "zarahemla", to: "sidon", type: "adjacent", value: "city by / oriented to Sidon", sourceVerse: "Alma 2+", strength: "hard" },
+  { id: "c3", from: "manti", to: "sidon", type: "adjacent", value: "near head/upstream narratives", sourceVerse: "Alma 22/43 region", strength: "soft" },
+  { id: "c4", from: "zarahemla", to: "bountiful-nw", type: "direction", value: "toward north", sourceVerse: "Alma 22:29–33", strength: "soft" },
+  { id: "c5", from: "bountiful-nw", to: "desolation", type: "adjacent", value: "meet at narrow neck area", sourceVerse: "Alma 22:31–32", strength: "hard" },
+  { id: "c6", from: "narrow-neck", to: "bountiful-nw", type: "adjacent", value: "day and a half journey motif (model-dependent)", sourceVerse: "Alma 22:32", strength: "hard" },
+  { id: "c7", from: "jershon", to: "sea-east", type: "adjacent", value: "by the east sea in common readings", sourceVerse: "Alma 27:22", strength: "soft" },
+  { id: "c8", from: "landing", to: "nephi", type: "days_travel", value: "many days (unspecified)", sourceVerse: "1 Ne 18–2 Ne 5", strength: "soft" },
+  { id: "c9", from: "cumorah", to: "desolation", type: "same_region", value: "land of many waters / northward association (model-dependent)", sourceVerse: "Morm 6 / Ether 15", strength: "soft" },
+  { id: "c10", from: "sea-west", to: "sea-east", type: "narrow_feature", value: "narrow neck between seas (Alma 22)", sourceVerse: "Alma 22:32", strength: "hard" },
+];
+
+export function assumptionsForModel(modelId: string) {
+  return assumptions.filter((a) => a.modelId === modelId);
+}
+
+export const evidenceDomains = [
+  { id: "textual_geography", label: "Textual geography", caution: "Relative vs absolute readings" },
+  { id: "climate_botany", label: "Climate & botany", caution: "Modern farms ≠ ancient practice" },
+  { id: "hydrology_topo", label: "Hydrology & topography", caution: "Courses and coasts change" },
+  { id: "archaeology_artifacts", label: "Archaeology & artifacts", caution: "Dating & attribution debates" },
+  { id: "language_onomastics", label: "Language & names", caution: "Speculative etymologies common" },
+  { id: "genetics", label: "Genetics", caution: "Sampling bias; high uncertainty" },
+  { id: "historical_routes", label: "Historical routes", caution: "Analogy only for 600 BC" },
+  { id: "paleoclimate", label: "Paleoclimate", caution: "Sparse resolution" },
 ];
 
 export function getModel(id: string) {

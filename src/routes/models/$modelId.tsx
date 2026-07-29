@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { getModel, versesForModel } from "@/data/catalog";
+import { assumptionsForModel, getModel, versesForModel } from "@/data/catalog";
 
 export const Route = createFileRoute("/models/$modelId")({ component: ModelDetailPage });
 
@@ -67,6 +67,25 @@ function ModelDetailPage() {
           {m.criticisms.map((c) => (
             <li key={c}>{c}</li>
           ))}
+        </ul>
+      </Card>
+
+
+      <Card className="p-5 space-y-3">
+        <h2 className="font-semibold">Explicit assumptions</h2>
+        <p className="text-sm text-muted">
+          These are the load-bearing premises. Fork this model under My Models to toggle or replace them.
+        </p>
+        <ul className="space-y-2">
+          {assumptionsForModel(m.id).map((a) => (
+            <li key={a.id} className="text-sm rounded-[var(--radius-sm)] bg-surface-2/80 p-3">
+              <span className="text-xs uppercase tracking-wide text-muted">{a.category} · {a.status}</span>
+              <div className="text-ink-soft mt-0.5">{a.statement}</div>
+            </li>
+          ))}
+          {assumptionsForModel(m.id).length === 0 && (
+            <li className="text-sm text-muted">No seed assumptions yet for this model.</li>
+          )}
         </ul>
       </Card>
 

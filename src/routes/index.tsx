@@ -16,8 +16,9 @@ function HomePage() {
             Weigh every model against the text—and against the ground truth you gather.
           </h1>
           <p className="text-lg text-ink-soft max-w-2xl leading-relaxed">
-            A verse-by-verse catalog of Book of Mormon geographic clues, each model’s claims with
-            sources, and a parallel insights track for travel, climate, flora, hydrology, and history.
+            A workbench: verse catalog, published models with explicit assumptions, Reader tagging, forkable
+            user models, multi-domain evidence (including language, artifacts, genetics), and Map Lab
+            constraint testing—toward real-map overlays.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <Link
@@ -58,16 +59,16 @@ function HomePage() {
             body: "Book / chapter / verse units with clues, tags, plate source, and competing claims.",
           },
           {
-            to: "/models" as const,
-            icon: Map,
-            title: "Geography models",
-            body: "Mesoamerica, Heartland, Baja, South America, Malay, and internal-only profiles.",
+            to: "/my-models" as const,
+            icon: Scale,
+            title: "Fork models",
+            body: "Adopt assumptions from published models; toggle, add, and export your own package.",
           },
           {
-            to: "/insights" as const,
-            icon: Lightbulb,
-            title: "Independent insights",
-            body: "Travel times, crop viability, hydrology—evidence that isn’t owned by one map.",
+            to: "/map-lab" as const,
+            icon: Map,
+            title: "Map Lab",
+            body: "Constraint graph for internal geography—red edges when assumptions break.",
           },
         ].map((item) => {
           const Icon = item.icon;
