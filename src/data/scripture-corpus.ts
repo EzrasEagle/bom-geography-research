@@ -1,22 +1,12 @@
 /**
  * Working corpus for Reader + word index.
- * Full modern LDS edition is copyrighted — we store research excerpts / well-known
- * short geographic-climate passages for tagging & indexing, with official study links.
+ * Full chapters added progressively (Omni 1 complete). Official study links for modern edition.
  */
 
-export type CorpusVerse = {
-  id: string;
-  book: string;
-  chapter: number;
-  verse: number;
-  text: string;
-  /** Map feature ids this verse commonly informs */
-  featureIds?: string[];
-  domains?: string[];
-  studyUrl: string;
-};
-
+import type { CorpusVerse } from "./corpus-types";
 import { OMNI_1 } from "./chapters/omni-1";
+
+export type { CorpusVerse } from "./corpus-types";
 
 function url(bookPath: string, chapter: number, verse?: number) {
   const anchor = verse ? `&id=p${verse}#p${verse}` : "";

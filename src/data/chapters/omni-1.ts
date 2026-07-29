@@ -1,5 +1,5 @@
 /** Full Omni chapter 1 — public-domain Book of Mormon textual tradition (versified). */
-import type { CorpusVerse } from "../scripture-corpus";
+import type { CorpusVerse } from "../corpus-types";
 
 function v(
   verse: number,
