@@ -1,78 +1,89 @@
 import type { Point } from "@/lib/model-map-state";
-import {
-  DEFAULT_DAY_PIXELS,
-  type ProximityLink,
-} from "@/data/soft-regions";
+import type { CorridorAssociation } from "@/data/soft-regions";
+import { DEFAULT_DAY_PIXELS } from "@/data/soft-regions";
 
 /**
- * Build a soft-region polygon:
- * - For each linked place, add a circle of radius = proximityDays * dayPixels
- * - Take convex hull of sampled circle points (+ optional region centroid)
- * Result: blob that "stretches" near all linked places.
+ * Corridor band: from place A toward place B, only for `proximityDays` of travel
+ * along the segment — NOT a hull around both cities.
+ *
+ * offset: half-width of band in pixels (wilderness thickness).
  */
-export function softRegionHull(
-  links: ProximityLink[],
-  layout: Record<string, Point>,
-  dayPixels: number = DEFAULT_DAY_PIXELS,
-  samplesPerCircle = 12,
+export function corridorBandPolygon(
+  from: Point,
+  toward: Point,
+  /** Fraction of A→B length to cover, OR absolute length from day budget */
+  lengthPx: number,
+  halfWidthPx: number,
 ): Point[] {
-  const ring: Point[] = [];
+  const dx = toward.x - from.x;
+  const dy = toward.y - from.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  // Unit direction A → B
+  const ux = dx / dist;
+  const uy = dy / dist;
+  // How far along the route the wilderness extends from `from`
+  const along = Math.min(lengthPx, dist * 0.92); // never quite reach the other city center
+  // Start slightly outside the settlement (gap so we don't swallow the pin)
+  const gap = Math.min(14, along * 0.15);
+  if (along <= gap + 2) return [];
+
+  const x0 = from.x + ux * gap;
+  const y0 = from.y + uy * gap;
+  const x1 = from.x + ux * along;
+  const y1 = from.y + uy * along;
+
+  // Perpendicular for band width
+  const px = -uy * halfWidthPx;
+  const py = ux * halfWidthPx;
+
+  return [
+    { x: x0 + px, y: y0 + py },
+    { x: x1 + px, y: y1 + py },
+    { x: x1 - px, y: y1 - py },
+    { x: x0 - px, y: y0 - py },
+  ];
+}
+
+/** Day length in pixels, adjusted for terrain cost (slower in wilderness → shorter ring). */
+export function dayLengthPixels(
+  baseDayPixels: number,
+  dayMilesOpen: number,
+  dayMilesTerrain: number,
+): number {
+  // If wilderness is slower, each day covers fewer map-miles → smaller ring for same "1 day"
+  // baseDayPixels is calibrated to open ground; scale by terrain ratio
+  const ratio = dayMilesTerrain / Math.max(1, dayMilesOpen);
+  return baseDayPixels * ratio;
+}
+
+/**
+ * Build all corridor quads for a region; merge as multipolygon paths.
+ */
+export function regionCorridorPaths(
+  links: CorridorAssociation[],
+  layout: Record<string, Point>,
+  dayPixelsOpen: number,
+  halfWidthPx = 16,
+): { id: string; points: Point[] }[] {
+  const out: { id: string; points: Point[] }[] = [];
   for (const link of links) {
-    const c = layout[link.placeId];
-    if (!c) continue;
-    const r = Math.max(8, link.proximityDays * dayPixels);
-    for (let i = 0; i < samplesPerCircle; i++) {
-      const a = (i / samplesPerCircle) * Math.PI * 2;
-      ring.push({ x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) });
-    }
-    // also include the place center so hull touches inward
-    ring.push({ x: c.x, y: c.y });
+    const a = layout[link.placeId];
+    const b = layout[link.towardPlaceId];
+    if (!a || !b) continue;
+    const lengthPx = link.proximityDays * dayPixelsOpen;
+    const poly = corridorBandPolygon(a, b, lengthPx, halfWidthPx);
+    if (poly.length >= 3) out.push({ id: link.id, points: poly });
   }
-  if (ring.length < 3) return ring;
-  return convexHull(ring);
+  return out;
 }
 
-function convexHull(points: Point[]): Point[] {
-  const pts = [...points].sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
-  if (pts.length <= 1) return pts;
-
-  const cross = (o: Point, a: Point, b: Point) =>
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-
-  const lower: Point[] = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2]!, lower[lower.length - 1]!, p) <= 0) {
-      lower.pop();
-    }
-    lower.push(p);
-  }
-  const upper: Point[] = [];
-  for (let i = pts.length - 1; i >= 0; i--) {
-    const p = pts[i]!;
-    while (upper.length >= 2 && cross(upper[upper.length - 2]!, upper[upper.length - 1]!, p) <= 0) {
-      upper.pop();
-    }
-    upper.push(p);
-  }
-  lower.pop();
-  upper.pop();
-  return lower.concat(upper);
-}
-
-export function hullToSvgPath(hull: Point[]): string {
-  if (hull.length === 0) return "";
-  if (hull.length === 1) {
-    const p = hull[0]!;
-    return `M ${p.x - 20} ${p.y} a 20 20 0 1 0 40 0 a 20 20 0 1 0 -40 0`;
-  }
-  let d = `M ${hull[0]!.x} ${hull[0]!.y}`;
-  for (let i = 1; i < hull.length; i++) {
-    d += ` L ${hull[i]!.x} ${hull[i]!.y}`;
-  }
+export function polyToSvgPath(pts: Point[]): string {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0]!.x} ${pts[0]!.y}`;
+  for (let i = 1; i < pts.length; i++) d += ` L ${pts[i]!.x} ${pts[i]!.y}`;
   return d + " Z";
 }
 
-/** Transform hull points with same macro as places */
 export function transformPoints(
   pts: Point[],
   transform: (layout: Record<string, Point>) => Record<string, Point>,
@@ -83,4 +94,20 @@ export function transformPoints(
   });
   const out = transform(keyed);
   return pts.map((_, i) => out[`p${i}`]!);
+}
+
+/** Contoured day-ring: ellipse-ish circle, radius = days * dayPixels (terrain-aware). */
+export function dayRingRadius(
+  days: number,
+  dayPixels: number,
+): number {
+  return Math.max(6, days * dayPixels);
+}
+
+// Keep old hull API as thin wrappers so nothing else crashes
+export function softRegionHull() {
+  return [] as Point[];
+}
+export function hullToSvgPath() {
+  return "";
 }
