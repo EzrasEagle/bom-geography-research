@@ -456,6 +456,91 @@ export const placeDossiers: Record<string, FeatureDossier> = {
     assumptionIds: [],
     related: [],
   },
+
+  "climate-whirlwind": {
+    id: "climate-whirlwind",
+    name: "Whirlwinds / tempests",
+    kind: "climate",
+    summary:
+      "Whirlwind and tempest language (esp. 3 Nephi 8 destruction narrative; Helaman imagery). Tag regions where models place affected cities (e.g. Zarahemla burned) to test climate/hazard assumptions.",
+    scriptures: [
+      bom("3 Nephi", 8, "5–19", "Great storm, tempest, whirlwind; cities destroyed.", {
+        verseAnchor: "5",
+        tags: ["whirlwind", "storm", "climate"],
+      }),
+      bom("Helaman", 5, "12", "Whirlwind imagery (spiritual metaphor — still climate-tagged).", {
+        verseAnchor: "12",
+        tags: ["whirlwind"],
+      }),
+    ],
+    relatedFeatureIds: ["zarahemla", "climate-storms", "climate-seasons"],
+    edgeIds: [],
+    assumptionIds: ["baja-seed-climate"],
+    related: [
+      { label: "Open whirlwind verses in Reader", href: "/reader?q=whirlwind&feature=climate-whirlwind", kind: "catalog_verse" },
+    ],
+  },
+  "climate-storms": {
+    id: "climate-storms",
+    name: "Storms / great storm",
+    kind: "climate",
+    summary: "Great storm / tempest at Christ’s death (3 Nephi 8). Associate with areas where destroyed cities are mapped.",
+    scriptures: [
+      bom("3 Nephi", 8, "5–7", "Great storm and tempest.", { verseAnchor: "5", tags: ["storm", "climate"] }),
+    ],
+    relatedFeatureIds: ["climate-whirlwind", "zarahemla"],
+    edgeIds: [],
+    assumptionIds: [],
+    related: [
+      { label: "Reader: storm", href: "/reader?q=storm&feature=climate-storms", kind: "catalog_verse" },
+    ],
+  },
+  "climate-seasons": {
+    id: "climate-seasons",
+    name: "Seasons / seasonal timing",
+    kind: "climate",
+    summary:
+      "Seasonal fevers (Alma 46:40), agricultural cycles, and war-year timing. Use to ask whether campaigns pause for winter/harvest — text is often subtle; tag carefully.",
+    scriptures: [
+      bom("Alma", 46, "40", "Fevers at some seasons of the year.", {
+        verseAnchor: "40",
+        tags: ["seasons", "climate"],
+      }),
+      bom("Enos", 1, "21", "Till the land; grain and fruit.", { verseAnchor: "21", tags: ["agriculture"] }),
+    ],
+    relatedFeatureIds: ["climate-agriculture", "zarahemla", "nephi"],
+    edgeIds: [],
+    assumptionIds: ["day-march-15-20"],
+    related: [
+      { label: "Reader: seasons", href: "/reader?q=seasons&feature=climate-seasons", kind: "catalog_verse" },
+    ],
+  },
+  "climate-agriculture": {
+    id: "climate-agriculture",
+    name: "Agriculture / grain / famine",
+    kind: "climate",
+    summary:
+      "Grain, tillage, famine, timber scarcity. Landing seed success (1 Ne 18:24) and later agriculture constrain climate models.",
+    scriptures: [
+      bom("1 Nephi", 18, "24", "Jerusalem seeds grow exceedingly.", {
+        catalogId: "1ne-18-24",
+        verseAnchor: "24",
+        tags: ["seeds", "climate"],
+      }),
+      bom("Enos", 1, "21", "Grain and fruit.", { verseAnchor: "21", tags: ["agriculture"] }),
+      bom("Helaman", 3, "10", "Timber scarce in land northward.", {
+        verseAnchor: "10",
+        tags: ["timber", "northward"],
+      }),
+    ],
+    relatedFeatureIds: ["landing", "nephi", "climate-seasons"],
+    edgeIds: [],
+    assumptionIds: ["baja-seed-climate", "sa-chile-landing"],
+    related: [
+      { label: "Levantine crops insight", href: "/insights/insight-levantine-crops-baja-socal", kind: "insight" },
+      { label: "Reader: grain", href: "/reader?q=grain&feature=climate-agriculture", kind: "catalog_verse" },
+    ],
+  },
 };
 
 /** Build edge dossiers from constraints + place scriptures that touch both ends. */

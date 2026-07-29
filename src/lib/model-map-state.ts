@@ -59,6 +59,10 @@ export const LAYOUT_INTERNAL: Record<string, Point> = {
   "narrow-neck": { x: 300, y: 70 },
   desolation: { x: 300, y: 40 },
   cumorah: { x: 360, y: 30 },
+  "climate-whirlwind": { x: 420, y: 280 },
+  "climate-storms": { x: 440, y: 250 },
+  "climate-seasons": { x: 400, y: 300 },
+  "climate-agriculture": { x: 380, y: 270 },
 };
 
 /** Model-specific default layouts (schematic — not GPS). */
@@ -78,6 +82,10 @@ export const MODEL_DEFAULT_LAYOUTS: Record<string, Record<string, Point>> = {
     "narrow-neck": { x: 300, y: 90 },
     desolation: { x: 300, y: 55 },
     cumorah: { x: 340, y: 45 },
+    "climate-whirlwind": { x: 420, y: 280 },
+    "climate-storms": { x: 440, y: 250 },
+    "climate-seasons": { x: 400, y: 300 },
+    "climate-agriculture": { x: 380, y: 270 },
   },
   "meso-highland": {
     "sea-west": { x: 50, y: 210 },
@@ -92,6 +100,10 @@ export const MODEL_DEFAULT_LAYOUTS: Record<string, Record<string, Point>> = {
     "narrow-neck": { x: 300, y: 75 },
     desolation: { x: 300, y: 45 },
     cumorah: { x: 350, y: 40 },
+    "climate-whirlwind": { x: 420, y: 280 },
+    "climate-storms": { x: 440, y: 250 },
+    "climate-seasons": { x: 400, y: 300 },
+    "climate-agriculture": { x: 380, y: 270 },
   },
   // North American long stage: Cumorah far NE, Sidon as N–S spine
   heartland: {
@@ -107,6 +119,10 @@ export const MODEL_DEFAULT_LAYOUTS: Record<string, Record<string, Point>> = {
     "narrow-neck": { x: 340, y: 70 },
     desolation: { x: 360, y: 50 },
     cumorah: { x: 420, y: 40 },
+    "climate-whirlwind": { x: 200, y: 80 },
+    "climate-storms": { x: 180, y: 100 },
+    "climate-seasons": { x: 220, y: 90 },
+    "climate-agriculture": { x: 240, y: 110 },
   },
   // Peninsula: seas left/right, neck mid, landing NW
   baja: {
@@ -122,6 +138,10 @@ export const MODEL_DEFAULT_LAYOUTS: Record<string, Record<string, Point>> = {
     "narrow-neck": { x: 260, y: 100 },
     desolation: { x: 260, y: 70 },
     cumorah: { x: 220, y: 50 },
+    "climate-whirlwind": { x: 340, y: 300 },
+    "climate-storms": { x: 360, y: 280 },
+    "climate-seasons": { x: 320, y: 310 },
+    "climate-agriculture": { x: 300, y: 290 },
   },
   "south-america": { ...LAYOUT_INTERNAL },
   malay: { ...LAYOUT_INTERNAL },

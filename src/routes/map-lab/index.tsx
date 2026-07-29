@@ -799,6 +799,13 @@ function MapLabPage() {
               >
                 Full dossier (new context)
               </Link>
+              <Link
+                to="/reader"
+                search={{ feature: placeDossier.id, q: placeDossier.name.split(/[\s/]/)[0] }}
+                className="rounded-[var(--radius)] border border-border px-3 py-2 text-sm text-accent"
+              >
+                Open in Reader · tag
+              </Link>
               <Link to="/my-models" className="rounded-[var(--radius)] border border-border px-3 py-2 text-sm">
                 Adjust assumptions
               </Link>

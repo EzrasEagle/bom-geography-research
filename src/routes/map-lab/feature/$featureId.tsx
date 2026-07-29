@@ -44,6 +44,25 @@ function FeatureDossierPage() {
         {place && (
           <p className="text-xs text-muted mt-1">Map id: {place.id}</p>
         )}
+        <div className="flex flex-wrap gap-2 mt-3">
+          <Link
+            to="/reader"
+            search={{ feature: d.id, q: d.name.split(" ")[0] }}
+            className="rounded-[var(--radius)] bg-accent px-3 py-2 text-sm font-medium text-accent-fg"
+          >
+            Open in Reader · tag verses
+          </Link>
+          <Link
+            to="/reader"
+            search={{ feature: d.id }}
+            className="rounded-[var(--radius)] border border-border px-3 py-2 text-sm"
+          >
+            Reader (feature filter)
+          </Link>
+          <Link to="/map-lab" className="rounded-[var(--radius)] border border-border px-3 py-2 text-sm">
+            Map Lab
+          </Link>
+        </div>
       </div>
 
       <Card className="p-5 space-y-3">
@@ -80,6 +99,16 @@ function FeatureDossierPage() {
                     Atlas catalog record →
                   </Link>
                 )}
+                <Link
+                  to="/reader"
+                  search={{
+                    feature: d.id,
+                    q: s.ref.split(" ")[0],
+                  }}
+                  className="text-accent hover:underline"
+                >
+                  Tag in Reader →
+                </Link>
               </div>
             </li>
           ))}

@@ -481,6 +481,10 @@ export const places: PlaceNode[] = [
   { id: "landing", name: "Landing region", kind: "other" },
   { id: "sea-east", name: "Sea east", kind: "sea" },
   { id: "sea-west", name: "Sea west", kind: "sea" },
+  { id: "climate-whirlwind", name: "Whirlwinds / tempests", kind: "other" },
+  { id: "climate-storms", name: "Storms / great storm", kind: "other" },
+  { id: "climate-seasons", name: "Seasons / seasonal timing", kind: "other" },
+  { id: "climate-agriculture", name: "Agriculture / grain / famine", kind: "other" },
 ];
 
 /** Seed constraints (internal). Conflicts intentionally possible when day-scale changes. */
