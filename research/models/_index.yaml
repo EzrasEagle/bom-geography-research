@@ -1,0 +1,15 @@
+# Registry of geography models tracked in this project
+models:
+  - id: mesoamerica
+    file: mesoamerica.md
+  - id: heartland
+    file: heartland.md
+  - id: baja
+    file: baja.md
+  - id: south-america
+    file: south-america.md
+  - id: malay
+    file: malay.md
+  - id: internal
+    file: internal.md
+# Add new models here; each gets research/models/<id>.md + data/catalog rows

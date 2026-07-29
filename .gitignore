@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.output/
+.vinxi/
+.turbo/
+*.log
+/tmp/
+.DS_Store
+.env
+.env.*
+!.env.example
+screenshots/*.png
+.local/
+data/pg/

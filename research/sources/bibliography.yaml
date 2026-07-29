@@ -1,0 +1,23 @@
+# Seed bibliography — expand continuously
+entries:
+  - id: sorenson-1985
+    type: book
+    citation: "Sorenson, John L. An Ancient American Setting for the Book of Mormon. Deseret Book / FARMS, 1985."
+  - id: sorenson-2013
+    type: book
+    citation: "Sorenson, John L. Mormon’s Codex: An Ancient American Book. Deseret Book / Neal A. Maxwell Institute, 2013."
+  - id: rosenvall-baja
+    type: web_or_ms
+    citation: "Rosenvall, Lynn & David. Baja California geography model materials (see model profile for specific editions)."
+  - id: anza-nht
+    type: web
+    citation: "National Park Service. Juan Bautista de Anza National Historic Trail — expedition distance and duration FAQs."
+    url: "https://www.nps.gov/juba/"
+  - id: usgs-nhd
+    type: web
+    citation: "U.S. Geological Survey. National Hydrography Dataset (NHD)."
+    url: "https://www.usgs.gov/national-hydrography"
+  - id: hydrosheds
+    type: web
+    citation: "HydroSHEDS / HydroBASINS global hydrography."
+    url: "https://www.hydrosheds.org/"

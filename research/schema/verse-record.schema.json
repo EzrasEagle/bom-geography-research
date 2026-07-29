@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EzrasEagle/bom-geography-research/research/schema/verse-record.schema.json",
+  "title": "BoM Geographic Verse Record",
+  "description": "Canonical unit for Book/Chapter/Verse(s) geographic analysis. Supports word-level spans within a verse.",
+  "type": "object",
+  "required": ["id", "book", "chapter", "verse_start", "text_excerpt", "clues", "tags", "model_claims", "updated"],
+  "properties": {
+    "id": { "type": "string", "description": "Stable id e.g. 1ne-18-23" },
+    "book": { "type": "string", "examples": ["1 Nephi", "Alma", "Helaman"] },
+    "chapter": { "type": "integer", "minimum": 1 },
+    "verse_start": { "type": "integer", "minimum": 1 },
+    "verse_end": { "type": "integer", "minimum": 1, "description": "Inclusive end if multi-verse unit; omit if single" },
+    "word_span": {
+      "type": "object",
+      "description": "Optional 0-based word offsets within the verse text for precise phrases",
+      "properties": {
+        "start_word": { "type": "integer", "minimum": 0 },
+        "end_word": { "type": "integer", "minimum": 0 },
+        "phrase": { "type": "string" }
+      }
+    },
+    "text_excerpt": { "type": "string" },
+    "narrative_context": {
+      "type": "object",
+      "properties": {
+        "speaker": { "type": "string" },
+        "time_period": { "type": "string" },
+        "surrounding_events": { "type": "string" },
+        "plate_source": {
+          "type": "string",
+          "enum": ["small_plates", "large_plates_abridgment", "mormon_words", "moroni", "ether", "unknown"]
+        }
+      }
+    },
+    "clues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "summary"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "direction", "distance", "travel_time", "landform", "water", "climate",
+              "flora", "fauna", "mineral", "settlement", "boundary", "relative_location",
+              "culture", "other"
+            ]
+          },
+          "summary": { "type": "string" },
+          "raw_terms": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "model_claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["model_id", "claim", "sources"],
+        "properties": {
+          "model_id": { "type": "string" },
+          "claim": { "type": "string" },
+          "why": { "type": "string" },
+          "confidence_author": { "type": "string", "enum": ["high", "medium", "low", "speculative", "unspecified"] },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["citation"],
+              "properties": {
+                "citation": { "type": "string" },
+                "url": { "type": "string" },
+                "page": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "our_notes": { "type": "string", "description": "Neutral editorial notes; not advocacy" },
+    "insight_links": { "type": "array", "items": { "type": "string" }, "description": "Paths under research/insights/" },
+    "cross_refs": { "type": "array", "items": { "type": "string" }, "description": "Other verse ids" },
+    "placement": {
+      "type": "object",
+      "description": "Where this content appears in the book product",
+      "properties": {
+        "main_text": { "type": "boolean" },
+        "footnote": { "type": "boolean" },
+        "appendix": { "type": "boolean" },
+        "digital_only": { "type": "boolean" }
+      }
+    },
+    "updated": { "type": "string", "format": "date" }
+  }
+}

@@ -1,0 +1,7 @@
+id,name,category,status,profile_path,updated
+mesoamerica,Limited Mesoamerica (Sorenson-style),mesoamerica,active,research/models/mesoamerica.md,2026-07-29
+heartland,Heartland (North American Midwest),heartland,active,research/models/heartland.md,2026-07-29
+baja,Baja California Peninsula,baja,active,research/models/baja.md,2026-07-29
+south-america,South America / Chile–Peru variants,south_america,historical,research/models/south-america.md,2026-07-29
+malay,Malay Peninsula,malay,speculative,research/models/malay.md,2026-07-29
+internal,Internal Geography Only,internal,active,research/models/internal.md,2026-07-29

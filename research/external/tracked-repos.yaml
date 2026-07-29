@@ -1,0 +1,69 @@
+# External repositories and data sources to track (fork, submodule, or citation-only).
+# Policy: prefer submodule or documented fork; always record upstream URL + last reviewed date.
+# Do NOT vendor huge binary DEM/river datasets into git — link and document fetch scripts.
+
+bom_geography:
+  - name: Map-BofM-Geography
+    url: https://github.com/vwolfley/Map-BofM-Geography
+    role: Interactive/map visualization reference
+    integrate: reference
+    last_reviewed: 2026-07-29
+  - name: Book-of-Mormon-Geography
+    url: https://github.com/BillPrisbrey/Book-of-Mormon-Geography
+    role: Graph-database approach to internal geography
+    integrate: candidate_submodule_or_adapter
+    last_reviewed: 2026-07-29
+  - name: book-of-mormon-geography-atlas
+    url: https://github.com/StephenCranney/book-of-mormon-geography-atlas
+    role: Atlas HTML reference
+    integrate: reference
+    last_reviewed: 2026-07-29
+  - name: bom-map-constraints
+    url: https://github.com/edwardsjohnmartin/bom-map-constraints
+    role: Mapping constraints from the text
+    integrate: candidate_adapter
+    last_reviewed: 2026-07-29
+
+hydrology_topography:
+  - name: py3dep
+    url: https://github.com/hyriver/py3dep
+    role: USGS 3DEP elevation access (US topography)
+    integrate: tool_dependency_docs
+    last_reviewed: 2026-07-29
+  - name: wh2o-vue (American Whitewater)
+    url: https://github.com/AmericanWhitewater/wh2o-vue
+    role: North American river map/guide patterns
+    integrate: reference
+    last_reviewed: 2026-07-29
+  - name: north-america-river-watch
+    url: https://github.com/andrewnakas/north-america-river-watch
+    role: River sensors map (USGS/NOAA/EC)
+    integrate: reference
+    last_reviewed: 2026-07-29
+  - name: NHD / NHDPlus (USGS official)
+    url: https://www.usgs.gov/national-hydrography
+    role: Authoritative US river geometry — use official downloads, not a random fork
+    integrate: data_pipeline
+    last_reviewed: 2026-07-29
+  - name: HydroSHEDS / HydroBASINS
+    url: https://www.hydrosheds.org/
+    role: Global river/basin layers including Mexico & South America
+    integrate: data_pipeline
+    last_reviewed: 2026-07-29
+
+paleoclimate:
+  - name: paleoda_sa
+    url: https://github.com/mchoblet/paleoda_sa
+    role: South American hydroclimate reconstruction methods (publication code)
+    integrate: reference_methods
+    last_reviewed: 2026-07-29
+  - name: NOAA Paleoclimatology
+    url: https://www.ncei.noaa.gov/products/paleoclimatology
+    role: Proxy data archives; search for ~600 BCE North America
+    integrate: data_pipeline
+    last_reviewed: 2026-07-29
+
+notes: >
+  When a useful upstream improves, open an issue "upstream-sync:<name>" and
+  record changelog in research/external/CHANGELOG.md. Prefer thin adapters
+  over hard forks when license allows.

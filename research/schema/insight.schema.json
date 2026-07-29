@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EzrasEagle/bom-geography-research/research/schema/insight.schema.json",
+  "title": "Independent Research Insight",
+  "description": "Dual-track content: facts, history, travel, climate, flora, etc. not owned by a single geography model.",
+  "type": "object",
+  "required": ["id", "title", "category", "summary", "body_path", "sources", "updated"],
+  "properties": {
+    "id": { "type": "string" },
+    "title": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": ["travel", "climate", "flora", "fauna", "history", "hydrology", "topography", "archaeology", "linguistics", "other"]
+    },
+    "summary": { "type": "string" },
+    "body_path": { "type": "string" },
+    "relevance_to_models": { "type": "array", "items": { "type": "string" } },
+    "related_verses": { "type": "array", "items": { "type": "string" } },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "citation": { "type": "string" },
+          "url": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "confidence": { "type": "string", "enum": ["established", "probable", "speculative", "open_question"] },
+    "updated": { "type": "string", "format": "date" }
+  }
+}
