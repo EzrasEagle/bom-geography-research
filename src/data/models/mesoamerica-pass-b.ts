@@ -6,6 +6,8 @@
  * Seed: high-signal spine + war geography + neck + Sidon graph (expandable).
  */
 
+import { mesoGeoPassagesExtra } from "@/data/models/mesoamerica-pass-b-extra";
+
 export type GeoPassage = {
   id: string;
   ref: string;
@@ -40,7 +42,7 @@ export const MESO_PASS_B_META = {
   note: "Internal text facts first. Expand until near-exhaustive vs Mormon’s Map / Source Book apparatus.",
 };
 
-export const mesoGeoPassages: GeoPassage[] = [
+const mesoGeoPassagesSeed: GeoPassage[] = [
   // Landing / Nephi founding
   { id: "gp-1ne-18-23", ref: "1 Nephi 18:23", book: "1 Nephi", chapter: 18, verse: 23, fact: "Arrived at promised land; went forth upon the land", features: ["landing"], relation: "location", strength: "hard" },
   { id: "gp-1ne-18-24", ref: "1 Nephi 18:24", book: "1 Nephi", chapter: 18, verse: 24, fact: "Tilled earth; seeds grew exceedingly", features: ["landing"], relation: "other", strength: "soft" },
@@ -126,6 +128,16 @@ export const mesoGeoPassages: GeoPassage[] = [
   { id: "gp-ether-10-20", ref: "Ether 10:20", book: "Ether", chapter: 10, verse: 20, fact: "Built great city by narrow neck; sea east and west; animals in land southward", features: ["narrow-neck", "sea-east", "sea-west"], relation: "boundary", strength: "hard", passAIds: ["mc-map-24-jaredite-great-city-neck"] },
   { id: "gp-ether-15-11", ref: "Ether 15:11", book: "Ether", chapter: 15, verse: 11, fact: "Hill Ramah same as hill Cumorah of Nephites", features: ["cumorah"], relation: "location", strength: "hard", passAIds: ["mc-map-22-cumorah-vigia"] },
 ];
+
+export const mesoGeoPassages: GeoPassage[] = (() => {
+  const all = [...mesoGeoPassagesSeed, ...(mesoGeoPassagesExtra as GeoPassage[])];
+  const seen = new Set<string>();
+  return all.filter((p) => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+})();
 
 export function passBStats() {
   return {
