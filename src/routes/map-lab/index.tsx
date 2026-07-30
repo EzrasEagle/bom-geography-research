@@ -31,10 +31,11 @@ import {
   type CorridorAssociation,
 } from "@/data/soft-regions";
 import {
+  DEFAULT_FULL_WILDERNESS_ROUTES,
   dayLengthPixels,
   dayRingRadius,
+  fullRouteBands,
   polyToSvgPath,
-  regionCorridorPaths,
   transformPoints,
 } from "@/lib/soft-region-geometry";
 import {
@@ -92,6 +93,12 @@ function MapLabPage() {
   const [proximityOverrides, setProximityOverrides] = useState<Record<string, number>>({});
   const [dayPixels, setDayPixels] = useState(DEFAULT_DAY_PIXELS);
   const [showSoftRegions, setShowSoftRegions] = useState(true);
+  /** Perimeter / half-width of wilderness band along full routes (px) */
+  const [corridorHalfWidth, setCorridorHalfWidth] = useState(22);
+  const [enabledWildRoutes, setEnabledWildRoutes] = useState<string[]>([
+    "route-nephi-zarahemla-omni",
+  ]);
+  const [showConstraintEdges, setShowConstraintEdges] = useState(true);
   const [assocForObject, setAssocForObject] = useState<{ title: string; dist: string; time: string }[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(true);
@@ -225,14 +232,32 @@ function MapLabPage() {
   );
 
   const wildernessBandsDisplay = useMemo(() => {
-    const bands = regionCorridorPaths(wildernessCorridors, layout, dayPxOpen, 15);
+    const enabled = new Set(enabledWildRoutes);
+    const bands = fullRouteBands(DEFAULT_FULL_WILDERNESS_ROUTES, layout, corridorHalfWidth, enabled);
     return bands.map((b) => ({
       id: b.id,
       points: transformPoints(b.points, (keyed) =>
         applyMacroTransform(keyed, macro.directionRotation, macro.globalScale),
       ),
+      mid: transformPoints([b.mid], (keyed) =>
+        applyMacroTransform(keyed, macro.directionRotation, macro.globalScale),
+      )[0]!,
     }));
-  }, [wildernessCorridors, layout, dayPxOpen, macro.directionRotation, macro.globalScale]);
+  }, [
+    layout,
+    corridorHalfWidth,
+    enabledWildRoutes,
+    macro.directionRotation,
+    macro.globalScale,
+  ]);
+
+  /** Keep wilderness layout pin on primary route midpoint so paths through it stay on route */
+  const wildernessRouteMid = useMemo(() => {
+    const a = layout["nephi"];
+    const b = layout["zarahemla"];
+    if (!a || !b) return null;
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }, [layout]);
 
   const edges = useMemo(() => {
     return seedConstraints.map((c) => {
@@ -466,6 +491,14 @@ function MapLabPage() {
               onChange={(e) => setShowSoftRegions(e.target.checked)}
             />
             Soft regions
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm px-2">
+            <input
+              type="checkbox"
+              checked={showConstraintEdges}
+              onChange={(e) => setShowConstraintEdges(e.target.checked)}
+            />
+            Constraint links
           </label>
           <button
             type="button"
@@ -853,88 +886,62 @@ function MapLabPage() {
       {showSoftRegions && (
         <Card className="p-4 md:p-5 space-y-3 border-emerald-800/20">
           <div>
-            <h2 className="font-semibold text-base">Wilderness · route corridors</h2>
+            <h2 className="font-semibold text-base">Wilderness · full route band</h2>
             <p className="text-xs text-muted mt-0.5 max-w-2xl leading-relaxed">
-              Wilderness is drawn <strong>only along associations</strong> (e.g. Nephi → toward
-              Zarahemla), for the prescribed days from each land — it does <strong>not</strong>{" "}
-              swallow Zarahemla or Nephi. Add more corridor associations to expand along other
-              routes (e.g. toward Desolation). Lands can grow later; we do not know which edge of
-              Nephi they fled from.
+              For Omni 1:12–13 the party travels <strong>through the wilderness the whole way</strong>{" "}
+              from the land of Nephi to Zarahemla. The green band follows that entire spine (not stubs
+              only at each end). It stops just short of city pins. Perimeter (band width) is
+              adjustable. Enable extra routes to expand along other associations (e.g. Desolation
+              branch).
             </p>
           </div>
-          <div className="flex flex-wrap gap-4 text-xs">
-            <label className="space-y-1">
-              <span className="text-muted">Pixels / open-ground day</span>
-              <input
-                type="range"
-                min={14}
-                max={50}
-                value={dayPixels}
-                onChange={(e) => setDayPixels(Number(e.target.value))}
-                className="w-40 block"
-              />
-              <span className="tabular-nums font-medium">{dayPixels}px</span>
-            </label>
-            <div className="text-muted max-w-xs leading-relaxed">
-              Day rings use <strong>wilderness pace</strong> from macro (jungle/mountain day-miles
-              vs open). Slower wilderness → smaller day ring for the same "1 day."
-              Macro open {macro.dayMilesOpen} mi/d · wild{" "}
-              {Math.min(macro.dayMilesJungle, macro.dayMilesMountain)} mi/d.
-            </div>
-          </div>
+          <label className="block text-xs space-y-1 max-w-md">
+            <span className="text-muted">Corridor perimeter (half-width, px)</span>
+            <input
+              type="range"
+              min={8}
+              max={48}
+              value={corridorHalfWidth}
+              onChange={(e) => setCorridorHalfWidth(Number(e.target.value))}
+              className="w-full"
+            />
+            <span className="tabular-nums font-medium">{corridorHalfWidth}px each side of route</span>
+          </label>
           <div className="space-y-2">
-            {wildernessCorridors.map((link) => (
-              <div
-                key={link.id}
-                className="rounded-[var(--radius)] border border-border bg-surface-2/50 p-3 space-y-1"
-              >
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <button
-                    type="button"
-                    className="font-medium text-accent hover:underline"
-                    onClick={() => setSelectedPlace(link.placeId)}
-                  >
-                    {placeLabel(link.placeId)}
-                  </button>
-                  <span className="text-muted">→ toward</span>
-                  <button
-                    type="button"
-                    className="font-medium text-accent hover:underline"
-                    onClick={() => setSelectedPlace(link.towardPlaceId)}
-                  >
-                    {placeLabel(link.towardPlaceId)}
-                  </button>
-                  <Badge tone={link.strength === "hard" ? "teal" : "claim"}>{link.strength}</Badge>
-                </div>
-                <label className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-muted">Days into corridor from place</span>
+            {DEFAULT_FULL_WILDERNESS_ROUTES.map((route) => {
+              const on = enabledWildRoutes.includes(route.id);
+              return (
+                <label
+                  key={route.id}
+                  className="flex items-start gap-2 text-xs rounded border border-border p-2"
+                >
                   <input
-                    type="range"
-                    min={0.25}
-                    max={5}
-                    step={0.25}
-                    value={link.proximityDays}
-                    onChange={(e) =>
-                      setProximityOverrides((prev) => ({
-                        ...prev,
-                        [`${link.placeId}>${link.towardPlaceId}`]: Number(e.target.value),
-                      }))
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={on}
+                    onChange={() =>
+                      setEnabledWildRoutes((prev) =>
+                        on ? prev.filter((x) => x !== route.id) : [...prev, route.id],
+                      )
                     }
-                    className="flex-1 min-w-[8rem]"
                   />
-                  <span className="tabular-nums font-medium w-10">{link.proximityDays}d</span>
+                  <span>
+                    <span className="font-medium text-ink">
+                      {route.placeIds.map((id) => placeLabel(id)).join(" → ")}
+                    </span>
+                    <span className="block text-muted mt-0.5">{route.note}</span>
+                    {route.sourceRefs && (
+                      <span className="text-[10px] text-muted">{route.sourceRefs.join(" · ")}</span>
+                    )}
+                  </span>
                 </label>
-                {link.note && <p className="text-[11px] text-muted">{link.note}</p>}
-                {link.sourceRefs && (
-                  <p className="text-[10px] text-muted">{link.sourceRefs.join(" · ")}</p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
           <p className="text-[11px] text-muted leading-relaxed">
-            Green bands = wilderness along the route only. City/land pins stay clear. Full
-            Nephi–Zarahemla distance can remain unknown while each end is "about a day into
-            the wilderness."
+            Constraint links (city–city graph) are separate from multi-paths and the wilderness band.
+            Toggle "Constraint links" if they are hidden. Paths with a wilderness corridor
+            are drawn through the band midpoint.
           </p>
         </Card>
       )}
@@ -1055,40 +1062,42 @@ function MapLabPage() {
             <rect x="470" y="0" width="50" height="360" fill="#ccfbf1" opacity="0.55" />
             
             
-            {/* Terrain-aware day rings (smaller radius if wilderness travel is slower) */}
-            {showSoftRegions &&
-              wildernessCorridors.map((link) => {
-                const c = displayLayout[link.placeId];
-                if (!c) return null;
-                // Ring at place: open-ground day by default; if contact is wilderness, use wild day scale
-                const r = dayRingRadius(link.proximityDays, dayPxWild) * macro.globalScale;
-                const show =
-                  selectedPlace === "wilderness" ||
-                  hoverPlace === "wilderness" ||
-                  selectedPlace === link.placeId ||
-                  hoverPlace === link.placeId;
-                if (!show) return null;
+
+            {/* Constraint graph edges (city–city links) */}
+            {showConstraintEdges &&
+              edges.map((e) => {
+                if (!e.enabled) return null;
+                const a = displayLayout[e.from];
+                const b = displayLayout[e.to];
+                if (!a || !b) return null;
+                const active = e.id === selected?.id;
                 return (
-                  <circle
-                    key={`ring-${link.id}`}
-                    cx={c.x}
-                    cy={c.y}
-                    r={r}
-                    fill="none"
-                    stroke="#3f6212"
-                    strokeWidth={1.25}
-                    strokeDasharray="4 3"
-                    opacity={0.55}
+                  <line
+                    key={e.id}
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    stroke={e.color}
+                    strokeWidth={active || hoverEdge === e.id ? 4 : e.strength === "hard" ? 2.5 : 1.5}
+                    strokeDasharray={e.strength === "soft" ? "4 3" : undefined}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedEdge(e.id);
+                      setSelectedPlace(null);
+                    }}
+                    onPointerEnter={() => setHoverEdge(e.id)}
+                    onPointerLeave={() => setHoverEdge((h) => (h === e.id ? null : h))}
                   >
                     <title>
-                      {link.proximityDays} day walk from {link.placeId} (wilderness pace) toward{" "}
-                      {link.towardPlaceId}
+                      {e.from} → {e.to}: {String(e.value)}
+                      {e.sourceVerse ? ` · ${e.sourceVerse}` : ""}
                     </title>
-                  </circle>
+                  </line>
                 );
               })}
 
-            {/* Wilderness corridors along routes only — does not swallow cities */}
+            {/* Full-route wilderness bands (entire Nephi→Zarahemla spine + optional branches) */}
             {showSoftRegions &&
               wildernessBandsDisplay.map((band) => (
                 <path
@@ -1096,38 +1105,93 @@ function MapLabPage() {
                   d={polyToSvgPath(band.points)}
                   fill="#3f6212"
                   fillOpacity={
-                    selectedPlace === "wilderness" || hoverPlace === "wilderness" ? 0.32 : 0.18
+                    selectedPlace === "wilderness" || hoverPlace === "wilderness" ? 0.34 : 0.2
                   }
                   stroke="#14532d"
-                  strokeWidth={1.25}
-                  strokeDasharray="5 3"
+                  strokeWidth={1.5}
+                  strokeDasharray="6 3"
                   className="cursor-pointer"
                   onClick={() => setSelectedPlace("wilderness")}
                   onPointerEnter={() => setHoverPlace("wilderness")}
                   onPointerLeave={() => setHoverPlace((h) => (h === "wilderness" ? null : h))}
                 >
                   <title>
-                    Wilderness corridor along route — stops before city centers (proximity days)
+                    Wilderness along full route {band.id} — perimeter adjustable; does not cover city
+                    centers
                   </title>
                 </path>
               ))}
 
-            {/* Multi-path routes (curves; intended vs actual) */}
+            {/* Day rings at ends of primary corridor */}
+            {showSoftRegions &&
+              (selectedPlace === "wilderness" ||
+                hoverPlace === "wilderness" ||
+                selectedPlace === "nephi" ||
+                selectedPlace === "zarahemla") &&
+              ["nephi", "zarahemla"].map((pid) => {
+                const c = displayLayout[pid];
+                if (!c) return null;
+                const r = dayRingRadius(1, dayPxWild) * macro.globalScale;
+                return (
+                  <circle
+                    key={`ring-${pid}`}
+                    cx={c.x}
+                    cy={c.y}
+                    r={r}
+                    fill="none"
+                    stroke="#3f6212"
+                    strokeWidth={1.25}
+                    strokeDasharray="4 3"
+                    opacity={0.5}
+                  >
+                    <title>1 day at wilderness pace from {pid}</title>
+                  </circle>
+                );
+              })}
+
+            {/* Multi-path routes — use live wilderness midpoint so route goes through corridor */}
             {showPaths &&
               pathDraw.map(({ path, dMain, dGhost, displayPts }) => {
                 const sel = selectedPathId === path.id;
                 const dash =
                   path.style === "dashed" ? "8 5" : path.style === "dotted" ? "2 5" : undefined;
+                // Rebuild display pts so wilderness via sits on route mid
+                let pts = displayPts;
+                if (path.corridor === "wilderness" && wildernessBandsDisplay[0]?.mid) {
+                  const mid = wildernessBandsDisplay[0].mid;
+                  pts = displayPts.map((pt) =>
+                    pt.featureId === "wilderness" || pt.role === "via"
+                      ? { ...pt, x: mid.x, y: mid.y }
+                      : pt,
+                  );
+                }
+                // recompute path d from adjusted pts
+                const dAdj =
+                  path.corridor === "wilderness" && wildernessBandsDisplay[0]?.mid
+                    ? (() => {
+                        const main = pts.filter((p) => p.role !== "intended");
+                        if (main.length < 2) return dMain;
+                        let d = `M ${main[0]!.x} ${main[0]!.y}`;
+                        for (let i = 1; i < main.length; i++) {
+                          const prev = main[i - 1]!;
+                          const cur = main[i]!;
+                          const cpx = (prev.x + cur.x) / 2;
+                          const cpy = (prev.y + cur.y) / 2;
+                          d += ` Q ${cpx} ${cpy} ${cur.x} ${cur.y}`;
+                        }
+                        return d;
+                      })()
+                    : dMain;
                 return (
                   <g key={path.id} className="cursor-pointer" onClick={() => setSelectedPathId(path.id)}>
-                    {dMain && (
+                    {dAdj && (
                       <path
-                        d={dMain}
+                        d={dAdj}
                         fill="none"
                         stroke={path.color}
                         strokeWidth={sel ? 4 : 2.5}
                         strokeDasharray={dash}
-                        opacity={sel ? 1 : 0.75}
+                        opacity={sel ? 1 : 0.8}
                       />
                     )}
                     {dGhost && (
@@ -1147,7 +1211,7 @@ function MapLabPage() {
                         : ""}
                       {path.actualDestinationId ? ` · actual ${path.actualDestinationId}` : ""}
                     </title>
-                    {displayPts
+                    {pts
                       .filter((pt) => pt.role === "branch")
                       .map((pt, i) => (
                         <circle
@@ -1176,11 +1240,11 @@ function MapLabPage() {
               const nRefs = dossier?.scriptures.length ?? 0;
               // Soft regions: centroid handle only (blob drawn separately)
               if (isSoft && p.id === "wilderness") {
-                // Label near midpoint of Nephi–Zarahemla corridor (not a city)
+                const mid = wildernessBandsDisplay[0]?.mid;
                 const a = displayLayout["nephi"];
                 const b = displayLayout["zarahemla"];
-                const cx = a && b ? (a.x + b.x) / 2 : pos.x;
-                const cy = a && b ? (a.y + b.y) / 2 : pos.y;
+                const cx = mid?.x ?? (a && b ? (a.x + b.x) / 2 : pos.x);
+                const cy = mid?.y ?? (a && b ? (a.y + b.y) / 2 : pos.y);
                 return (
                   <g
                     key={p.id}
