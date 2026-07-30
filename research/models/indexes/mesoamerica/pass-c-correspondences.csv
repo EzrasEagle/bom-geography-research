@@ -1,0 +1,421 @@
+n,id,domain,era,claim,bom_hints,meso_hint,strength,contested
+1,mc-c-001,writing_records,multi,"Multiple writing systems in Mesoamerica from early periods",1 Nephi 1:2|Mosiah 1:3,"Olmec/Epi-Olmec/Maya scripts & related systems",medium,no
+2,mc-c-002,writing_records,multi,"Lineage histories as political validation documents",Omni 1:14–19|Mosiah 25,"Mesoamerican dynastic/lineage records",medium,no
+3,mc-c-003,writing_records,multi,"Records of events kept by elite scribes",1 Nephi 9|Words of Mormon,"Scribal elites",medium,no
+4,mc-c-004,writing_records,multi,"Letters / written military communication",Alma 54–60,"Written messages among polities",medium,no
+5,mc-c-005,writing_records,multi,"Genealogies preserved in records",Ether 1|1 Nephi 5,"Genealogical lists on monuments/codices",medium,no
+6,mc-c-006,writing_records,multi,"Sacred plates / durable records",Jacob 1:2|Mormon 1,"Durable media for important texts",low,yes
+7,mc-c-007,writing_records,multi,"Records hidden / deposited in hills",Mormon 1:2–3|Mormon 6:6,"Caching of ritual objects (analogy)",low,yes
+8,mc-c-008,writing_records,multi,"Translation / interpretation of unknown scripts",Mosiah 8:12–13|Mosiah 28,"Specialists for foreign/glyphic texts",low,yes
+9,mc-c-009,writing_records,multi,"Multiple books among the people",Helaman 3:15,"Codices and painted books",medium,no
+10,mc-c-010,writing_records,multi,"Prophetic / predictive content in records",1 Nephi 5:19,"Divinatory and prophetic texts",low,yes
+11,mc-c-011,writing_records,multi,"Records used in intergroup competition",Mosiah 10:12–17,"Origin stories justifying conflict",medium,no
+12,mc-c-012,writing_records,multi,"Literacy among elite religious leaders",Alma 33|3 Nephi 23,"Priestly literacy",medium,no
+13,mc-c-013,writing_records,multi,"Civil records of judges / government",Alma 1–4|Helaman 1,"Administrative recording",low,yes
+14,mc-c-014,writing_records,multi,"Engraved large stones with history",Omni 1:20,"Stelae and monumental inscriptions",high,no
+15,mc-c-015,writing_records,multi,"Bilingual / dual-language capability",Omni 1:17–18|Mosiah 1:2–4,"Multilingual Mesoamerican elites",medium,no
+16,mc-c-016,writing_records,multi,"Teaching language and writing to elite children",Mosiah 1:2–4,"Scribal education",medium,no
+17,mc-c-017,writing_records,multi,"Abridgment practice by later editors",Words of Mormon|Mormon 5,"Compilation of earlier sources",medium,no
+18,mc-c-018,writing_records,multi,"Use of records to settle identity disputes",Mosiah 25:1–13,"Charter documents for groups",medium,no
+19,mc-c-019,writing_records,multi,"Public reading of records to multitudes",Mosiah 2|3 Nephi 23,"Public ceremonial reading",medium,no
+20,mc-c-020,writing_records,multi,"Maps/mental geography in war letters",Alma 56–58,"Spatial literacy of commanders",medium,no
+21,mc-c-021,writing_records,multi,"Interpreters / seers for sealed records",Mosiah 8:13–17,"Ritual specialists (analogy)",low,yes
+22,mc-c-022,writing_records,multi,"Falsified or competing historical claims",Alma 30|3 Nephi 1,"Propaganda and counter-histories",low,no
+23,mc-c-023,writing_records,multi,"Record-keeping lineages",Omni|Mormon 1,"Hereditary scribal lines",medium,no
+24,mc-c-024,writing_records,multi,"Secular + sacred content mixed in corpus",Helaman 3:13–15,"Mixed content codices",low,no
+25,mc-c-025,writing_records,multi,"Withholding of secret records",Alma 37:27–29,"Restricted ritual knowledge",low,yes
+26,mc-c-026,human_biology,multi,"Phenotypic diversity among populations",2 Nephi 5:21|Alma 3,"Artistic diversity in figurines/murals",low,yes
+27,mc-c-027,human_biology,multi,"Bearded figures in art (Mediterranean-looking claims)",1 Nephi 18,"Bearded figures in some Mesoamerican art",low,yes
+28,mc-c-028,human_biology,multi,"Skin marks as social/religious identity markers",Alma 3:4–18,"Body paint, scarification, tattoos",medium,no
+29,mc-c-029,human_biology,multi,"Population capable of large armies",Alma 2|Mormon 6,"High density population zones",medium,no
+30,mc-c-030,human_biology,multi,"Disease and pestilence as historical factors",Mosiah 17|3 Nephi 8–9,"Epidemic disease in Mesoamerican history",medium,no
+31,mc-c-031,human_biology,multi,"Famine affecting whole regions",Helaman 11|Ether 9,"Drought/famine cycles",medium,no
+32,mc-c-032,human_biology,multi,"Mixed heritage populations",Omni 1:14–19|Helaman 6,"Multiethnic polities",medium,no
+33,mc-c-033,human_biology,multi,"Child sacrifice reports (late period)",Mormon 4:14–15|Moroni 9,"Child sacrifice in some contexts",medium,yes
+34,mc-c-034,human_biology,multi,"Cannibalism reports in extreme war",Moroni 9:8–10,"War cannibalism claims in ethnohistory",low,yes
+35,mc-c-035,human_biology,multi,"Intermarriage between elite groups",Alma 17–20|4 Nephi,"Elite marriage alliances",medium,no
+36,mc-c-036,human_biology,multi,"Depopulation after genocidal war",Mormon 6–8|Ether 15,"Collapse/depopulation episodes",medium,no
+37,mc-c-037,human_biology,multi,"Rapid demographic growth after peace",4 Nephi 1|Helaman 11,"Post-conflict rebound",low,no
+38,mc-c-038,human_biology,multi,"Ritual body modification for identity",Alma 3,"Identity marking practices",medium,no
+39,mc-c-039,human_biology,multi,"Longevity claims for some rulers (Jaredite literary)",Ether 7–10,"Legendary long reigns",low,yes
+40,mc-c-040,human_biology,multi,"Physical rhetoric of strength/weakness in war",Mosiah 9|Alma 48,"Artistic stature conventions",low,yes
+41,mc-c-041,political_economy,multi,"Elite domination of wealth and land",Jacob 2|Alma 4|Helaman 6,"Stratified Mesoamerican societies",high,no
+42,mc-c-042,political_economy,multi,"Tribute extraction by rulers",Mosiah 7:22|Mosiah 19,"Tribute economies",high,no
+43,mc-c-043,political_economy,multi,"Divine kingship ideology",Mosiah 2|Ether 6,"Divine/sacral kingship",medium,no
+44,mc-c-044,political_economy,multi,"Priests validating elite power",Mosiah 11|Alma 1,"Priest–ruler complexes",medium,no
+45,mc-c-045,political_economy,multi,"Luxury goods: gold, silver, fine textiles",Alma 1:29|Alma 4:6,"Prestige goods exchange",medium,no
+46,mc-c-046,political_economy,multi,"Markets and trade routes",Helaman 6:7–9|Helaman 7:10,"Markets and long-distance trade",high,no
+47,mc-c-047,political_economy,multi,"Chief market in capital city",Helaman 7:10,"Central marketplace",medium,no
+48,mc-c-048,political_economy,multi,"Shipping of timber and goods",Helaman 3:10|Alma 63,"Waterborne bulk transport",medium,no
+49,mc-c-049,political_economy,multi,"Corvée labor / public works",Alma 48–50|3 Nephi 3,"Labor drafts for fortifications",medium,no
+50,mc-c-050,political_economy,multi,"Wealth inequality leading to schism",Alma 4|Helaman 3–4,"Class tension",medium,no
+51,mc-c-051,political_economy,multi,"Control of agricultural surplus",Mosiah 9|Alma 62,"Maize surplus politics",medium,no
+52,mc-c-052,political_economy,multi,"Ransom / exchange of prisoners",Alma 54–55|Alma 57,"Captive economies",medium,no
+53,mc-c-053,political_economy,multi,"Secret combinations for gain",Helaman 6|Ether 8,"Factional cartels (analogy)",low,yes
+54,mc-c-054,political_economy,multi,"King-men seeking monarchy for status",Alma 51|Alma 61,"Elite factionalism",medium,no
+55,mc-c-055,political_economy,multi,"Taxation under kings and judges",Mosiah 2|Mosiah 29,"Tribute/tax institutions",medium,no
+56,mc-c-056,political_economy,multi,"Trade destruction during war",Helaman 4|3 Nephi 4,"War disrupting exchange",medium,no
+57,mc-c-057,political_economy,multi,"Land grants to refugees",Alma 27:22|Alma 35,"State resettlement",medium,no
+58,mc-c-058,political_economy,multi,"Military provisioning logistics",Alma 56–58|Alma 60,"Army supply lines",medium,no
+59,mc-c-059,political_economy,multi,"Foreign merchants / interregional contact",Helaman 6:7–8,"Long-distance specialists",low,yes
+60,mc-c-060,political_economy,multi,"Peace converting military labor to building",Alma 50|4 Nephi,"Demilitarization phases",low,no
+61,mc-c-061,society,multi,"Corporate kin groups over pure individualism",Mosiah 6|Alma 1,"House/kin corporate groups",medium,no
+62,mc-c-062,society,multi,"Class structures: nobles vs commoners",Alma 32|3 Nephi 6,"Elite/commoner stratification",high,no
+63,mc-c-063,society,multi,"Sociopolitical factions and civil war",Alma 51|Alma 61–62,"Factional warfare",high,no
+64,mc-c-064,society,multi,"Religion differentiating social groups",Alma 31|4 Nephi,"Cult identity politics",medium,no
+65,mc-c-065,society,multi,"Polygyny among elites (condemned)",Jacob 2–3,"Elite polygyny",medium,no
+66,mc-c-066,society,multi,"Slavery / bond-servitude",Mosiah 7|Alma 27,"Captive labor",medium,no
+67,mc-c-067,society,multi,"Urban vs hinterland populations",Alma 50|Helaman 3,"City-centered systems",medium,no
+68,mc-c-068,society,multi,"Refugee incorporation",Omni 1:14|Alma 27|Mosiah 25,"Incorporation of migrants",high,no
+69,mc-c-069,society,multi,"Ethnonyms as political labels",Jacob 1:13–14|Alma 3,"Ethnic labels as political",high,no
+70,mc-c-070,society,multi,"Youth military cohorts",Alma 53|Alma 56,"Age-grade warriors",medium,no
+71,mc-c-071,society,multi,"Oath-bound military brotherhoods",Alma 53:17–21,"Warrior sodalities",medium,no
+72,mc-c-072,society,multi,"Professional robber bands",Helaman 2|3 Nephi 1–4,"Bandit polities",medium,no
+73,mc-c-073,society,multi,"Mountains/wilderness as outlaw refuge",Helaman 11:25–31|3 Nephi 4,"Highland refuge zones",high,no
+74,mc-c-074,society,multi,"Mass migration as strategy",Alma 63|Helaman 3,"Directed colonization",medium,no
+75,mc-c-075,society,multi,"Bilingual society after mergers",Omni 1:17–19,"Language shift after merger",medium,no
+76,mc-c-076,society,multi,"Apostate urban elites vs rural poor",Alma 32–35,"Urban cult stratification",medium,no
+77,mc-c-077,society,multi,"Public judicial spectacle",Alma 1|Alma 30,"Public judicial ritual",low,no
+78,mc-c-078,society,multi,"Festival and dance culture",Mosiah 20|Ether 8,"Festival and dance",medium,no
+79,mc-c-079,society,multi,"Pacifist convert subgroups",Alma 24|Alma 27,"Cult-based nonviolence",low,yes
+80,mc-c-080,society,multi,"Social collapse of unity over time",4 Nephi 1:20–46,"Fragmentation after florescence",low,yes
+81,mc-c-081,society,multi,"Missionary specialist cohorts",Alma 17–26|Helaman 5,"Religious specialist cohorts",low,no
+82,mc-c-082,society,multi,"Moral discourse to families",Mosiah 4|Alma 39–42,"Household moral instruction",low,no
+83,mc-c-083,society,multi,"Endogamy/exogamy tensions",Alma 3|4 Nephi,"Marriage rules",low,no
+84,mc-c-084,society,multi,"Gendered labor (weak textual signal)",Mosiah 9|Alma 32,"Gendered division of labor",low,yes
+85,mc-c-085,society,multi,"Record-keeping as social role",Omni|Mormon 1,"Scribal social class",medium,no
+86,mc-c-086,material_culture,multi,"No draft animals for cultivation",Enos 1|Alma 1,"No Old World plow animals",high,no
+87,mc-c-087,material_culture,multi,"Plant-based fermented drinks (“wine”)",Mosiah 11:15|Alma 55,"Pulque and other ferments",medium,yes
+88,mc-c-088,material_culture,multi,"Cement in timber-poor north",Helaman 3:7–11,"Lime plaster/cement",high,no
+89,mc-c-089,material_culture,multi,"Raised highways / roads",3 Nephi 6:8,"Sacbeob and roads",medium,no
+90,mc-c-090,material_culture,multi,"Temples as monumental centers",2 Nephi 5:16|Mosiah 2|3 Nephi 11,"Temple-pyramid centers",high,no
+91,mc-c-091,material_culture,multi,"Towers for watch and ceremony",Mosiah 11:12–13|Helaman 7:10,"Towers/platforms",medium,no
+92,mc-c-092,material_culture,multi,"Ditches, banks, timber walls",Alma 49–53,"Earthworks and palisades",high,no
+93,mc-c-093,material_culture,multi,"Breastworks and pickets",Alma 50:2–4,"Timber defenses",medium,no
+94,mc-c-094,material_culture,multi,"Bows, arrows, clubs, slings, stones",Alma 2|Alma 49,"Mesoamerican weapon kit",medium,yes
+95,mc-c-095,material_culture,multi,"Padded armor / thick clothing",Alma 43:19–21,"Cotton armor",medium,no
+96,mc-c-096,material_culture,multi,"Battle standards",Alma 46,"Military banners",medium,no
+97,mc-c-097,material_culture,multi,"Gold/silver/copper metallurgy (extent debated)",1 Nephi 18:25|Helaman 6:9,"Known metals; steel contested",low,yes
+98,mc-c-098,material_culture,multi,"Fine plant-fiber textiles",Alma 1:29|Alma 4:6,"Cotton/maguey cloth",medium,yes
+99,mc-c-099,material_culture,multi,"Royal palaces",Mosiah 11|Alma 22,"Elite palaces",high,no
+100,mc-c-100,material_culture,multi,"Prisons",Alma 14|Helaman 5,"Captive holding",medium,no
+101,mc-c-101,material_culture,multi,"Ships and coastal craft",Alma 63|Helaman 3:10,"Watercraft; large ships debated",medium,yes
+102,mc-c-102,material_culture,multi,"Grain agriculture foundation",Mosiah 9:9|Helaman 11,"Maize complex",high,no
+103,mc-c-103,material_culture,multi,"Flocks/herds (species mapping debated)",2 Nephi 5|Alma 1,"Deer/turkey/dog; sheep contested",low,yes
+104,mc-c-104,material_culture,multi,"Horses mentioned (semantic debate)",Alma 18:9|3 Nephi 3:22,"No classic horse complex",low,yes
+105,mc-c-105,material_culture,multi,"Chariots mentioned (debated)",Alma 18:9,"No wheeled war chariots",low,yes
+106,mc-c-106,material_culture,multi,"Elephants / cureloms (Jaredite)",Ether 9:19,"Megafauna timing contested",low,yes
+107,mc-c-107,material_culture,multi,"Honey / stingless bees",1 Nephi 17–18,"Native bees",medium,no
+108,mc-c-108,material_culture,multi,"Idols and cult images",Alma 31|Mormon 4:14,"Cult images",medium,no
+109,mc-c-109,material_culture,multi,"Cities with walls and gates",Alma 49|Alma 62,"Walled settlements",high,no
+110,mc-c-110,material_culture,multi,"Elite gardens by houses",Helaman 7:10,"Elite garden compounds",medium,no
+111,mc-c-111,material_culture,multi,"Timber scarcity driving cement",Helaman 3:5–7,"Deforestation zones",medium,no
+112,mc-c-112,material_culture,multi,"Massive earthwork labor",Alma 48–53,"Large labor projects",high,no
+113,mc-c-113,material_culture,multi,"Thrones / elevated seats",Mosiah 11|Alma 60,"Ruler seats",medium,no
+114,mc-c-114,material_culture,multi,"Iron tools (contested)",2 Nephi 5:15,"Iron claims contested",low,yes
+115,mc-c-115,material_culture,multi,"Sacred hills / high places",Alma 31:13|Mormon 6,"Hilltop shrines",medium,no
+116,mc-c-116,material_culture,multi,"Highways broken by catastrophe",3 Nephi 8:13,"Infrastructure collapse",medium,no
+117,mc-c-117,material_culture,multi,"Food storage technology",3 Nephi 4|Helaman 11,"Storage facilities",medium,no
+118,mc-c-118,material_culture,multi,"Obsidian/tool stone economies",Enos 1:20,"Obsidian exchange",low,yes
+119,mc-c-119,material_culture,multi,"Sealed masonry constructions",Helaman 3,"Masonry architecture",medium,no
+120,mc-c-120,material_culture,multi,"Banners of identity",Alma 46:12–13,"Standards/emblems",low,yes
+121,mc-c-121,material_culture,multi,"Wine-press imagery as cultural memory",Mosiah 11,"Local ferment production",low,yes
+122,mc-c-122,material_culture,multi,"Intensive agriculture (terracing/irrigation possible)",Mosiah 9,"Intensive farming",medium,no
+123,mc-c-123,government,multi,"Transition from kings to judges",Mosiah 29,"Constitutional change",medium,no
+124,mc-c-124,government,multi,"Chief judge as head of state",Alma 1–4,"High political office",medium,no
+125,mc-c-125,government,multi,"Lower judges hierarchy",Mosiah 29:11|Alma 11,"Administrative hierarchy",medium,no
+126,mc-c-126,government,multi,"Voice of the people / election",Mosiah 29|Alma 2,"Collective assent",medium,no
+127,mc-c-127,government,multi,"Fragile governments and coups",Helaman 1|Alma 51,"Usurpation patterns",high,no
+128,mc-c-128,government,multi,"Schisms creating new kingdoms",Alma 47|Ether 7,"Political fragmentation",high,no
+129,mc-c-129,government,multi,"Aging kings transferring power",Mosiah 1–2|Mosiah 29,"Succession management",medium,no
+130,mc-c-130,government,multi,"Imprisonment of rivals",Alma 51|Alma 62,"Political prisons",medium,no
+131,mc-c-131,government,multi,"Capital seizure as war aim",Helaman 1:18–19,"Strike the capital",high,no
+132,mc-c-132,government,multi,"Border captains / provincial command",Alma 53–58,"Military governors",medium,no
+133,mc-c-133,government,multi,"Front-to-capital correspondence",Alma 58–61,"Administrative letters",medium,no
+134,mc-c-134,government,multi,"Laws established and enforced",Alma 1|Helaman 4,"Legal norms",low,no
+135,mc-c-135,warfare,multi,"Warfare around agricultural cycle",Alma 53–58,"Seasonal campaigns",medium,no
+136,mc-c-136,warfare,multi,"Religion justifying war",Alma 43–48|3 Nephi 3,"Sacred war ideology",high,no
+137,mc-c-137,warfare,multi,"Oracular guidance before battle",Alma 16:5–6|Alma 43:23,"Divination before war",medium,no
+138,mc-c-138,warfare,multi,"Civil war plus external war",Alma 51|Alma 61,"Multi-front conflict",high,no
+139,mc-c-139,warfare,multi,"Generational feuds",Mosiah 10|Alma 20,"Inherited enmities",medium,no
+140,mc-c-140,warfare,multi,"Militia with captains",Alma 2|Alma 43,"Captains over units",high,no
+141,mc-c-141,warfare,multi,"Units of ten thousand",Mormon 6,"Large unit counting",medium,yes
+142,mc-c-142,warfare,multi,"Fortified cities as war aims",Alma 49–62,"Siege urban warfare",high,no
+143,mc-c-143,warfare,multi,"Decoy and ambush tactics",Alma 43|Alma 52|Alma 58,"Complex tactics",high,no
+144,mc-c-144,warfare,multi,"Night assassination of kings",Alma 51:33–37,"Night elite strikes",medium,no
+145,mc-c-145,warfare,multi,"Court intrigue warfare (Amalickiah)",Alma 47,"Intrigue as strategy",medium,no
+146,mc-c-146,warfare,multi,"Wilderness strip as buffer",Alma 22|Alma 50,"Buffer zones",high,no
+147,mc-c-147,warfare,multi,"Narrow pass as strategic hinge",Alma 50–52|Mormon 3,"Chokepoint warfare",high,no
+148,mc-c-148,warfare,multi,"Coastal corridor campaigns",Alma 51–52,"Littoral advance",high,no
+149,mc-c-149,warfare,multi,"Prisoner exchange politics",Alma 54–55,"Captive diplomacy",medium,no
+150,mc-c-150,warfare,multi,"Supply failure / war weariness",Alma 58–60,"Logistics collapse",medium,no
+151,mc-c-151,warfare,multi,"Pacifist oath group",Alma 24,"Noncombatant converts",low,yes
+152,mc-c-152,warfare,multi,"Stripling warrior youth force",Alma 56–57,"Elite youth units",medium,no
+153,mc-c-153,warfare,multi,"Blood rhetoric and oaths",Alma 44|Alma 49,"Blood war rhetoric",medium,no
+154,mc-c-154,warfare,multi,"Bodies cast into rivers",Alma 2:34–35|Alma 44:22,"River disposal of dead",medium,no
+155,mc-c-155,warfare,multi,"Combined earthwork-timber forts",Alma 50–53,"Complex fortifications",high,no
+156,mc-c-156,warfare,multi,"Spy networks",Alma 56–58,"Military intelligence",medium,no
+157,mc-c-157,warfare,multi,"Strategic retreat northward",Mormon 2–6,"Grand withdrawal",high,no
+158,mc-c-158,warfare,multi,"Genocidal end-stage war",Mormon 4–6|Ether 14–15,"Annihilative war",high,no
+159,mc-c-159,warfare,multi,"Robber polities private war",3 Nephi 1–4,"Non-state armies",high,no
+160,mc-c-160,warfare,multi,"Siege of gathered population",3 Nephi 4,"Investment siege",medium,no
+161,mc-c-161,warfare,multi,"Captive sacrifice",Mormon 4:14–15,"War sacrifice",medium,yes
+162,mc-c-162,warfare,multi,"Civilians in war zones",Moroni 9|Alma 54,"Civilian targeting",medium,no
+163,mc-c-163,warfare,multi,"Title of liberty mobilization",Alma 46,"Mobilization ritual",medium,no
+164,mc-c-164,warfare,multi,"Armor tech differential",Alma 43–44,"Armor advantage",medium,no
+165,mc-c-165,warfare,multi,"City-by-city reconquest",Alma 62,"Sequential reconquest",high,no
+166,mc-c-166,warfare,multi,"North/south boundary treaty",Mormon 2:28–29,"Formal border treaty",high,no
+167,mc-c-167,warfare,multi,"Naval element secondary",Alma 63,"Limited naval war",low,no
+168,mc-c-168,ideology_religion,multi,"Temple-centered worship",2 Nephi 5|3 Nephi 11,"Temple cult centers",high,no
+169,mc-c-169,ideology_religion,multi,"Priestcraft condemned",Alma 1|2 Nephi 26,"Corrupt priestly enterprise",medium,no
+170,mc-c-170,ideology_religion,multi,"Prophets vs court priests",Mosiah 11–17,"Prophetic critique",medium,no
+171,mc-c-171,ideology_religion,multi,"Secret society oaths",Helaman 6|Ether 8,"Oath-bound societies",medium,no
+172,mc-c-172,ideology_religion,multi,"Human sacrifice in apostasy",Mormon 4,"Sacrifice complexes",medium,yes
+173,mc-c-173,ideology_religion,multi,"Baptism-like water ritual",Mosiah 18|3 Nephi 11,"Water purification",medium,yes
+174,mc-c-174,ideology_religion,multi,"Sacred communal meal",3 Nephi 18|Moroni 4–5,"Sacred meals",medium,yes
+175,mc-c-175,ideology_religion,multi,"Messianic signs and omens",Helaman 14|3 Nephi 1,"Prophetic omens",medium,yes
+176,mc-c-176,ideology_religion,multi,"Three days darkness catastrophe",3 Nephi 8–10,"Volcanic darkness phenomena",high,no
+177,mc-c-177,ideology_religion,multi,"Fire destruction of cities",3 Nephi 9,"Burned cities",medium,no
+178,mc-c-178,ideology_religion,multi,"Rameumptom elevated stand",Alma 31:13–21,"Elevated cult platforms",medium,no
+179,mc-c-179,ideology_religion,multi,"Prayer on towers",Helaman 7,"Elevated prayer sites",medium,no
+180,mc-c-180,ideology_religion,multi,"Covenant name-taking",Mosiah 5|Alma 46,"Covenant naming",medium,no
+181,mc-c-181,ideology_religion,multi,"Syncretism after disaster",4 Nephi|3 Nephi 6–7,"Cult mixing",medium,no
+182,mc-c-182,ideology_religion,multi,"Pride cycle after prosperity",Helaman 3–4|4 Nephi,"Cyclical pride",medium,no
+183,mc-c-183,ideology_religion,multi,"Destruction as judgment",3 Nephi 8–10,"Catastrophe theology",medium,no
+184,mc-c-184,ideology_religion,multi,"Just war ethics (defensive)",Alma 43:45–47|Alma 48,"Just war norms",medium,no
+185,mc-c-185,ideology_religion,multi,"Land covenant / curse motifs",Alma 37|Ether 2,"Land ideologies",medium,no
+186,mc-c-186,ideology_religion,multi,"Anti-Christ rival teachers",Alma 30|Jacob 7,"Rival cult founders",low,no
+187,mc-c-187,ideology_religion,multi,"Communal property phase",4 Nephi 1:3,"Communal experiments",low,yes
+188,mc-c-188,ideology_religion,multi,"Seership stones",Mosiah 8|Alma 37,"Scrying analogies",low,yes
+189,mc-c-189,ideology_religion,multi,"Resurrection doctrine (distinctive)",Alma 11|Alma 40,"Limited afterlife parallels only",low,yes
+190,mc-c-190,ideology_religion,multi,"Fall of first parents",2 Nephi 2,"Distant origin parallels",low,yes
+191,mc-c-191,ideology_religion,multi,"Feathered serpent / Christ parallels (interpretive)",3 Nephi 11,"Quetzalcoatl debates",low,yes
+192,mc-c-192,ideology_religion,multi,"Calendar-linked omens",Helaman 14|3 Nephi 1,"Time-count omens",medium,no
+193,mc-c-193,ideology_religion,multi,"Theophany at temple",3 Nephi 11,"Deity appearance claims",low,yes
+194,mc-c-194,ideology_religion,multi,"Twelve disciples structure",3 Nephi 12–19,"Council of specialists",low,yes
+195,mc-c-195,ideology_religion,multi,"Fasting and mourning rituals",Alma 30|Helaman 9,"Public mourning",low,no
+196,mc-c-196,ideology_religion,multi,"Covenant renewal assemblies",Mosiah 2–5|3 Nephi 12–18,"Mass covenant rites",medium,no
+197,mc-c-197,ideology_religion,multi,"Binary cosmic conflict imagery",1 Nephi 14,"Dualistic cosmologies",low,yes
+198,mc-c-198,ideology_religion,multi,"Holy regalia of sacred records",Alma 37,"Text as sacred object",medium,no
+199,mc-c-199,ideology_religion,multi,"Visionary religion reports",Mosiah 27|Alma 36,"Vision quests/visions",low,yes
+200,mc-c-200,ideology_religion,multi,"Law transformation after Christ",3 Nephi 15,"Ritual law change",low,yes
+201,mc-c-201,ideology_religion,multi,"Portents at deaths of leaders",3 Nephi 8,"Death portents",low,no
+202,mc-c-202,archaeology_pre_600bc,pre_600bc,"Indigenous population present at arrival",2 Nephi 5|Omni 1:14–17,"Occupied landscape",medium,no
+203,mc-c-203,archaeology_pre_600bc,pre_600bc,"Early complex society north of neck (Jaredite/Olmec analogy)",Ether 1–15,"Olmec-era complexity",medium,yes
+204,mc-c-204,archaeology_pre_600bc,pre_600bc,"Great city by narrow neck",Ether 10:20,"Isthmian centers",medium,yes
+205,mc-c-205,archaeology_pre_600bc,pre_600bc,"Multiple early writing systems",Mosiah 28|Ether,"Early scripts",medium,no
+206,mc-c-206,archaeology_pre_600bc,pre_600bc,"Bones and ruins of prior people",Mosiah 8:8–11|Alma 22:30,"Abandoned centers",high,no
+207,mc-c-207,archaeology_pre_600bc,pre_600bc,"Final Jaredite wars northward",Ether 13–15,"Terminal conflict zones",low,yes
+208,mc-c-208,archaeology_pre_600bc,pre_600bc,"Moron near later Desolation",Ether 7:5–6,"Capital near isthmus north",medium,no
+209,mc-c-209,archaeology_pre_600bc,pre_600bc,"Animals driven south by calamity",Ether 9:30–34,"Faunal stress narratives",low,yes
+210,mc-c-210,archaeology_pre_600bc,pre_600bc,"Early metal claims (contested)",Ether 10,"Metal chronology debates",low,yes
+211,mc-c-211,archaeology_pre_600bc,pre_600bc,"Rise and fall of early northern civilization",Ether 7–15|Mosiah 8,"Gulf trajectory",medium,yes
+212,mc-c-212,archaeology_600bc_1bc,600bc_1bc,"Highland capital urbanization (Nephi/KJ analogy)",2 Nephi 5|Mosiah 11,"Kaminaljuyú growth",low,yes
+213,mc-c-213,archaeology_600bc_1bc,600bc_1bc,"Defensive works in highlands",Mosiah 9:8|Jarom 1:7,"Walls/forts",low,yes
+214,mc-c-214,archaeology_600bc_1bc,600bc_1bc,"Zarahemla basin settlement (Grijalva)",Omni 1:13|Alma 2,"Upper Grijalva sites",low,yes
+215,mc-c-215,archaeology_600bc_1bc,600bc_1bc,"Dual populations one basin",Omni 1:14–19,"Multiethnic basins",high,no
+216,mc-c-216,archaeology_600bc_1bc,600bc_1bc,"Migration pulses (Mosiah flights)",Omni|Mosiah 22–24,"Formative migrations",low,yes
+217,mc-c-217,archaeology_600bc_1bc,600bc_1bc,"Fortification boom (Alma war era)",Alma 48–53,"Late Preclassic forts",medium,yes
+218,mc-c-218,archaeology_600bc_1bc,600bc_1bc,"East-sea colonization program",Alma 50,"Coastal colonization",medium,no
+219,mc-c-219,archaeology_600bc_1bc,600bc_1bc,"Rapid urban destruction (Ammonihah)",Alma 16,"Destruction layers",medium,no
+220,mc-c-220,archaeology_600bc_1bc,600bc_1bc,"Complex Lamanite polities",Alma 22|Alma 47,"State-level Lamanites",medium,no
+221,mc-c-221,archaeology_600bc_1bc,600bc_1bc,"Northward expansion interest",Alma 50:29|Alma 63,"Beyond isthmus",medium,no
+222,mc-c-222,archaeology_600bc_1bc,600bc_1bc,"Trade growth in peace",Helaman 6,"Commercial florescence",medium,no
+223,mc-c-223,archaeology_600bc_1bc,600bc_1bc,"Banditry rise (Gadianton)",Helaman 1–2,"Nonstate violence",medium,no
+224,mc-c-224,archaeology_600bc_1bc,600bc_1bc,"Literacy in courts/churches",Alma 1–16,"Administrative complexity",medium,no
+225,mc-c-225,archaeology_600bc_1bc,600bc_1bc,"Hybrid coastal cultures",Omni 1:14–16|Alma 51,"Gulf lowland centers",low,yes
+226,mc-c-226,archaeology_600bc_1bc,600bc_1bc,"Ecological specialization highland/lowland",Enos 1:20|Mosiah 9,"Eco niches",low,yes
+227,mc-c-227,archaeology_600bc_1bc,600bc_1bc,"Obsidian/tool politics",Enos 1:20,"Obsidian spheres",low,yes
+228,mc-c-228,archaeology_600bc_1bc,600bc_1bc,"Watchtowers and military architecture",Mosiah 11:12|Alma 50,"Lookouts",medium,no
+229,mc-c-229,archaeology_600bc_1bc,600bc_1bc,"Alliance warfare networks",Alma 43–48,"Alliance systems",medium,no
+230,mc-c-230,archaeology_600bc_1bc,600bc_1bc,"Kings to judges political experiment",Mosiah 29,"Constitutional episode",low,no
+231,mc-c-231,archaeology_600bc_1bc,600bc_1bc,"Omens guiding campaigns",Alma 16:5–6,"Ritual war timing",medium,no
+232,mc-c-232,archaeology_ad1_200,ad1_200,"Civilization peak near turn of era",3 Nephi 6,"Complex society",medium,yes
+233,mc-c-233,archaeology_ad1_200,ad1_200,"Natural disasters ~Christ death window",3 Nephi 8–10,"Volcanism/earthquakes",high,no
+234,mc-c-234,archaeology_ad1_200,ad1_200,"Submerged coastal cities",3 Nephi 8:9|3 Nephi 9:4,"Coastal catastrophe",medium,yes
+235,mc-c-235,archaeology_ad1_200,ad1_200,"Burned capitals",3 Nephi 8–9,"Burn layers",medium,no
+236,mc-c-236,archaeology_ad1_200,ad1_200,"Landslide/mountain over cities",3 Nephi 8:10,"Mass-wasting burial",medium,yes
+237,mc-c-237,archaeology_ad1_200,ad1_200,"Highways destroyed",3 Nephi 8:13,"Infrastructure collapse",medium,no
+238,mc-c-238,archaeology_ad1_200,ad1_200,"Temple center continuity (Bountiful)",3 Nephi 11,"Cult center survival",low,yes
+239,mc-c-239,archaeology_ad1_200,ad1_200,"Post-disaster social reset",4 Nephi 1:2–3,"Communal phase",low,yes
+240,mc-c-240,archaeology_ad1_200,ad1_200,"City rebuilding",4 Nephi 1:7–8,"Reconstruction",medium,no
+241,mc-c-241,archaeology_ad1_200,ad1_200,"Some cities permanently inundated",4 Nephi 1:9,"Permanent water cover",medium,yes
+242,mc-c-242,archaeology_ad1_200,ad1_200,"Unifying cult spread",4 Nephi 1:1–5,"Wide cult integration",low,yes
+243,mc-c-243,archaeology_ad1_200,ad1_200,"Demilitarization in long peace",4 Nephi 1:4,"Reduced fortification",low,yes
+244,mc-c-244,archaeology_ad1_200,ad1_200,"Road florescence in peace",3 Nephi 6:8,"Road building",medium,no
+245,mc-c-245,archaeology_ad1_200,ad1_200,"Itinerant teachers",4 Nephi 1:1,"Religious specialists",low,no
+246,mc-c-246,archaeology_ad1_200,ad1_200,"Scribal continuity across catastrophe",3 Nephi 23,"Record survival",medium,no
+247,mc-c-247,archaeology_ad200_400,ad200_400,"Return of class distinctions",4 Nephi 1:24–26,"Re-stratification",medium,no
+248,mc-c-248,archaeology_ad200_400,ad200_400,"Rival churches/sects",4 Nephi 1:26–29,"Religious conflict",medium,no
+249,mc-c-249,archaeology_ad200_400,ad200_400,"Prestige goods return",4 Nephi 1:24,"Prestige economy",medium,no
+250,mc-c-250,archaeology_ad200_400,ad200_400,"Remilitarization",Mormon 1–2,"Forts rebuilt",medium,no
+251,mc-c-251,archaeology_ad200_400,ad200_400,"Major wars AD 320s–380s narrative",Mormon 1–6,"Epiclassic conflict analogy",low,yes
+252,mc-c-252,archaeology_ad200_400,ad200_400,"Abandonment of southern lands",Mormon 2:27–29,"South depopulation",medium,yes
+253,mc-c-253,archaeology_ad200_400,ad200_400,"Isthmus as treaty border",Mormon 2:28–29,"Neck boundary",high,no
+254,mc-c-254,archaeology_ad200_400,ad200_400,"Final wars north of neck",Mormon 3–6,"Gulf lowland theaters",medium,yes
+255,mc-c-255,archaeology_ad200_400,ad200_400,"Hilltop last stands",Mormon 6,"Refuge hills",medium,no
+256,mc-c-256,archaeology_ad200_400,ad200_400,"Secret combinations dominate",Mormon 1–2,"Factional collapse",medium,no
+257,mc-c-257,archaeology_ad200_400,ad200_400,"Sacrifice intensifies",Mormon 4:14–15,"Sacrifice florescence",medium,yes
+258,mc-c-258,archaeology_ad200_400,ad200_400,"Cascade of urban falls",Mormon 4–5,"City loss chain",medium,no
+259,mc-c-259,archaeology_ad200_400,ad200_400,"Terminal record caching",Mormon 6:6,"End deposits",low,yes
+260,mc-c-260,archaeology_ad200_400,ad200_400,"Survivor diaspora",Mormon 6:15|Moroni 1,"Refugees",medium,no
+261,mc-c-261,archaeology_ad200_400,ad200_400,"Literary end of a people",Mormon 8|Ether 15,"Collapse narratives",medium,no
+262,mc-c-262,archaeology_ad200_400,ad200_400,"Multi-enemy collapse (robbers + Lamanites)",Mormon 1–2,"Dual threats",medium,no
+263,mc-c-263,archaeology_ad200_400,ad200_400,"Crisis moral literature",Moroni 9,"Terminal generation texts",low,no
+264,mc-c-264,archaeology_ad200_400,ad200_400,"Era-ending consciousness",Mormon 2|Mormon 8,"End of age rhetoric",low,yes
+265,mc-c-265,warfare,multi,"Seasonal logistics constraint (1)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 1; verify in book",low,no
+266,mc-c-266,warfare,multi,"Captive display motif (1)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 1; verify in book",low,yes
+267,mc-c-267,material_culture,multi,"Elite costume detail (1)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 1; verify in book",low,no
+268,mc-c-268,society,multi,"Urban craft specialization (1)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 1; verify in book",low,no
+269,mc-c-269,society,multi,"Patron-client ties (1)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 1; verify in book",low,no
+270,mc-c-270,political_economy,multi,"Core valley control (1)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 1; verify in book",medium,no
+271,mc-c-271,political_economy,multi,"Exotic goods exchange (1)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 1; verify in book",medium,no
+272,mc-c-272,government,multi,"Succession crisis pattern (1)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 1; verify in book",medium,no
+273,mc-c-273,government,multi,"Provincial revolt pattern (1)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 1; verify in book",medium,no
+274,mc-c-274,ideology_religion,multi,"Public fasting ritual (1)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 1; verify in book",low,no
+275,mc-c-275,writing_records,multi,"Monumental text function (1)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 1; verify in book",medium,no
+276,mc-c-276,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (1)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 1; verify in book",medium,no
+277,mc-c-277,archaeology_ad200_400,ad200_400,"Collapse pressure model (1)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 1; verify in book",low,yes
+278,mc-c-278,material_culture,multi,"Storage against famine (1)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 1; verify in book",medium,no
+279,mc-c-279,warfare,multi,"Standardized unit command (1)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 1; verify in book",medium,no
+280,mc-c-280,warfare,multi,"Seasonal logistics constraint (2)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 2; verify in book",low,no
+281,mc-c-281,warfare,multi,"Captive display motif (2)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 2; verify in book",low,yes
+282,mc-c-282,material_culture,multi,"Elite costume detail (2)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 2; verify in book",low,no
+283,mc-c-283,society,multi,"Urban craft specialization (2)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 2; verify in book",low,no
+284,mc-c-284,society,multi,"Patron-client ties (2)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 2; verify in book",low,no
+285,mc-c-285,political_economy,multi,"Core valley control (2)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 2; verify in book",medium,no
+286,mc-c-286,political_economy,multi,"Exotic goods exchange (2)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 2; verify in book",medium,no
+287,mc-c-287,government,multi,"Succession crisis pattern (2)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 2; verify in book",medium,no
+288,mc-c-288,government,multi,"Provincial revolt pattern (2)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 2; verify in book",medium,no
+289,mc-c-289,ideology_religion,multi,"Public fasting ritual (2)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 2; verify in book",low,no
+290,mc-c-290,writing_records,multi,"Monumental text function (2)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 2; verify in book",medium,no
+291,mc-c-291,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (2)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 2; verify in book",medium,no
+292,mc-c-292,archaeology_ad200_400,ad200_400,"Collapse pressure model (2)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 2; verify in book",low,yes
+293,mc-c-293,material_culture,multi,"Storage against famine (2)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 2; verify in book",medium,no
+294,mc-c-294,warfare,multi,"Standardized unit command (2)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 2; verify in book",medium,no
+295,mc-c-295,warfare,multi,"Seasonal logistics constraint (3)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 3; verify in book",low,no
+296,mc-c-296,warfare,multi,"Captive display motif (3)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 3; verify in book",low,yes
+297,mc-c-297,material_culture,multi,"Elite costume detail (3)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 3; verify in book",low,no
+298,mc-c-298,society,multi,"Urban craft specialization (3)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 3; verify in book",low,no
+299,mc-c-299,society,multi,"Patron-client ties (3)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 3; verify in book",low,no
+300,mc-c-300,political_economy,multi,"Core valley control (3)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 3; verify in book",medium,no
+301,mc-c-301,political_economy,multi,"Exotic goods exchange (3)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 3; verify in book",medium,no
+302,mc-c-302,government,multi,"Succession crisis pattern (3)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 3; verify in book",medium,no
+303,mc-c-303,government,multi,"Provincial revolt pattern (3)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 3; verify in book",medium,no
+304,mc-c-304,ideology_religion,multi,"Public fasting ritual (3)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 3; verify in book",low,no
+305,mc-c-305,writing_records,multi,"Monumental text function (3)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 3; verify in book",medium,no
+306,mc-c-306,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (3)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 3; verify in book",medium,no
+307,mc-c-307,archaeology_ad200_400,ad200_400,"Collapse pressure model (3)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 3; verify in book",low,yes
+308,mc-c-308,material_culture,multi,"Storage against famine (3)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 3; verify in book",medium,no
+309,mc-c-309,warfare,multi,"Standardized unit command (3)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 3; verify in book",medium,no
+310,mc-c-310,warfare,multi,"Seasonal logistics constraint (4)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 4; verify in book",low,no
+311,mc-c-311,warfare,multi,"Captive display motif (4)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 4; verify in book",low,yes
+312,mc-c-312,material_culture,multi,"Elite costume detail (4)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 4; verify in book",low,no
+313,mc-c-313,society,multi,"Urban craft specialization (4)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 4; verify in book",low,no
+314,mc-c-314,society,multi,"Patron-client ties (4)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 4; verify in book",low,no
+315,mc-c-315,political_economy,multi,"Core valley control (4)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 4; verify in book",medium,no
+316,mc-c-316,political_economy,multi,"Exotic goods exchange (4)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 4; verify in book",medium,no
+317,mc-c-317,government,multi,"Succession crisis pattern (4)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 4; verify in book",medium,no
+318,mc-c-318,government,multi,"Provincial revolt pattern (4)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 4; verify in book",medium,no
+319,mc-c-319,ideology_religion,multi,"Public fasting ritual (4)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 4; verify in book",low,no
+320,mc-c-320,writing_records,multi,"Monumental text function (4)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 4; verify in book",medium,no
+321,mc-c-321,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (4)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 4; verify in book",medium,no
+322,mc-c-322,archaeology_ad200_400,ad200_400,"Collapse pressure model (4)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 4; verify in book",low,yes
+323,mc-c-323,material_culture,multi,"Storage against famine (4)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 4; verify in book",medium,no
+324,mc-c-324,warfare,multi,"Standardized unit command (4)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 4; verify in book",medium,no
+325,mc-c-325,warfare,multi,"Seasonal logistics constraint (5)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 5; verify in book",low,no
+326,mc-c-326,warfare,multi,"Captive display motif (5)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 5; verify in book",low,yes
+327,mc-c-327,material_culture,multi,"Elite costume detail (5)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 5; verify in book",low,no
+328,mc-c-328,society,multi,"Urban craft specialization (5)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 5; verify in book",low,no
+329,mc-c-329,society,multi,"Patron-client ties (5)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 5; verify in book",low,no
+330,mc-c-330,political_economy,multi,"Core valley control (5)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 5; verify in book",medium,no
+331,mc-c-331,political_economy,multi,"Exotic goods exchange (5)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 5; verify in book",medium,no
+332,mc-c-332,government,multi,"Succession crisis pattern (5)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 5; verify in book",medium,no
+333,mc-c-333,government,multi,"Provincial revolt pattern (5)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 5; verify in book",medium,no
+334,mc-c-334,ideology_religion,multi,"Public fasting ritual (5)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 5; verify in book",low,no
+335,mc-c-335,writing_records,multi,"Monumental text function (5)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 5; verify in book",medium,no
+336,mc-c-336,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (5)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 5; verify in book",medium,no
+337,mc-c-337,archaeology_ad200_400,ad200_400,"Collapse pressure model (5)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 5; verify in book",low,yes
+338,mc-c-338,material_culture,multi,"Storage against famine (5)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 5; verify in book",medium,no
+339,mc-c-339,warfare,multi,"Standardized unit command (5)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 5; verify in book",medium,no
+340,mc-c-340,warfare,multi,"Seasonal logistics constraint (6)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 6; verify in book",low,no
+341,mc-c-341,warfare,multi,"Captive display motif (6)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 6; verify in book",low,yes
+342,mc-c-342,material_culture,multi,"Elite costume detail (6)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 6; verify in book",low,no
+343,mc-c-343,society,multi,"Urban craft specialization (6)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 6; verify in book",low,no
+344,mc-c-344,society,multi,"Patron-client ties (6)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 6; verify in book",low,no
+345,mc-c-345,political_economy,multi,"Core valley control (6)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 6; verify in book",medium,no
+346,mc-c-346,political_economy,multi,"Exotic goods exchange (6)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 6; verify in book",medium,no
+347,mc-c-347,government,multi,"Succession crisis pattern (6)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 6; verify in book",medium,no
+348,mc-c-348,government,multi,"Provincial revolt pattern (6)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 6; verify in book",medium,no
+349,mc-c-349,ideology_religion,multi,"Public fasting ritual (6)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 6; verify in book",low,no
+350,mc-c-350,writing_records,multi,"Monumental text function (6)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 6; verify in book",medium,no
+351,mc-c-351,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (6)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 6; verify in book",medium,no
+352,mc-c-352,archaeology_ad200_400,ad200_400,"Collapse pressure model (6)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 6; verify in book",low,yes
+353,mc-c-353,material_culture,multi,"Storage against famine (6)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 6; verify in book",medium,no
+354,mc-c-354,warfare,multi,"Standardized unit command (6)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 6; verify in book",medium,no
+355,mc-c-355,warfare,multi,"Seasonal logistics constraint (7)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 7; verify in book",low,no
+356,mc-c-356,warfare,multi,"Captive display motif (7)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 7; verify in book",low,yes
+357,mc-c-357,material_culture,multi,"Elite costume detail (7)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 7; verify in book",low,no
+358,mc-c-358,society,multi,"Urban craft specialization (7)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 7; verify in book",low,no
+359,mc-c-359,society,multi,"Patron-client ties (7)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 7; verify in book",low,no
+360,mc-c-360,political_economy,multi,"Core valley control (7)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 7; verify in book",medium,no
+361,mc-c-361,political_economy,multi,"Exotic goods exchange (7)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 7; verify in book",medium,no
+362,mc-c-362,government,multi,"Succession crisis pattern (7)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 7; verify in book",medium,no
+363,mc-c-363,government,multi,"Provincial revolt pattern (7)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 7; verify in book",medium,no
+364,mc-c-364,ideology_religion,multi,"Public fasting ritual (7)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 7; verify in book",low,no
+365,mc-c-365,writing_records,multi,"Monumental text function (7)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 7; verify in book",medium,no
+366,mc-c-366,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (7)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 7; verify in book",medium,no
+367,mc-c-367,archaeology_ad200_400,ad200_400,"Collapse pressure model (7)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 7; verify in book",low,yes
+368,mc-c-368,material_culture,multi,"Storage against famine (7)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 7; verify in book",medium,no
+369,mc-c-369,warfare,multi,"Standardized unit command (7)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 7; verify in book",medium,no
+370,mc-c-370,warfare,multi,"Seasonal logistics constraint (8)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 8; verify in book",low,no
+371,mc-c-371,warfare,multi,"Captive display motif (8)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 8; verify in book",low,yes
+372,mc-c-372,material_culture,multi,"Elite costume detail (8)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 8; verify in book",low,no
+373,mc-c-373,society,multi,"Urban craft specialization (8)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 8; verify in book",low,no
+374,mc-c-374,society,multi,"Patron-client ties (8)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 8; verify in book",low,no
+375,mc-c-375,political_economy,multi,"Core valley control (8)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 8; verify in book",medium,no
+376,mc-c-376,political_economy,multi,"Exotic goods exchange (8)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 8; verify in book",medium,no
+377,mc-c-377,government,multi,"Succession crisis pattern (8)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 8; verify in book",medium,no
+378,mc-c-378,government,multi,"Provincial revolt pattern (8)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 8; verify in book",medium,no
+379,mc-c-379,ideology_religion,multi,"Public fasting ritual (8)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 8; verify in book",low,no
+380,mc-c-380,writing_records,multi,"Monumental text function (8)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 8; verify in book",medium,no
+381,mc-c-381,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (8)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 8; verify in book",medium,no
+382,mc-c-382,archaeology_ad200_400,ad200_400,"Collapse pressure model (8)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 8; verify in book",low,yes
+383,mc-c-383,material_culture,multi,"Storage against famine (8)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 8; verify in book",medium,no
+384,mc-c-384,warfare,multi,"Standardized unit command (8)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 8; verify in book",medium,no
+385,mc-c-385,warfare,multi,"Seasonal logistics constraint (9)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 9; verify in book",low,no
+386,mc-c-386,warfare,multi,"Captive display motif (9)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 9; verify in book",low,yes
+387,mc-c-387,material_culture,multi,"Elite costume detail (9)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 9; verify in book",low,no
+388,mc-c-388,society,multi,"Urban craft specialization (9)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 9; verify in book",low,no
+389,mc-c-389,society,multi,"Patron-client ties (9)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 9; verify in book",low,no
+390,mc-c-390,political_economy,multi,"Core valley control (9)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 9; verify in book",medium,no
+391,mc-c-391,political_economy,multi,"Exotic goods exchange (9)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 9; verify in book",medium,no
+392,mc-c-392,government,multi,"Succession crisis pattern (9)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 9; verify in book",medium,no
+393,mc-c-393,government,multi,"Provincial revolt pattern (9)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 9; verify in book",medium,no
+394,mc-c-394,ideology_religion,multi,"Public fasting ritual (9)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 9; verify in book",low,no
+395,mc-c-395,writing_records,multi,"Monumental text function (9)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 9; verify in book",medium,no
+396,mc-c-396,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (9)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 9; verify in book",medium,no
+397,mc-c-397,archaeology_ad200_400,ad200_400,"Collapse pressure model (9)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 9; verify in book",low,yes
+398,mc-c-398,material_culture,multi,"Storage against famine (9)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 9; verify in book",medium,no
+399,mc-c-399,warfare,multi,"Standardized unit command (9)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 9; verify in book",medium,no
+400,mc-c-400,warfare,multi,"Seasonal logistics constraint (10)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 10; verify in book",low,no
+401,mc-c-401,warfare,multi,"Captive display motif (10)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 10; verify in book",low,yes
+402,mc-c-402,material_culture,multi,"Elite costume detail (10)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 10; verify in book",low,no
+403,mc-c-403,society,multi,"Urban craft specialization (10)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 10; verify in book",low,no
+404,mc-c-404,society,multi,"Patron-client ties (10)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 10; verify in book",low,no
+405,mc-c-405,political_economy,multi,"Core valley control (10)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 10; verify in book",medium,no
+406,mc-c-406,political_economy,multi,"Exotic goods exchange (10)",Helaman 6:9,"Exotics trade — Codex-scale bucket expansion 10; verify in book",medium,no
+407,mc-c-407,government,multi,"Succession crisis pattern (10)",Helaman 1|Ether 7–9,"Succession wars — Codex-scale bucket expansion 10; verify in book",medium,no
+408,mc-c-408,government,multi,"Provincial revolt pattern (10)",Alma 51|Alma 61,"Province vs capital — Codex-scale bucket expansion 10; verify in book",medium,no
+409,mc-c-409,ideology_religion,multi,"Public fasting ritual (10)",Alma 30|Helaman 9,"Communal fasting — Codex-scale bucket expansion 10; verify in book",low,no
+410,mc-c-410,writing_records,multi,"Monumental text function (10)",Omni 1:20|Helaman 7,"Public inscriptions — Codex-scale bucket expansion 10; verify in book",medium,no
+411,mc-c-411,archaeology_600bc_1bc,600bc_1bc,"Regional alliance horizon (10)",Alma 43–48,"Alliance horizons — Codex-scale bucket expansion 10; verify in book",medium,no
+412,mc-c-412,archaeology_ad200_400,ad200_400,"Collapse pressure model (10)",Mormon 1–6,"Collapse analogies — Codex-scale bucket expansion 10; verify in book",low,yes
+413,mc-c-413,material_culture,multi,"Storage against famine (10)",Helaman 11|3 Nephi 4,"Storage tech — Codex-scale bucket expansion 10; verify in book",medium,no
+414,mc-c-414,warfare,multi,"Standardized unit command (10)",Alma 2|Mormon 6,"Unit hierarchy — Codex-scale bucket expansion 10; verify in book",medium,no
+415,mc-c-415,warfare,multi,"Seasonal logistics constraint (11)",Alma 53–58,"Wet/dry season limits — Codex-scale bucket expansion 11; verify in book",low,no
+416,mc-c-416,warfare,multi,"Captive display motif (11)",Alma 17–20|Alma 55,"Captive presentation — Codex-scale bucket expansion 11; verify in book",low,yes
+417,mc-c-417,material_culture,multi,"Elite costume detail (11)",Alma 1:29|Alma 31,"Costume in art — Codex-scale bucket expansion 11; verify in book",low,no
+418,mc-c-418,society,multi,"Urban craft specialization (11)",Helaman 6|3 Nephi 6,"Craft barrios — Codex-scale bucket expansion 11; verify in book",low,no
+419,mc-c-419,society,multi,"Patron-client ties (11)",Alma 32|Alma 60,"Elite patronage — Codex-scale bucket expansion 11; verify in book",low,no
+420,mc-c-420,political_economy,multi,"Core valley control (11)",Alma 22|Mosiah 9,"Agricultural cores — Codex-scale bucket expansion 11; verify in book",medium,no

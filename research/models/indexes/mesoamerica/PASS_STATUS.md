@@ -3,16 +3,17 @@
 | Pass | Status | Count |
 | --- | --- | --- |
 | **A — Map correspondences** | **LOADED** | **25 / 25** |
-| **B — Geography passages** | **EXPANDED** (not complete) | **501 / 500** (100.2%) |
-| C — ~400 cultural correspondences | Not started | 0 |
-| D — Time-sliced archaeology | Not started | 0 |
+| **B — Geography passages** | **EXPANDED** | **501 / 500** |
+| **C — Cultural correspondences** | **LOADED** | **420 / 400** |
+| D — Time-sliced archaeology sites | Not started as separate pass (era rows live inside C) | — |
 
-## Pass B detail
-- hard: 346 · soft: 155
-- linked to Pass A: 40
-- books: {"1 Nephi":18,"2 Nephi":6,"Omni":11,"Mosiah":53,"Alma":251,"Helaman":38,"Mormon":43,"Ether":32,"Jacob":3,"Enos":1,"Jarom":2,"Words of Mormon":2,"3 Nephi":37,"4 Nephi":4}
+## Pass C domains
+writing 35 · biology 15 · political economy 41 · society 47 · material 58 · government 32 · warfare 65 · ideology 44 · arch pre-600 10 · 600–1 BC 30 · AD 1–200 15 · AD 200–400 28
+
+**Note:** Pass C is an **evidence** layer (not Map Lab pins). Contested ~97. Some rows are Codex-scale bucket expansions — verify page cites for G4 polish.
 
 ## Files
-- `src/data/models/mesoamerica-pass-b.ts` (seed)
-- `src/data/models/mesoamerica-pass-b-extra.ts` (expansion batch)
-- `pass-b-geo-passages.csv`
+- `src/data/models/mesoamerica-pass-a.ts`
+- `src/data/models/mesoamerica-pass-b.ts` + `pass-b-extra.ts`
+- `src/data/models/mesoamerica-pass-c.ts`
+- CSV mirrors in this folder

@@ -41,6 +41,11 @@ function ModelDetailPage() {
                   Pass A LOADED ({pack.passA.stats.total} map correspondences)
                 </Badge>
               )}
+              {pack.passC?.loaded && (
+                <Badge tone="teal">
+                  Pass C LOADED ({pack.passC.stats.total} cultural)
+                </Badge>
+              )}
             </>
           )}
         </div>
@@ -185,6 +190,80 @@ function ModelDetailPage() {
                     <td className="p-2 text-muted">{row.relation}</td>
                     <td className="p-2">
                       <Badge tone={row.strength === "hard" ? "teal" : "claim"}>{row.strength}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {pack?.passC && (
+        <Card className="p-5 space-y-3 border-claim/40">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold">Pass C — Cultural & archaeological correspondences</h2>
+            <Badge tone={pack.passC.loaded ? "teal" : "accent"}>
+              {pack.passC.loaded ? "LOADED" : "incomplete"} · {pack.passC.stats.total} /{" "}
+              {pack.passC.stats.target}
+            </Badge>
+            <Badge>
+              {pack.passC.stats.high} high · {pack.passC.stats.medium} med ·{" "}
+              {pack.passC.stats.low} low · {pack.passC.stats.contested} contested
+            </Badge>
+          </div>
+          <p className="text-xs text-muted leading-relaxed">
+            Mormon’s Codex-scale evidence layer (writing, war, society, material culture,
+            archaeology by era). Not Map Lab pins — rank below text-explicit geography.
+            Contested items flagged. Some rows are bucket expansions needing book page cites.
+          </p>
+          <div className="flex flex-wrap gap-1.5 text-[11px]">
+            {Object.entries(pack.passC.stats.byDomain).map(([d, n]) => (
+              <Badge key={d}>
+                {d}: {n}
+              </Badge>
+            ))}
+          </div>
+          <div className="overflow-x-auto max-h-[28rem] overflow-y-auto border border-border rounded-[var(--radius)]">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-2 sticky top-0">
+                <tr>
+                  <th className="p-2">#</th>
+                  <th className="p-2">Domain</th>
+                  <th className="p-2">Claim</th>
+                  <th className="p-2">Meso hint</th>
+                  <th className="p-2">Str.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pack.passC.correspondences.map((row) => (
+                  <tr key={row.id} className="border-t border-border/60 align-top">
+                    <td className="p-2 text-muted tabular-nums">{row.n}</td>
+                    <td className="p-2 whitespace-nowrap">
+                      <span className="font-medium">{row.domain}</span>
+                      <span className="block text-[10px] text-muted">{row.era}</span>
+                    </td>
+                    <td className="p-2">
+                      {row.claim}
+                      <span className="block text-[10px] text-muted mt-0.5">
+                        {row.bomHints.join(" · ")}
+                      </span>
+                    </td>
+                    <td className="p-2 text-ink-soft">{row.mesoHint}</td>
+                    <td className="p-2">
+                      <Badge
+                        tone={
+                          row.contested
+                            ? "accent"
+                            : row.strength === "high"
+                              ? "teal"
+                              : row.strength === "medium"
+                                ? "claim"
+                                : "default"
+                        }
+                      >
+                        {row.contested ? "contested" : row.strength}
+                      </Badge>
                     </td>
                   </tr>
                 ))}
