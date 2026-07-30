@@ -40,9 +40,11 @@ import {
 import {
   loadRouteAssociations,
   saveRouteAssociations,
+  type ElevationSegment,
   type RouteAssociation,
   type SpanField,
 } from "@/data/route-associations";
+import { Plus, Minus, Maximize2 } from "lucide-react";
 import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
@@ -72,6 +74,7 @@ function clientToSvg(
   const ctm = svg.getScreenCTM();
   if (!ctm) return { x: 0, y: 0 };
   const p = pt.matrixTransform(ctm.inverse());
+  // p is already in current viewBox user units
   return {
     x: Math.min(VB.w, Math.max(0, p.x)),
     y: Math.min(VB.h, Math.max(0, p.y)),
@@ -105,6 +108,16 @@ function MapLabPage() {
   const [editMode, setEditMode] = useState(true);
   const [savedFlash, setSavedFlash] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [mapZoom, setMapZoom] = useState(1);
+  const [mapPan, setMapPan] = useState({ x: 0, y: 0 });
+  const [connectMode, setConnectMode] = useState(false);
+  const [connectFrom, setConnectFrom] = useState<string | null>(null);
+  const [newRouteForm, setNewRouteForm] = useState({
+    from: "nephi",
+    to: "zarahemla",
+    name: "",
+    corridor: "wilderness" as RouteAssociation["corridor"],
+  });
 
   // Model-space layout (what we store). Display applies macro rot/scale on top.
   const layout = pack.layout;
@@ -155,6 +168,126 @@ function MapLabPage() {
     });
   }
 
+  function addNewRoute(fromId: string, toId: string, name?: string, corridor: RouteAssociation["corridor"] = "wilderness") {
+    const id = `route-user-${Date.now()}`;
+    const row: RouteAssociation = {
+      id,
+      name: name || `${placeLabel(fromId)} → ${placeLabel(toId)}`,
+      placeIds: [fromId, toId],
+      objects: [placeLabel(fromId), corridor === "wilderness" ? "wilderness" : corridor, placeLabel(toId)],
+      sourceRefs: [],
+      summary: "User-created association",
+      distance: {
+        quality: "unknown",
+        strength: "estimate",
+        note: "Text distance not set — fill stated vs estimate below",
+      },
+      time: { quality: "unknown", strength: "estimate" },
+      corridor,
+      enabled: true,
+      color: "#0f766e",
+      style: "solid",
+      elevation: [
+        { id: `${id}-level`, t0: 0, t1: 1, kind: "level", note: "Default level — edit sequence" },
+      ],
+      intendedDestinationId: toId,
+      actualDestinationId: toId,
+    };
+    setRouteAssocs((prev) => {
+      const next = [...prev, row];
+      saveRouteAssociations(next);
+      return next;
+    });
+    setEditRouteId(id);
+    setConnectMode(false);
+    setConnectFrom(null);
+  }
+
+  function patchElevation(routeId: string, elevation: ElevationSegment[]) {
+    patchRoute(routeId, { elevation });
+  }
+
+  function addElevationSeg(routeId: string) {
+    const route = routeAssocs.find((r) => r.id === routeId);
+    const segs = [...(route?.elevation ?? [])];
+    const lastT = segs.length ? segs[segs.length - 1]!.t1 : 0;
+    const t0 = Math.min(0.9, lastT);
+    segs.push({
+      id: `elev-${Date.now()}`,
+      t0,
+      t1: 1,
+      kind: "down",
+      phrase: "",
+      note: "New elevation stage",
+    });
+    // shrink previous last segment if needed
+    if (segs.length >= 2) {
+      const prev = segs[segs.length - 2]!;
+      if (prev.t1 > t0) segs[segs.length - 2] = { ...prev, t1: t0 };
+    }
+    patchElevation(routeId, segs);
+  }
+
+  function updateElevSeg(routeId: string, segId: string, patch: Partial<ElevationSegment>) {
+    const route = routeAssocs.find((r) => r.id === routeId);
+    if (!route?.elevation) return;
+    patchElevation(
+      routeId,
+      route.elevation.map((s) => (s.id === segId ? { ...s, ...patch } : s)),
+    );
+  }
+
+  function removeElevSeg(routeId: string, segId: string) {
+    const route = routeAssocs.find((r) => r.id === routeId);
+    if (!route?.elevation) return;
+    patchElevation(
+      routeId,
+      route.elevation.filter((s) => s.id !== segId),
+    );
+  }
+
+  function moveElevSeg(routeId: string, segId: string, dir: -1 | 1) {
+    const route = routeAssocs.find((r) => r.id === routeId);
+    if (!route?.elevation) return;
+    const segs = [...route.elevation];
+    const i = segs.findIndex((s) => s.id === segId);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= segs.length) return;
+    [segs[i], segs[j]] = [segs[j]!, segs[i]!];
+    // re-normalize t ranges evenly
+    const n = segs.length;
+    const normalized = segs.map((s, idx) => ({
+      ...s,
+      t0: idx / n,
+      t1: (idx + 1) / n,
+    }));
+    patchElevation(routeId, normalized);
+  }
+
+  /** Layout-derived path length in abstract miles (using dayPixels + open day miles scale) */
+  function layoutDerivedMiles(placeIds: string[]): number | null {
+    let total = 0;
+    for (let i = 1; i < placeIds.length; i++) {
+      const a = layout[placeIds[i - 1]!];
+      const b = layout[placeIds[i]!];
+      if (!a || !b) return null;
+      const px = Math.hypot(b.x - a.x, b.y - a.y);
+      // dayPixels map units ≈ 1 open day ≈ dayMilesOpen miles
+      total += (px / Math.max(1, dayPixels)) * macro.dayMilesOpen;
+    }
+    return Math.round(total * 10) / 10;
+  }
+
+  function layoutDerivedDays(placeIds: string[], terrain: "open" | "mountain" | "jungle" | "mixed" = "mixed"): number | null {
+    const mi = layoutDerivedMiles(placeIds);
+    if (mi == null) return null;
+    let dayMi = macro.dayMilesOpen;
+    if (terrain === "mountain") dayMi = macro.dayMilesMountain;
+    if (terrain === "jungle") dayMi = macro.dayMilesJungle;
+    if (terrain === "mixed") dayMi = (macro.dayMilesOpen + macro.dayMilesJungle) / 2;
+    return Math.round((mi / Math.max(1, dayMi)) * 10) / 10;
+  }
+
   function switchModel(id: string) {
     const user = userModels.find((u) => u.id === id);
     const base = user?.forkedFrom ?? id;
@@ -185,6 +318,24 @@ function MapLabPage() {
       ...p,
       micro: { ...p.micro, [id]: { ...p.micro[id], ...partial } },
     }));
+  }
+
+  function handlePlaceClick(id: string) {
+    if (connectMode) {
+      if (!connectFrom) {
+        setConnectFrom(id);
+        setSelectedPlace(id);
+        return;
+      }
+      if (connectFrom === id) {
+        setConnectFrom(null);
+        return;
+      }
+      addNewRoute(connectFrom, id);
+      return;
+    }
+    setSelectedPlace(id);
+    setDossierOpen(true);
   }
 
   function setPlacePos(id: string, pt: Point) {
@@ -569,24 +720,74 @@ function MapLabPage() {
         </span>
       </div>
 
-      {/* Map is the focus — full width, large canvas; controls below / side on wide screens */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_16rem_16rem]">
-        <Card className="p-2 md:p-3 overflow-x-auto order-first xl:row-span-2 min-h-[50vh] xl:min-h-[70vh] flex flex-col">
-          <div className="flex items-center justify-between gap-2 px-1 pb-2">
+      {/* Map full width — macro/micro below (not side columns that shrink the map) */}
+      <div className="space-y-4">
+        <Card className="p-2 md:p-3 overflow-hidden flex flex-col min-h-[55vh] md:min-h-[65vh]">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-2">
             <span className="text-xs font-semibold text-muted uppercase tracking-wide">
               Map canvas
             </span>
-            <span className="text-[11px] text-muted">
-              Drag places · toggle links/paths/regions above
-            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
+                onClick={() => setMapZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
+                title="Zoom out"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="text-xs tabular-nums w-12 text-center">{Math.round(mapZoom * 100)}%</span>
+              <button
+                type="button"
+                className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
+                onClick={() => setMapZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
+                title="Zoom in"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
+                onClick={() => {
+                  setMapZoom(1);
+                  setMapPan({ x: 0, y: 0 });
+                }}
+                title="Reset view"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                className={`rounded px-2.5 py-1 text-xs font-medium border ${
+                  connectMode
+                    ? "bg-accent text-accent-fg border-accent"
+                    : "border-border hover:bg-surface-2"
+                }`}
+                onClick={() => {
+                  setConnectMode((c) => !c);
+                  setConnectFrom(null);
+                }}
+              >
+                {connectMode
+                  ? connectFrom
+                    ? `Click end (from ${placeLabel(connectFrom)})…`
+                    : "Click start place…"
+                  : "Add connection"}
+              </button>
+            </div>
           </div>
           <svg
             ref={svgRef}
-            viewBox={`0 0 ${VB.w} ${VB.h}`}
+            viewBox={`${mapPan.x} ${mapPan.y} ${VB.w / mapZoom} ${VB.h / mapZoom}`}
             className="w-full flex-1 min-h-[420px] md:min-h-[520px] xl:min-h-[640px] h-auto bg-[#faf6ef] rounded-[var(--radius)] touch-none border border-border/60"
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
+            onWheel={(e) => {
+              e.preventDefault();
+              const delta = e.deltaY > 0 ? -0.1 : 0.1;
+              setMapZoom((z) => Math.min(3, Math.max(0.5, Math.round((z + delta) * 100) / 100)));
+            }}
           >
             <rect x="0" y="0" width="56" height={VB.h} fill="#ccfbf1" opacity="0.55" />
             <rect x={VB.w - 56} y="0" width="56" height={VB.h} fill="#ccfbf1" opacity="0.55" />
@@ -815,10 +1016,7 @@ function MapLabPage() {
                   <g
                     key={p.id}
                     className="cursor-pointer"
-                    onClick={() => {
-                      setSelectedPlace(p.id);
-                      setDossierOpen(true);
-                    }}
+                    onClick={() => handlePlaceClick(p.id)}
                     onPointerEnter={() => setHoverPlace(p.id)}
                     onPointerLeave={() => setHoverPlace((h) => (h === p.id ? null : h))}
                   >
@@ -955,7 +1153,8 @@ function MapLabPage() {
           )}
         </Card>
 
-        {/* MACRO */}
+        {/* MACRO + MICRO below map */}
+        <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4 space-y-3">
           <h2 className="font-semibold text-sm">Macro (whole model)</h2>
           <label className="block text-xs space-y-1">
@@ -1156,6 +1355,87 @@ function MapLabPage() {
               </label>
             </>
           )}
+        </Card>
+        </div>
+
+        {/* Add association (form) */}
+        <Card className="p-4 space-y-3 border-teal/30">
+          <h2 className="font-semibold text-sm">Add association / connection</h2>
+          <p className="text-xs text-muted">
+            Or use <strong>Add connection</strong> on the map: click start place, then end place.
+            New routes get unknown distance/time; fill stated vs estimate below.
+          </p>
+          <div className="flex flex-wrap gap-2 items-end">
+            <label className="text-xs space-y-1">
+              <span className="text-muted">From</span>
+              <select
+                className="block rounded border border-border px-2 py-1.5 text-sm min-w-[8rem]"
+                value={newRouteForm.from}
+                onChange={(e) => setNewRouteForm((f) => ({ ...f, from: e.target.value }))}
+              >
+                {places.map((pl) => (
+                  <option key={pl.id} value={pl.id}>
+                    {pl.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs space-y-1">
+              <span className="text-muted">To</span>
+              <select
+                className="block rounded border border-border px-2 py-1.5 text-sm min-w-[8rem]"
+                value={newRouteForm.to}
+                onChange={(e) => setNewRouteForm((f) => ({ ...f, to: e.target.value }))}
+              >
+                {places.map((pl) => (
+                  <option key={pl.id} value={pl.id}>
+                    {pl.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs space-y-1">
+              <span className="text-muted">Corridor</span>
+              <select
+                className="block rounded border border-border px-2 py-1.5 text-sm"
+                value={newRouteForm.corridor}
+                onChange={(e) =>
+                  setNewRouteForm((f) => ({
+                    ...f,
+                    corridor: e.target.value as RouteAssociation["corridor"],
+                  }))
+                }
+              >
+                <option value="wilderness">wilderness</option>
+                <option value="open">open</option>
+                <option value="coast">coast</option>
+                <option value="unknown">unknown</option>
+              </select>
+            </label>
+            <label className="text-xs space-y-1 flex-1 min-w-[10rem]">
+              <span className="text-muted">Name (optional)</span>
+              <input
+                className="w-full rounded border border-border px-2 py-1.5 text-sm"
+                value={newRouteForm.name}
+                onChange={(e) => setNewRouteForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Scout party A"
+              />
+            </label>
+            <button
+              type="button"
+              className="rounded-[var(--radius)] bg-accent px-3 py-2 text-sm font-medium text-accent-fg"
+              onClick={() =>
+                addNewRoute(
+                  newRouteForm.from,
+                  newRouteForm.to,
+                  newRouteForm.name || undefined,
+                  newRouteForm.corridor,
+                )
+              }
+            >
+              Create association
+            </button>
+          </div>
         </Card>
       </div>
 
@@ -1563,62 +1843,258 @@ function MapLabPage() {
                 </div>
                 {editRouteId === route.id && (
                   <div className="grid gap-2 sm:grid-cols-2 border-t border-border pt-2">
-                    <label className="text-xs space-y-1">
-                      <span className="text-muted">Distance</span>
-                      <select
-                        className="w-full rounded border border-border px-2 py-1.5"
-                        value={route.distance.quality}
-                        onChange={(e) =>
-                          patchRouteSpan(route.id, "distance", {
-                            ...route.distance,
-                            quality: e.target.value as SpanField["quality"],
-                          })
-                        }
+                    <div className="text-xs space-y-1.5 sm:col-span-2 rounded bg-surface-2/60 p-2">
+                      <div className="font-semibold text-muted uppercase tracking-wide">
+                        Layout-derived (moves with map)
+                      </div>
+                      <p className="text-ink-soft">
+                        Path length ≈{" "}
+                        <strong className="text-ink">
+                          {layoutDerivedMiles(route.placeIds) ?? "—"} mi
+                        </strong>
+                        {" · "}
+                        travel ≈{" "}
+                        <strong className="text-ink">
+                          {layoutDerivedDays(route.placeIds) ?? "—"} days
+                        </strong>{" "}
+                        (mixed terrain pace). Not scripture — for testing only.
+                      </p>
+                      <button
+                        type="button"
+                        className="text-accent hover:underline"
+                        onClick={() => {
+                          const mi = layoutDerivedMiles(route.placeIds);
+                          const d = layoutDerivedDays(route.placeIds);
+                          if (mi != null) {
+                            patchRouteSpan(route.id, "distance", {
+                              ...route.distance,
+                              estimate: String(mi),
+                              estimateUnit: "miles",
+                              strength: "layout_derived",
+                            });
+                          }
+                          if (d != null) {
+                            patchRouteSpan(route.id, "time", {
+                              ...route.time,
+                              estimate: String(d),
+                              estimateUnit: "days",
+                              strength: "layout_derived",
+                            });
+                          }
+                        }}
                       >
-                        <option value="unknown">Unknown</option>
-                        <option value="approximate">Approximate</option>
-                        <option value="stated">Stated</option>
-                      </select>
-                      <input
-                        className="w-full rounded border border-border px-2 py-1 text-xs"
-                        placeholder="value e.g. many days"
-                        value={route.distance.value ?? ""}
-                        onChange={(e) =>
-                          patchRouteSpan(route.id, "distance", {
-                            ...route.distance,
-                            value: e.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="text-xs space-y-1">
-                      <span className="text-muted">Travel time</span>
-                      <select
-                        className="w-full rounded border border-border px-2 py-1.5"
-                        value={route.time.quality}
-                        onChange={(e) =>
-                          patchRouteSpan(route.id, "time", {
-                            ...route.time,
-                            quality: e.target.value as SpanField["quality"],
-                          })
-                        }
-                      >
-                        <option value="unknown">Unknown</option>
-                        <option value="approximate">Approximate</option>
-                        <option value="stated">Stated</option>
-                      </select>
-                      <input
-                        className="w-full rounded border border-border px-2 py-1 text-xs"
-                        placeholder="value"
-                        value={route.time.value ?? ""}
-                        onChange={(e) =>
-                          patchRouteSpan(route.id, "time", {
-                            ...route.time,
-                            value: e.target.value,
-                          })
-                        }
-                      />
-                    </label>
+                        Copy layout values into estimates
+                      </button>
+                    </div>
+                    <div className="text-xs space-y-1 border border-border rounded p-2">
+                      <div className="font-semibold">Distance (text vs estimate)</div>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Text support</span>
+                        <select
+                          className="w-full rounded border border-border px-2 py-1.5"
+                          value={route.distance.quality}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "distance", {
+                              ...route.distance,
+                              quality: e.target.value as SpanField["quality"],
+                              strength:
+                                e.target.value === "stated"
+                                  ? "text_explicit"
+                                  : e.target.value === "approximate"
+                                    ? "text_implied"
+                                    : route.distance.strength ?? "estimate",
+                            })
+                          }
+                        >
+                          <option value="unknown">Unknown (not stated)</option>
+                          <option value="approximate">Implied / approximate in text</option>
+                          <option value="stated">Explicitly stated</option>
+                        </select>
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Stated / textual value</span>
+                        <input
+                          className="w-full rounded border border-border px-2 py-1"
+                          placeholder='e.g. "many days" or leave blank'
+                          value={route.distance.value ?? ""}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "distance", {
+                              ...route.distance,
+                              value: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Your estimate</span>
+                        <div className="flex gap-1">
+                          <input
+                            className="flex-1 rounded border border-border px-2 py-1"
+                            placeholder="e.g. 120"
+                            value={route.distance.estimate ?? ""}
+                            onChange={(e) =>
+                              patchRouteSpan(route.id, "distance", {
+                                ...route.distance,
+                                estimate: e.target.value,
+                                strength: route.distance.strength ?? "estimate",
+                              })
+                            }
+                          />
+                          <select
+                            className="rounded border border-border px-1 py-1"
+                            value={route.distance.estimateUnit ?? "miles"}
+                            onChange={(e) =>
+                              patchRouteSpan(route.id, "distance", {
+                                ...route.distance,
+                                estimateUnit: e.target.value as SpanField["estimateUnit"],
+                              })
+                            }
+                          >
+                            <option value="miles">miles</option>
+                            <option value="km">km</option>
+                            <option value="days">days</option>
+                            <option value="other">other</option>
+                          </select>
+                        </div>
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Strength in model</span>
+                        <select
+                          className="w-full rounded border border-border px-2 py-1"
+                          value={route.distance.strength ?? "estimate"}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "distance", {
+                              ...route.distance,
+                              strength: e.target.value as SpanField["strength"],
+                            })
+                          }
+                        >
+                          <option value="text_explicit">Text explicit</option>
+                          <option value="text_implied">Text implied</option>
+                          <option value="estimate">Estimate</option>
+                          <option value="layout_derived">Layout-derived</option>
+                          <option value="weak">Weak</option>
+                        </select>
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Note</span>
+                        <textarea
+                          className="w-full rounded border border-border px-2 py-1"
+                          rows={2}
+                          value={route.distance.note ?? ""}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "distance", {
+                              ...route.distance,
+                              note: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="text-xs space-y-1 border border-border rounded p-2">
+                      <div className="font-semibold">Travel time (text vs estimate)</div>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Text support</span>
+                        <select
+                          className="w-full rounded border border-border px-2 py-1.5"
+                          value={route.time.quality}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "time", {
+                              ...route.time,
+                              quality: e.target.value as SpanField["quality"],
+                              strength:
+                                e.target.value === "stated"
+                                  ? "text_explicit"
+                                  : e.target.value === "approximate"
+                                    ? "text_implied"
+                                    : route.time.strength ?? "estimate",
+                            })
+                          }
+                        >
+                          <option value="unknown">Unknown (not stated)</option>
+                          <option value="approximate">Implied / approximate in text</option>
+                          <option value="stated">Explicitly stated</option>
+                        </select>
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Stated / textual value</span>
+                        <input
+                          className="w-full rounded border border-border px-2 py-1"
+                          placeholder="e.g. many days"
+                          value={route.time.value ?? ""}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "time", {
+                              ...route.time,
+                              value: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Your estimate</span>
+                        <div className="flex gap-1">
+                          <input
+                            className="flex-1 rounded border border-border px-2 py-1"
+                            placeholder="e.g. 8"
+                            value={route.time.estimate ?? ""}
+                            onChange={(e) =>
+                              patchRouteSpan(route.id, "time", {
+                                ...route.time,
+                                estimate: e.target.value,
+                                strength: route.time.strength ?? "estimate",
+                              })
+                            }
+                          />
+                          <select
+                            className="rounded border border-border px-1 py-1"
+                            value={route.time.estimateUnit ?? "days"}
+                            onChange={(e) =>
+                              patchRouteSpan(route.id, "time", {
+                                ...route.time,
+                                estimateUnit: e.target.value as SpanField["estimateUnit"],
+                              })
+                            }
+                          >
+                            <option value="days">days</option>
+                            <option value="hours">hours</option>
+                            <option value="other">other</option>
+                          </select>
+                        </div>
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Strength in model</span>
+                        <select
+                          className="w-full rounded border border-border px-2 py-1"
+                          value={route.time.strength ?? "estimate"}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "time", {
+                              ...route.time,
+                              strength: e.target.value as SpanField["strength"],
+                            })
+                          }
+                        >
+                          <option value="text_explicit">Text explicit</option>
+                          <option value="text_implied">Text implied</option>
+                          <option value="estimate">Estimate</option>
+                          <option value="layout_derived">Layout-derived</option>
+                          <option value="weak">Weak</option>
+                        </select>
+                      </label>
+                      <label className="block space-y-0.5">
+                        <span className="text-muted">Note</span>
+                        <textarea
+                          className="w-full rounded border border-border px-2 py-1"
+                          rows={2}
+                          value={route.time.note ?? ""}
+                          onChange={(e) =>
+                            patchRouteSpan(route.id, "time", {
+                              ...route.time,
+                              note: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
                     <label className="flex items-center gap-2 text-xs sm:col-span-2">
                       <input
                         type="checkbox"
@@ -1647,46 +2123,118 @@ function MapLabPage() {
                       </label>
                     )}
 
-                    {route.elevation && route.elevation.length > 0 && (
-                      <div className="sm:col-span-2 space-y-1.5 border-t border-border pt-2">
+                    <div className="sm:col-span-2 space-y-2 border-t border-border pt-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="text-xs font-semibold text-muted uppercase tracking-wide">
-                          Elevation sequence (along route)
+                          Elevation sequence (edit stages)
                         </div>
-                        {route.elevation.map((seg) => (
-                          <div
-                            key={seg.id}
-                            className="flex flex-wrap items-center gap-2 text-xs rounded bg-surface-2/80 px-2 py-1.5"
-                          >
-                            <Badge
-                              tone={
-                                seg.kind === "down"
-                                  ? "claim"
-                                  : seg.kind === "up"
-                                    ? "accent"
-                                    : "default"
+                        <button
+                          type="button"
+                          className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
+                          onClick={() => addElevationSeg(route.id)}
+                        >
+                          + Add stage
+                        </button>
+                      </div>
+                      {(route.elevation ?? []).map((seg, idx) => (
+                        <div
+                          key={seg.id}
+                          className="rounded border border-border bg-surface-2/50 p-2 space-y-1.5 text-xs"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-muted">#{idx + 1}</span>
+                            <select
+                              className="rounded border border-border px-1.5 py-1"
+                              value={seg.kind}
+                              onChange={(e) =>
+                                updateElevSeg(route.id, seg.id, {
+                                  kind: e.target.value as ElevationSegment["kind"],
+                                })
                               }
                             >
-                              {seg.kind === "up"
-                                ? "↑ up"
-                                : seg.kind === "down"
-                                  ? "↓ down"
-                                  : "≈ level"}
-                            </Badge>
-                            <span className="text-muted tabular-nums">
-                              {(seg.t0 * 100).toFixed(0)}–{(seg.t1 * 100).toFixed(0)}%
-                            </span>
-                            {seg.phrase && (
-                              <span className="italic text-ink-soft">“{seg.phrase}”</span>
-                            )}
-                            {seg.note && <span className="text-muted">{seg.note}</span>}
+                              <option value="level">≈ level</option>
+                              <option value="up">↑ up</option>
+                              <option value="down">↓ down</option>
+                              <option value="unknown">unknown</option>
+                            </select>
+                            <label className="flex items-center gap-1">
+                              from %
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                className="w-14 rounded border border-border px-1 py-0.5"
+                                value={Math.round(seg.t0 * 100)}
+                                onChange={(e) =>
+                                  updateElevSeg(route.id, seg.id, {
+                                    t0: Number(e.target.value) / 100,
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="flex items-center gap-1">
+                              to %
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                className="w-14 rounded border border-border px-1 py-0.5"
+                                value={Math.round(seg.t1 * 100)}
+                                onChange={(e) =>
+                                  updateElevSeg(route.id, seg.id, {
+                                    t1: Number(e.target.value) / 100,
+                                  })
+                                }
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              className="px-1 border rounded"
+                              onClick={() => moveElevSeg(route.id, seg.id, -1)}
+                              title="Move earlier"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="px-1 border rounded"
+                              onClick={() => moveElevSeg(route.id, seg.id, 1)}
+                              title="Move later"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              className="px-1 border rounded text-red-700"
+                              onClick={() => removeElevSeg(route.id, seg.id)}
+                            >
+                              ×
+                            </button>
                           </div>
-                        ))}
-                        <p className="text-[10px] text-muted">
-                          Markers show on the map in sequence. Level through wilderness, then down
-                          into Zarahemla (Omni). Reverse route: up out of Zarahemla.
+                          <input
+                            className="w-full rounded border border-border px-2 py-1"
+                            placeholder="Phrase from text (e.g. came down into…)"
+                            value={seg.phrase ?? ""}
+                            onChange={(e) =>
+                              updateElevSeg(route.id, seg.id, { phrase: e.target.value })
+                            }
+                          />
+                          <input
+                            className="w-full rounded border border-border px-2 py-1"
+                            placeholder="Note"
+                            value={seg.note ?? ""}
+                            onChange={(e) =>
+                              updateElevSeg(route.id, seg.id, { note: e.target.value })
+                            }
+                          />
+                        </div>
+                      ))}
+                      {(!route.elevation || route.elevation.length === 0) && (
+                        <p className="text-[11px] text-muted">
+                          No elevation stages — add one (level / up / down).
                         </p>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     <p className="text-[11px] text-muted sm:col-span-2">{route.summary}</p>
                     <p className="text-[10px] text-muted sm:col-span-2">

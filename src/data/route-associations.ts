@@ -19,9 +19,18 @@ export type ElevationSegment = {
 };
 
 export type SpanField = {
+  /** What the text supports */
   quality: "unknown" | "approximate" | "stated";
+  /** Stated or chosen textual value (e.g. "many days") */
   value?: string;
+  /** Free-form research note */
   note?: string;
+  /** Researcher estimate (separate from stated) */
+  estimate?: string;
+  /** Estimate unit */
+  estimateUnit?: "miles" | "km" | "days" | "hours" | "other";
+  /** How strong is this claim in the custom model */
+  strength?: "text_explicit" | "text_implied" | "estimate" | "layout_derived" | "weak";
 };
 
 export type RouteAssociation = {
