@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   ExternalLink,
@@ -22,6 +22,7 @@ import {
   type DetectedRelation,
 } from "@/lib/relation-phrases";
 import {
+  applyConnectorToChain,
   emptyLink,
   ensureLinks,
   inferModeFromChain,
@@ -29,6 +30,8 @@ import {
   isRelationWord,
   linkToLegKind,
   LINK_RELATIONS,
+  CONNECTOR_CHIPS,
+  makeConnectorLink,
   makeStep,
   suggestLinkBetween,
   type ChainLink,
@@ -181,6 +184,9 @@ function ReaderPage() {
   /** Ordered steps for a path (or related items for contains/proximity) */
   const [steps, setSteps] = useState<ConnectionDraftNode[]>([]);
   const [chainLinks, setChainLinks] = useState<ChainLink[]>([]);
+  const [pendingConnector, setPendingConnector] = useState<ChainLink | null>(null);
+  const pendingConnectorRef = useRef<ChainLink | null>(null);
+  pendingConnectorRef.current = pendingConnector;
   const [expandedLink, setExpandedLink] = useState<number | null>(null);
   const [showBuilderMeta, setShowBuilderMeta] = useState(false);
   const [editingAssocId, setEditingAssocId] = useState<string | null>(null);
@@ -452,6 +458,18 @@ function ReaderPage() {
     window.setTimeout(() => setFlash(null), 1500);
   }
 
+  function applyConnector(connector: ChainLink) {
+    const result = applyConnectorToChain(steps, chainLinks, connector);
+    setChainLinks(result.links);
+    setPendingConnector(result.pending);
+    if (result.appliedIndex != null) {
+      setExpandedLink(result.appliedIndex);
+      setMode(inferModeFromChain(steps, result.links) as ConnMode);
+    }
+    setFlash(result.message);
+    window.setTimeout(() => setFlash(null), 2500);
+  }
+
   function addStep(label: string, featureId?: string) {
     const trimmed = label.trim();
     if (!trimmed) return;
@@ -459,58 +477,43 @@ function ReaderPage() {
       ? `${current.book} ${current.chapter}:${current.verse}`
       : undefined;
 
-    // Relation words fill the link BEFORE the next place, not a step
+    // Connector phrase → set link, do not add as place chip
     const asRel = inferRelationFromPhrase(trimmed);
     if (asRel && isRelationWord(trimmed)) {
-      setChainLinks((prev) => {
-        const links = ensureLinks(steps.length, prev);
-        // If we already have ≥1 step, set the last open link (or next slot)
-        if (steps.length >= 1) {
-          const idx = Math.max(0, steps.length - 1);
-          // if link for next step doesn't exist yet, we're annotating upcoming
-          // store on last link if exists else remember via flash
-          if (links.length === 0) {
-            // no link yet — stash as via on a pending link when next place added
-            return links;
-          }
-          const i = links.length - 1;
-          const next = [...links];
-          next[i] = { ...asRel };
-          return next;
-        }
-        return prev;
-      });
-      // stash pending relation for next place add
-      (window as unknown as { __pendingLink?: ChainLink }).__pendingLink = asRel;
-      setFlash(`Relation "${trimmed}" will apply to the next place you add`);
-      window.setTimeout(() => setFlash(null), 2000);
+      applyConnector(asRel);
       return;
     }
 
     const node = makeStep(trimmed, featureId, ref);
     setSteps((prev) => {
-      if (prev.some((p) => p.label.toLowerCase() === node.label.toLowerCase())) return prev;
+      if (prev.some((p) => p.label.toLowerCase() === node.label.toLowerCase())) {
+        setFlash(`"${node.label}" already in chain`);
+        window.setTimeout(() => setFlash(null), 1500);
+        return prev;
+      }
       const next = [...prev, node];
       setChainLinks((links) => {
         let L = ensureLinks(next.length, links);
         if (next.length >= 2) {
-          const pending = (window as unknown as { __pendingLink?: ChainLink }).__pendingLink;
           const i = next.length - 2;
+          const pending = pendingConnectorRef.current;
           if (pending) {
             L = [...L];
             L[i] = pending;
-            (window as unknown as { __pendingLink?: ChainLink }).__pendingLink = undefined;
-          } else if (L[i]?.relation === "unknown") {
+            pendingConnectorRef.current = null;
+            setPendingConnector(null);
+          } else if (!L[i] || L[i]!.relation === "unknown") {
             L = [...L];
             L[i] = suggestLinkBetween(next[i]!, next[i + 1]!);
           }
         }
-        // auto mode
         setMode(inferModeFromChain(next, L) as ConnMode);
         return L;
       });
       return next;
     });
+    setFlash(`Added ${node.label}`);
+    window.setTimeout(() => setFlash(null), 1200);
   }
 
   function updateLink(index: number, patch: Partial<ChainLink>) {
@@ -1718,7 +1721,13 @@ function ReaderPage() {
                         <button type="button" className="text-xs text-accent" onClick={() => removeStep(s.id)}>×</button>
                       </div>
                       {i < steps.length - 1 && (
-                        <div className="ml-4 my-1 border-l-2 border-dashed border-teal/40 pl-3 py-1 space-y-1">
+                        <div
+                          className={`ml-4 my-1 border-l-2 pl-3 py-1 space-y-1 ${
+                            chainLinks[i]?.relation && chainLinks[i]!.relation !== "unknown"
+                              ? "border-teal bg-teal-soft/10 rounded-r-lg"
+                              : "border-dashed border-teal/40"
+                          }`}
+                        >
                           <div className="flex flex-wrap items-center gap-1.5">
                             <select
                               value={chainLinks[i]?.relation ?? "unknown"}
@@ -1823,11 +1832,47 @@ function ReaderPage() {
               )}
             </div>
 
+            {pendingConnector && (
+              <div className="rounded-lg border border-accent/40 bg-orange-50 px-2.5 py-2 text-xs flex flex-wrap items-center gap-2">
+                <span>
+                  Next link: <strong>{pendingConnector.viaPhrase || pendingConnector.relation}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="text-muted hover:underline ml-auto"
+                  onClick={() => setPendingConnector(null)}
+                >
+                  cancel
+                </button>
+              </div>
+            )}
+
+            <div>
+              <div className="text-xs font-medium mb-1">Connectors</div>
+              <p className="text-[10px] text-muted mb-1.5">
+                Click a connector to set the link between places (or queue it for the next place).
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {CONNECTOR_CHIPS.map((c) => (
+                  <button
+                    key={c.relation + c.label}
+                    type="button"
+                    onClick={() =>
+                      applyConnector(makeConnectorLink(c.relation, c.label, c.preset))
+                    }
+                    className="rounded-full border border-teal/50 bg-teal-soft/30 px-2.5 py-1 text-[11px] font-medium text-teal-900 hover:bg-teal hover:text-white"
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Quick add */}
             <div>
               <div className="text-xs font-medium mb-1 flex items-center gap-1">
                 <Sparkles className="h-3.5 w-3.5" />
-                Add to chain
+                Add place to chain
               </div>
               <div className="flex flex-wrap gap-1.5 max-h-28 overflow-auto">
                 {candidates.slice(0, 16).map((c) => (
