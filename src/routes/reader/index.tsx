@@ -116,6 +116,15 @@ function ReaderPage() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editNoteBody, setEditNoteBody] = useState("");
   const [editNoteSources, setEditNoteSources] = useState("");
+  const [showNewNote, setShowNewNote] = useState(false);
+  const [newNoteTerm, setNewNoteTerm] = useState("");
+  const [newNoteBody, setNewNoteBody] = useState("");
+  const [newNoteScope, setNewNoteScope] = useState<"term" | "verse" | "chapter">("term");
+  const [newNoteSources, setNewNoteSources] = useState("");
+  const [manualTimeQuality, setManualTimeQuality] = useState<"auto" | "unknown" | "approximate" | "stated">("auto");
+  const [manualTimeValue, setManualTimeValue] = useState("");
+  const [manualDistQuality, setManualDistQuality] = useState<"auto" | "unknown" | "approximate" | "stated">("auto");
+  const [manualDistValue, setManualDistValue] = useState("");
   const [modelForked, setModelForked] = useState(false);
   const [showSeedInPanel, setShowSeedInPanel] = useState(true);
   const [showYoursInPanel, setShowYoursInPanel] = useState(true);
@@ -268,8 +277,14 @@ function ReaderPage() {
   );
 
   const chapterStudyNotes = useMemo(
-    () => notesForChapter(studyNotes, chapterVerses.map((v) => v.text)),
-    [studyNotes, chapterVerses],
+    () =>
+      notesForChapter(
+        studyNotes,
+        book,
+        chapter,
+        chapterVerses.map((v) => ({ verse: v.verse, text: v.text })),
+      ),
+    [studyNotes, book, chapter, chapterVerses],
   );
 
   const filteredConnections = chapterConnections.filter((c) => {
@@ -353,7 +368,7 @@ function ReaderPage() {
     const phrase = (selectionBar || lookupPhrase).trim();
     if (!phrase) return;
     addStep(phrase);
-    setFlash(`Added path step "${phrase}"`);
+    setFlash(`Added to builder "${phrase}"`);
     window.setTimeout(() => setFlash(null), 1500);
   }
 
@@ -422,18 +437,73 @@ function ReaderPage() {
     body: string,
     sources: StudyNoteSource[],
     origin: StudyNote["origin"] = "dictionary_clip",
+    scope: "term" | "verse" | "chapter" = "term",
+    anchor?: { book: string; chapter: number; verse?: number },
   ) {
     const feats = guessFeaturesForPhrase(term);
-    const next = upsertStudyNote(studyNotes, {
+    const result = upsertStudyNote(studyNotes, {
       term,
       body,
       sources,
       featureIds: feats,
       origin,
+      scope,
+      anchor,
     });
-    persistNotes(next);
+    if (result.error || !result.note) {
+      setFlash(result.error || "Could not save study note");
+      window.setTimeout(() => setFlash(null), 2500);
+      return false;
+    }
+    persistNotes(result.rows);
     setFlash(`Saved study note for "${term}"`);
     window.setTimeout(() => setFlash(null), 2000);
+    return true;
+  }
+
+  function createNoteFromForm() {
+    if (!current) {
+      setFlash("Select a verse first");
+      window.setTimeout(() => setFlash(null), 2000);
+      return;
+    }
+    const term =
+      newNoteTerm.trim() ||
+      selectionBar.trim() ||
+      lookupPhrase.trim() ||
+      (newNoteScope === "verse"
+        ? `${current.book} ${current.chapter}:${current.verse}`
+        : newNoteScope === "chapter"
+          ? `${current.book} ${current.chapter}`
+          : "");
+    const sources: StudyNoteSource[] = newNoteSources
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split("|").map((x) => x.trim());
+        return { label: parts[0] || "Source", url: parts[1], kind: "user" as const };
+      });
+    const anchor =
+      newNoteScope === "term"
+        ? { book: current.book, chapter: current.chapter, verse: current.verse }
+        : newNoteScope === "verse"
+          ? { book: current.book, chapter: current.chapter, verse: current.verse }
+          : { book: current.book, chapter: current.chapter };
+    const ok = saveSenseAsNote(
+      term,
+      newNoteBody,
+      sources.length ? sources : [{ label: "User study note", kind: "user" }],
+      "manual",
+      newNoteScope,
+      anchor,
+    );
+    if (ok) {
+      setShowNewNote(false);
+      setNewNoteBody("");
+      setNewNoteSources("");
+      setNewNoteTerm("");
+    }
   }
 
   function startEditNote(n: StudyNote) {
@@ -460,14 +530,19 @@ function ReaderPage() {
           kind: "user" as const,
         };
       });
-    persistNotes(
-      upsertStudyNote(studyNotes, {
-        id: editingNoteId,
-        term: n.term,
-        body: editNoteBody,
-        sources,
-      }),
-    );
+    const result = upsertStudyNote(studyNotes, {
+      id: editingNoteId,
+      term: n.term,
+      body: editNoteBody,
+      sources,
+      scope: n.scope,
+      anchor: n.anchor,
+    });
+    if (result.error) {
+      setFlash(result.error);
+      return;
+    }
+    persistNotes(result.rows);
     setEditingNoteId(null);
     setFlash("Study note updated");
     window.setTimeout(() => setFlash(null), 1500);
@@ -559,11 +634,23 @@ function ReaderPage() {
     if (!current || steps.length === 0) return;
 
     const time =
-      selectionTime ??
-      ({ quality: "unknown" as const, note: "Not stated or not recognized" });
+      manualTimeQuality === "auto"
+        ? selectionTime ??
+          ({ quality: "unknown" as const, note: "Not stated or not recognized" })
+        : {
+            quality: manualTimeQuality,
+            value: manualTimeValue.trim() || undefined,
+            note: "Set in Association Builder",
+          };
     const distance =
-      selectionDistance ??
-      ({ quality: "unknown" as const, note: "Not stated or not recognized" });
+      manualDistQuality === "auto"
+        ? selectionDistance ??
+          ({ quality: "unknown" as const, note: "Not stated or not recognized" })
+        : {
+            quality: manualDistQuality,
+            value: manualDistValue.trim() || undefined,
+            note: "Set in Association Builder",
+          };
 
     let legs: UserAssociation["legs"] = [];
     let title = "";
@@ -671,6 +758,14 @@ function ReaderPage() {
     setSelectedVerse(a.verse);
     setMode(a.legs.some((l) => l.kind === "path") ? "path" : "proximity");
     if (a.legs[0]) setHubId(a.legs[0].fromFeatureId);
+    setManualTimeQuality(a.pathTime.quality === "unknown" && !a.pathTime.value ? "unknown" : a.pathTime.quality);
+    setManualTimeValue(a.pathTime.value ?? "");
+    setManualDistQuality(
+      a.pathDistance.quality === "unknown" && !a.pathDistance.value
+        ? "unknown"
+        : a.pathDistance.quality,
+    );
+    setManualDistValue(a.pathDistance.value ?? "");
     // Reconstruct ordered steps from legs
     const ids: ConnectionDraftNode[] = [];
     if (a.legs[0]) {
@@ -864,12 +959,82 @@ function ReaderPage() {
           <Card className="p-3 space-y-2 border-teal/30">
             <h2 className="font-semibold text-sm">Chapter study notes</h2>
             <p className="text-[11px] text-muted leading-relaxed">
-              Saved definitions/notes for words that appear in this chapter. Edit text & sources;
-              they also attach to map features when linked.
+              Dictionary-style notes keyed to a <strong>word or phrase</strong> in the text.
+              They reappear in any chapter containing that phrase and can attach to map features.
             </p>
-            {chapterStudyNotes.length === 0 && (
+            <button
+              type="button"
+              className="w-full rounded border border-teal/50 bg-teal-soft/20 px-2 py-1.5 text-xs font-medium text-teal-900 hover:bg-teal-soft/40"
+              onClick={() => {
+                setShowNewNote((v) => !v);
+                setNewNoteTerm(selectionBar || lookupPhrase || "");
+                setNewNoteScope("term");
+              }}
+            >
+              {showNewNote ? "Cancel new note" : "+ New study note"}
+            </button>
+            {showNewNote && (
+              <div className="rounded border border-border bg-surface p-2 space-y-1.5 text-xs">
+                <label className="block space-y-0.5">
+                  <span className="text-muted">Associate with (word / phrase)</span>
+                  <input
+                    value={newNoteTerm}
+                    onChange={(e) => setNewNoteTerm(e.target.value)}
+                    placeholder={
+                      selectionBar ||
+                      lookupPhrase ||
+                      (current
+                        ? `${current.book} ${current.chapter}:${current.verse}`
+                        : "e.g. wilderness")
+                    }
+                    className="w-full rounded border border-border px-2 py-1.5"
+                  />
+                </label>
+                <label className="block space-y-0.5">
+                  <span className="text-muted">Scope</span>
+                  <select
+                    value={newNoteScope}
+                    onChange={(e) =>
+                      setNewNoteScope(e.target.value as "term" | "verse" | "chapter")
+                    }
+                    className="w-full rounded border border-border px-2 py-1.5 bg-surface"
+                  >
+                    <option value="term">Term (shows wherever phrase appears)</option>
+                    <option value="verse">This verse only</option>
+                    <option value="chapter">This chapter only</option>
+                  </select>
+                </label>
+                <label className="block space-y-0.5">
+                  <span className="text-muted">Note text</span>
+                  <textarea
+                    value={newNoteBody}
+                    onChange={(e) => setNewNoteBody(e.target.value)}
+                    rows={4}
+                    placeholder="Paste or write insight (KJV sense, geography note…)"
+                    className="w-full rounded border border-border px-2 py-1.5"
+                  />
+                </label>
+                <label className="block space-y-0.5">
+                  <span className="text-muted">Sources (optional, one per line: Label | url)</span>
+                  <textarea
+                    value={newNoteSources}
+                    onChange={(e) => setNewNoteSources(e.target.value)}
+                    rows={2}
+                    className="w-full rounded border border-border px-2 py-1.5"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={createNoteFromForm}
+                  className="w-full rounded bg-teal px-2 py-1.5 text-white font-medium"
+                >
+                  Save study note
+                </button>
+              </div>
+            )}
+            {chapterStudyNotes.length === 0 && !showNewNote && (
               <p className="text-xs text-muted">
-                None yet. Save a clip from Dictionary (right).
+                None yet. Save a clip from Dictionary, or + New study note.
               </p>
             )}
             <div className="max-h-[40vh] overflow-auto space-y-2">
@@ -877,6 +1042,7 @@ function ReaderPage() {
                 <div key={n.id} className="rounded border border-border p-2 text-xs space-y-1">
                   <div className="flex flex-wrap items-center gap-1">
                     <span className="font-semibold text-sm text-ink">{n.term}</span>
+                    <Badge>{n.scope ?? "term"}</Badge>
                     {n.featureIds.map((f) => (
                       <Badge key={f} tone="claim">
                         {f}
@@ -1014,7 +1180,7 @@ function ReaderPage() {
           </div>
 
           <p className="text-xs text-muted">
-            Highlight words, then click <strong>Tag selection</strong> or <strong>Add to path</strong>
+            Highlight words, then click <strong>Tag selection</strong> or <strong>Add to Builder</strong>
             below (or on the right). Suggestions still offer one-click + tag / path.
           </p>
 
@@ -1035,7 +1201,7 @@ function ReaderPage() {
                 onClick={pathSelection}
                 className="rounded bg-teal px-3 py-1.5 text-xs font-medium text-white"
               >
-                Add to path
+                Add to Builder
               </button>
               <button
                 type="button"
@@ -1163,12 +1329,12 @@ function ReaderPage() {
           <Card className="p-4 space-y-3 border-teal/30">
             <h2 className="font-semibold text-sm flex items-center gap-2">
               <Link2 className="h-4 w-4 text-teal" />
-              Build path / connection
+              Association Builder
             </h2>
             <div className="text-[11px] text-muted space-y-1 leading-relaxed">
               <p>
                 <strong className="text-ink">Path</strong> = ordered travel (Nephi → wilderness →
-                came down → Zarahemla). Add steps in order from candidates or “+ path”.
+                came down → Zarahemla). Add steps via candidates or “Add to Builder”.
               </p>
               <p>
                 <strong className="text-ink">Contains / proximity</strong> = hub land + things
@@ -1325,17 +1491,105 @@ function ReaderPage() {
                   addTagPhrase(lookupPhrase.trim());
                 }}
               >
-                Add selection “{lookupPhrase.trim()}” to path + tags
+                Add selection “{lookupPhrase.trim()}” to builder + tags
               </button>
             )}
 
-            <div className="flex flex-wrap gap-1.5 text-xs">
-              <Badge tone={selectionTime ? "teal" : "claim"}>
-                Time: {selectionTime ? spanLabel(selectionTime) : "unknown"}
-              </Badge>
-              <Badge tone={selectionDistance ? "teal" : "claim"}>
-                Dist: {selectionDistance ? spanLabel(selectionDistance) : "unknown"}
-              </Badge>
+            <div className="space-y-2 rounded border border-border p-2 text-xs">
+              <div className="font-medium">Time & distance</div>
+              <p className="text-[10px] text-muted leading-relaxed">
+                Auto reads phrases like “space of many days” from the verse/steps. Override anytime.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-0.5">
+                  <span className="text-muted">Time</span>
+                  <select
+                    value={manualTimeQuality}
+                    onChange={(e) =>
+                      setManualTimeQuality(
+                        e.target.value as typeof manualTimeQuality,
+                      )
+                    }
+                    className="w-full rounded border border-border bg-surface px-1.5 py-1"
+                  >
+                    <option value="auto">
+                      Auto
+                      {selectionTime ? ` (→ ${spanLabel(selectionTime)})` : " (unknown)"}
+                    </option>
+                    <option value="unknown">Unknown</option>
+                    <option value="approximate">Approximate</option>
+                    <option value="stated">Stated in text</option>
+                  </select>
+                </label>
+                <label className="space-y-0.5">
+                  <span className="text-muted">Time value</span>
+                  <input
+                    value={manualTimeValue}
+                    onChange={(e) => {
+                      setManualTimeValue(e.target.value);
+                      if (manualTimeQuality === "auto") setManualTimeQuality("stated");
+                    }}
+                    placeholder={selectionTime?.value ?? "e.g. many days"}
+                    className="w-full rounded border border-border px-1.5 py-1"
+                  />
+                </label>
+                <label className="space-y-0.5">
+                  <span className="text-muted">Distance</span>
+                  <select
+                    value={manualDistQuality}
+                    onChange={(e) =>
+                      setManualDistQuality(
+                        e.target.value as typeof manualDistQuality,
+                      )
+                    }
+                    className="w-full rounded border border-border bg-surface px-1.5 py-1"
+                  >
+                    <option value="auto">
+                      Auto
+                      {selectionDistance
+                        ? ` (→ ${spanLabel(selectionDistance)})`
+                        : " (unknown)"}
+                    </option>
+                    <option value="unknown">Unknown</option>
+                    <option value="approximate">Approximate</option>
+                    <option value="stated">Stated in text</option>
+                  </select>
+                </label>
+                <label className="space-y-0.5">
+                  <span className="text-muted">Distance value</span>
+                  <input
+                    value={manualDistValue}
+                    onChange={(e) => {
+                      setManualDistValue(e.target.value);
+                      if (manualDistQuality === "auto") setManualDistQuality("approximate");
+                    }}
+                    placeholder={selectionDistance?.value ?? "e.g. ~40 miles"}
+                    className="w-full rounded border border-border px-1.5 py-1"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                className="text-accent hover:underline"
+                onClick={() => {
+                  if (selectionTime) {
+                    setManualTimeQuality(selectionTime.quality);
+                    setManualTimeValue(selectionTime.value ?? "");
+                  } else {
+                    setManualTimeQuality("unknown");
+                    setManualTimeValue("");
+                  }
+                  if (selectionDistance) {
+                    setManualDistQuality(selectionDistance.quality);
+                    setManualDistValue(selectionDistance.value ?? "");
+                  } else {
+                    setManualDistQuality("unknown");
+                    setManualDistValue("");
+                  }
+                }}
+              >
+                Apply auto-parsed values
+              </button>
             </div>
 
             <button
@@ -1345,10 +1599,10 @@ function ReaderPage() {
               className="w-full rounded-[var(--radius)] bg-teal px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50"
             >
               {editingAssocId
-                ? "Update"
+                ? "Update association"
                 : mode === "path"
-                  ? "Save path"
-                  : "Save connection"}
+                  ? "Save path association"
+                  : "Save association"}
             </button>
             {editingAssocId && (
               <button
@@ -1525,17 +1779,30 @@ function ReaderPage() {
                   onClick={pathSelection}
                   className="rounded bg-teal px-2.5 py-1 text-xs font-medium text-white"
                 >
-                  Add to path
+                  Add to Builder
                 </button>
-                <button
+                                <button
                   type="button"
                   onClick={() => {
-                    const term = lookupPhrase.trim();
-                    if (!term) return;
-                    const body =
-                      embeddedLex?.senses.map((s) => s.body).join("\n\n") ||
-                      term;
-                    saveSenseAsNote(
+                    const term = (lookupPhrase || selectionBar).trim();
+                    if (!term) {
+                      setFlash("Select or type a word to associate the note with");
+                      window.setTimeout(() => setFlash(null), 2500);
+                      return;
+                    }
+                    const parts = embeddedLex?.senses.map((s) => s.body).filter(Boolean) ?? [];
+                    let body = parts.join("\n\n").trim();
+                    if (!body) {
+                      // open left-panel form prefilled when no embedded text
+                      setNewNoteTerm(term);
+                      setNewNoteBody("");
+                      setNewNoteScope("term");
+                      setShowNewNote(true);
+                      setFlash("Add your note text in Chapter study notes (left)");
+                      window.setTimeout(() => setFlash(null), 3000);
+                      return;
+                    }
+                    const ok = saveSenseAsNote(
                       term,
                       body,
                       (embeddedLex?.curated.external || []).slice(0, 3).map((ex) => ({
@@ -1544,7 +1811,18 @@ function ReaderPage() {
                         kind: ex.kind as StudyNoteSource["kind"],
                       })),
                       "manual",
+                      "term",
+                      current
+                        ? {
+                            book: current.book,
+                            chapter: current.chapter,
+                            verse: current.verse,
+                          }
+                        : undefined,
                     );
+                    if (ok) {
+                      setShowNewNote(false);
+                    }
                   }}
                   className="rounded border border-teal px-2.5 py-1 text-xs font-medium text-teal"
                 >

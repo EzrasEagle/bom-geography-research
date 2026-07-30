@@ -65,13 +65,16 @@ function InsightsPage() {
         const [label, url] = line.split("|").map((x) => x.trim());
         return { label: label || "Source", url: url || undefined, kind: "user" as const };
       });
-    const next = upsertStudyNote(notes, {
+    const result = upsertStudyNote(notes, {
       id: editId,
       term: n.term,
       body: editBody,
       sources,
+      scope: n.scope,
+      anchor: n.anchor,
     });
-    persist(next);
+    if (result.error) return;
+    persist(result.rows);
     setEditId(null);
   }
 
@@ -138,6 +141,7 @@ function InsightsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="font-semibold text-lg">{n.term}</h2>
                 <Badge tone="teal">{n.origin}</Badge>
+                <Badge>{n.scope ?? "term"}</Badge>
                 {n.featureIds.map((f) => (
                   <Badge key={f} tone="claim">
                     map: {placeLabel(f)}
