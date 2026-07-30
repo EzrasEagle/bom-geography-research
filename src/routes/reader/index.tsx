@@ -63,6 +63,15 @@ import {
   fetchEmbeddedLexicon,
   type EmbeddedLexicon,
 } from "@/lib/embed-lexicon";
+import {
+  loadStudyNotes,
+  notesForChapter,
+  saveStudyNotes,
+  upsertStudyNote,
+  deleteStudyNote,
+  type StudyNote,
+  type StudyNoteSource,
+} from "@/lib/study-notes";
 
 type ReaderSearch = {
   q?: string;
@@ -103,6 +112,10 @@ function ReaderPage() {
   const [embeddedLex, setEmbeddedLex] = useState<EmbeddedLexicon | null>(null);
   const [embedLoading, setEmbedLoading] = useState(false);
   const [selectionBar, setSelectionBar] = useState<string>("");
+  const [studyNotes, setStudyNotes] = useState<StudyNote[]>([]);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editNoteBody, setEditNoteBody] = useState("");
+  const [editNoteSources, setEditNoteSources] = useState("");
   const [modelForked, setModelForked] = useState(false);
   const [showSeedInPanel, setShowSeedInPanel] = useState(true);
   const [showYoursInPanel, setShowYoursInPanel] = useState(true);
@@ -117,6 +130,7 @@ function ReaderPage() {
   useEffect(() => {
     setTagSets(loadTagSets());
     setUserAssocs(loadAssociations());
+    setStudyNotes(loadStudyNotes());
     try {
       setModelForked(localStorage.getItem("bom-atlas-model-forked") === "1");
     } catch {
@@ -251,6 +265,11 @@ function ReaderPage() {
   const chapterConnections = useMemo(
     () => listConnectionsForChapter(book, chapter, userAssocs),
     [book, chapter, userAssocs],
+  );
+
+  const chapterStudyNotes = useMemo(
+    () => notesForChapter(studyNotes, chapterVerses.map((v) => v.text)),
+    [studyNotes, chapterVerses],
   );
 
   const filteredConnections = chapterConnections.filter((c) => {
@@ -390,6 +409,68 @@ function ReaderPage() {
       next[j] = tmp;
       return next;
     });
+  }
+
+
+  function persistNotes(next: StudyNote[]) {
+    setStudyNotes(next);
+    saveStudyNotes(next);
+  }
+
+  function saveSenseAsNote(
+    term: string,
+    body: string,
+    sources: StudyNoteSource[],
+    origin: StudyNote["origin"] = "dictionary_clip",
+  ) {
+    const feats = guessFeaturesForPhrase(term);
+    const next = upsertStudyNote(studyNotes, {
+      term,
+      body,
+      sources,
+      featureIds: feats,
+      origin,
+    });
+    persistNotes(next);
+    setFlash(`Saved study note for "${term}"`);
+    window.setTimeout(() => setFlash(null), 2000);
+  }
+
+  function startEditNote(n: StudyNote) {
+    setEditingNoteId(n.id);
+    setEditNoteBody(n.body);
+    setEditNoteSources(
+      n.sources.map((s) => (s.url ? `${s.label} | ${s.url}` : s.label)).join("\n"),
+    );
+  }
+
+  function commitEditNote() {
+    if (!editingNoteId) return;
+    const n = studyNotes.find((x) => x.id === editingNoteId);
+    if (!n) return;
+    const sources: StudyNoteSource[] = editNoteSources
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split("|").map((x) => x.trim());
+        return {
+          label: parts[0] || "Source",
+          url: parts[1] || undefined,
+          kind: "user" as const,
+        };
+      });
+    persistNotes(
+      upsertStudyNote(studyNotes, {
+        id: editingNoteId,
+        term: n.term,
+        body: editNoteBody,
+        sources,
+      }),
+    );
+    setEditingNoteId(null);
+    setFlash("Study note updated");
+    window.setTimeout(() => setFlash(null), 1500);
   }
 
   function oneClickAccept(sug: AssociationSuggestion) {
@@ -778,6 +859,109 @@ function ReaderPage() {
             <p className="text-[10px] text-muted">
               All chapter connections · {chapterConnections.length} total
             </p>
+          </Card>
+
+          <Card className="p-3 space-y-2 border-teal/30">
+            <h2 className="font-semibold text-sm">Chapter study notes</h2>
+            <p className="text-[11px] text-muted leading-relaxed">
+              Saved definitions/notes for words that appear in this chapter. Edit text & sources;
+              they also attach to map features when linked.
+            </p>
+            {chapterStudyNotes.length === 0 && (
+              <p className="text-xs text-muted">
+                None yet. Save a clip from Dictionary (right).
+              </p>
+            )}
+            <div className="max-h-[40vh] overflow-auto space-y-2">
+              {chapterStudyNotes.map((n) => (
+                <div key={n.id} className="rounded border border-border p-2 text-xs space-y-1">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <span className="font-semibold text-sm text-ink">{n.term}</span>
+                    {n.featureIds.map((f) => (
+                      <Badge key={f} tone="claim">
+                        {f}
+                      </Badge>
+                    ))}
+                  </div>
+                  {editingNoteId === n.id ? (
+                    <div className="space-y-1.5">
+                      <textarea
+                        value={editNoteBody}
+                        onChange={(e) => setEditNoteBody(e.target.value)}
+                        rows={6}
+                        className="w-full rounded border border-border px-2 py-1.5 text-xs"
+                      />
+                      <textarea
+                        value={editNoteSources}
+                        onChange={(e) => setEditNoteSources(e.target.value)}
+                        rows={2}
+                        placeholder="Sources: Label | url"
+                        className="w-full rounded border border-border px-2 py-1.5 text-xs"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="text-teal font-medium hover:underline"
+                          onClick={commitEditNote}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="text-muted hover:underline"
+                          onClick={() => setEditingNoteId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-ink-soft whitespace-pre-wrap leading-relaxed">
+                        {n.body.length > 280 ? n.body.slice(0, 280) + "…" : n.body}
+                      </p>
+                      {n.sources[0] && (
+                        <p className="text-muted text-[10px]">
+                          Source: {n.sources[0].label}
+                          {n.sources.length > 1 ? ` (+ ${n.sources.length - 1})` : ""}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="text-accent hover:underline"
+                          onClick={() => startEditNote(n)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="text-accent hover:underline"
+                          onClick={() => {
+                            setLookupPhrase(n.term);
+                            setSelectionBar(n.term);
+                          }}
+                        >
+                          Dictionary
+                        </button>
+                        <button
+                          type="button"
+                          className="text-muted hover:underline"
+                          onClick={() => {
+                            persistNotes(deleteStudyNote(studyNotes, n.id));
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Link to="/insights" className="block text-center text-[11px] text-accent hover:underline">
+              All study notes in Insights →
+            </Link>
           </Card>
         </div>
 
@@ -1343,6 +1527,29 @@ function ReaderPage() {
                 >
                   Add to path
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const term = lookupPhrase.trim();
+                    if (!term) return;
+                    const body =
+                      embeddedLex?.senses.map((s) => s.body).join("\n\n") ||
+                      term;
+                    saveSenseAsNote(
+                      term,
+                      body,
+                      (embeddedLex?.curated.external || []).slice(0, 3).map((ex) => ({
+                        label: ex.label,
+                        url: ex.url,
+                        kind: ex.kind as StudyNoteSource["kind"],
+                      })),
+                      "manual",
+                    );
+                  }}
+                  className="rounded border border-teal px-2.5 py-1 text-xs font-medium text-teal"
+                >
+                  Save custom study note
+                </button>
               </div>
             )}
             {embedLoading && (
@@ -1353,7 +1560,7 @@ function ReaderPage() {
                 {embeddedLex.senses.map((s, i) => (
                   <div
                     key={i}
-                    className="rounded border border-border bg-surface-2/40 p-2 text-xs space-y-1"
+                    className="rounded border border-border bg-surface-2/40 p-2 text-xs space-y-1.5"
                   >
                     <div className="font-semibold text-[11px] uppercase tracking-wide text-muted">
                       {s.title}
@@ -1361,6 +1568,41 @@ function ReaderPage() {
                     <p className="text-ink-soft leading-relaxed whitespace-pre-wrap">
                       {s.body}
                     </p>
+                    <button
+                      type="button"
+                      className="rounded bg-teal/90 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-teal"
+                      onClick={() => {
+                        const term = embeddedLex.query || lookupPhrase.trim();
+                        const sources: StudyNoteSource[] = [
+                          {
+                            label: s.title,
+                            kind:
+                              s.source === "curated"
+                                ? "curated"
+                                : s.source === "kjv_api"
+                                  ? "kjv"
+                                  : s.source === "free_dictionary"
+                                    ? "free_dictionary"
+                                    : "other",
+                          },
+                          ...embeddedLex.curated.external
+                            .filter((ex) =>
+                              s.source === "curated"
+                                ? ex.kind === "webster1828" || ex.kind === "kjv"
+                                : true,
+                            )
+                            .slice(0, 2)
+                            .map((ex) => ({
+                              label: ex.label,
+                              url: ex.url,
+                              kind: ex.kind as StudyNoteSource["kind"],
+                            })),
+                        ];
+                        saveSenseAsNote(term, s.body, sources, "dictionary_clip");
+                      }}
+                    >
+                      Save to study notes
+                    </button>
                   </div>
                 ))}
               </div>

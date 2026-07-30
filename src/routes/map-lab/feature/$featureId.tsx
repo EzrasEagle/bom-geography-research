@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { assumptions, constraints, getInsight, getVerse, places } from "@/data/catalog";
 import { getPlaceDossier } from "@/data/place-scripture";
+import { loadStudyNotes, notesForFeature, notesMatchingText, type StudyNote } from "@/lib/study-notes";
 
 export const Route = createFileRoute("/map-lab/feature/$featureId")({
   component: FeatureDossierPage,
@@ -13,6 +15,17 @@ function FeatureDossierPage() {
   const { featureId } = Route.useParams();
   const d = getPlaceDossier(featureId);
   const place = places.find((p) => p.id === featureId);
+  const [studyNotes, setStudyNotes] = useState<StudyNote[]>([]);
+
+  useEffect(() => {
+    const all = loadStudyNotes();
+    // Notes linked to this feature id OR whose term matches the place name
+    const byFeature = notesForFeature(all, featureId);
+    const byName = d ? notesMatchingText(all, d.name + " " + featureId) : [];
+    const map = new Map<string, StudyNote>();
+    for (const n of [...byFeature, ...byName]) map.set(n.id, n);
+    setStudyNotes([...map.values()]);
+  }, [featureId, d?.name]);
 
   if (!d) {
     return (
@@ -64,6 +77,30 @@ function FeatureDossierPage() {
           </Link>
         </div>
       </div>
+
+
+      {studyNotes.length > 0 && (
+        <Card className="p-5 space-y-3 border-teal/30">
+          <h2 className="font-semibold">Your study notes</h2>
+          <p className="text-xs text-muted">
+            Saved dictionary clips / notes linked to this feature or its name. Edit in Insights.
+          </p>
+          {studyNotes.map((n) => (
+            <div key={n.id} className="rounded border border-border p-3 text-sm space-y-1">
+              <div className="font-medium">{n.term}</div>
+              <p className="text-ink-soft whitespace-pre-wrap text-xs leading-relaxed">
+                {n.body.length > 400 ? n.body.slice(0, 400) + "…" : n.body}
+              </p>
+              {n.sources[0] && (
+                <p className="text-[11px] text-muted">Source: {n.sources[0].label}</p>
+              )}
+            </div>
+          ))}
+          <Link to="/insights" className="text-sm text-accent hover:underline">
+            Manage all study notes →
+          </Link>
+        </Card>
+      )}
 
       <Card className="p-5 space-y-3">
         <h2 className="font-semibold">Scriptures that undergird this feature</h2>
