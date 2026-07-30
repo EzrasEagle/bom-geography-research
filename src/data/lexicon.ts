@@ -32,6 +32,35 @@ export const PRIORITY_TERMS = [
 ] as const;
 
 export const lexicon: LexiconEntry[] = [
+
+  {
+    term: "copper",
+    aliases: ["ore", "gold", "silver"],
+    priority: 55,
+    webster1828:
+      "Copper: a metal of a yellowish-red color, malleable and ductile. Ore: the compound of a metal and some other substance.",
+    kjvNotes:
+      "KJV mentions brass/copper (nechosheth) extensively; gold and silver as treasure metals. “Ore” is rarer in KJV than metal names.",
+    ambiguity:
+      "Presence of ore in a land is a resource claim, not a city pin. Soft feature attachable to a land hub.",
+    mapHints: ["resource", "soft"],
+    relatedTerms: ["gold", "silver", "brass"],
+    sources: [
+      { label: "Webster 1828 — copper", url: "https://webstersdictionary1828.com/Dictionary/copper" },
+      { label: "Webster 1828 — ore", url: "https://webstersdictionary1828.com/Dictionary/ore" },
+    ],
+  },
+  {
+    term: "forest",
+    aliases: ["forests", "wood", "woods"],
+    priority: 55,
+    webster1828: "An extensive wood; a large tract covered with trees.",
+    kjvNotes: "KJV forest/wood for wooded wild land; can overlap “wilderness.”",
+    ambiguity: "Soft land-cover feature near a land hub — not a settlement.",
+    mapHints: ["resource", "soft-region"],
+    relatedTerms: ["wilderness", "beasts"],
+    sources: [{ label: "Webster 1828 — forest", url: "https://webstersdictionary1828.com/Dictionary/forest" }],
+  },
   {
     term: "wilderness",
     aliases: ["the wilderness", "into the wilderness", "through the wilderness"],

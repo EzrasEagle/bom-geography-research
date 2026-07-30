@@ -26,8 +26,11 @@ import {
 import {
   acceptSuggestion,
   loadAssociations,
+  removeAssociation,
+  removeLeg,
   saveAssociations,
   spanLabel,
+  updateAssociation,
   type UserAssociation,
 } from "@/lib/user-associations";
 import { placeLabel } from "@/lib/place-connections";
@@ -95,6 +98,8 @@ function ReaderPage() {
   const [nodes, setNodes] = useState<ConnectionDraftNode[]>([]);
   const [connKind, setConnKind] = useState<"proximity" | "path" | "contains">("contains");
   const [selectionFlash, setSelectionFlash] = useState<string | null>(null);
+  const [lookupPhrase, setLookupPhrase] = useState("");
+  const [editingAssocId, setEditingAssocId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -249,11 +254,14 @@ function ReaderPage() {
 
   function onTextSelect() {
     const sel = window.getSelection()?.toString().trim();
-    if (!sel || sel.length < 2 || sel.length > 80) return;
-    const ref = current
-      ? `${current.book} ${current.chapter}:${current.verse}`
-      : undefined;
-    addNodeFromPhrase(sel, ref);
+    if (!sel || sel.length < 1 || sel.length > 80) return;
+    setLookupPhrase(sel);
+    if (sel.length >= 2) {
+      const ref = current
+        ? `${current.book} ${current.chapter}:${current.verse}`
+        : undefined;
+      addNodeFromPhrase(sel, ref);
+    }
   }
 
   function acceptSmartTag(phrase: string, featureIds: string[]) {
@@ -282,14 +290,48 @@ function ReaderPage() {
     }
   }
 
+
   function oneClickAccept(sug: AssociationSuggestion) {
-    const row = acceptSuggestion(sug, {
-      pathDistance: { quality: "unknown", note: "Marked unknown from source verse" },
-      pathTime: { quality: "unknown", note: "Marked unknown from source verse" },
-    });
+    // Preserve stated/approximate spans from suggestion legs.
+    // Enrich from verse text if legs left something unknown.
+    const verseBlob = current?.text ?? "";
+    const parsedTime = parseTimeSpan(verseBlob);
+    const parsedDist = parseDistanceSpan(verseBlob);
+    const base = acceptSuggestion(sug);
+    const pathTime =
+      base.pathTime.quality !== "unknown"
+        ? base.pathTime
+        : parsedTime ?? base.pathTime;
+    const pathDistance =
+      base.pathDistance.quality !== "unknown"
+        ? base.pathDistance
+        : parsedDist ?? base.pathDistance;
+    const row: UserAssociation = {
+      ...base,
+      pathTime,
+      pathDistance,
+      legs: base.legs.map((leg) => ({
+        ...leg,
+        time:
+          leg.time?.quality === "unknown" && pathTime.quality !== "unknown"
+            ? pathTime
+            : leg.time,
+        distance:
+          leg.distance?.quality === "unknown" && pathDistance.quality !== "unknown"
+            ? pathDistance
+            : leg.distance,
+      })),
+    };
+
     const next = [row, ...userAssocs.filter((a) => a.sourceSuggestionId !== sug.id)];
     setUserAssocs(next);
     saveAssociations(next);
+    const qualityTags = [
+      pathTime.quality === "unknown" ? "time-unknown" : `time-${pathTime.quality}`,
+      pathDistance.quality === "unknown"
+        ? "distance-unknown"
+        : `distance-${pathDistance.quality}`,
+    ];
     setTags((prev) => [
       {
         id: `${Date.now()}`,
@@ -297,7 +339,7 @@ function ReaderPage() {
         chapter: sug.chapter,
         verse: sug.verse,
         wordPhrase: sug.tags[0],
-        tags: [...sug.tags, "path", "distance-unknown", "time-unknown"],
+        tags: [...sug.tags, "path", ...qualityTags],
         note: sug.summary,
         domain: "textual_geography",
         featureIds: [
@@ -309,6 +351,146 @@ function ReaderPage() {
       ...prev,
     ]);
     setAcceptedFlash(sug.id);
+    setNodes([]);
+    window.setTimeout(() => setAcceptedFlash(null), 2000);
+  }
+
+  function deleteTag(id: string) {
+    setTags((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  function removeTagLabel(tagId: string, label: string) {
+    setTags((prev) =>
+      prev
+        .map((row) => {
+          if (row.id !== tagId) return row;
+          const tags = row.tags.filter((x) => x !== label);
+          const wordPhrase =
+            row.wordPhrase === label ? tags[0] ?? undefined : row.wordPhrase;
+          return { ...row, tags, wordPhrase };
+        })
+        .filter((row) => row.tags.length > 0 || row.wordPhrase),
+    );
+  }
+
+  function deleteAssoc(id: string) {
+    const next = removeAssociation(userAssocs, id);
+    setUserAssocs(next);
+    saveAssociations(next);
+    if (editingAssocId === id) setEditingAssocId(null);
+  }
+
+  function deleteAssocLeg(assocId: string, legIndex: number) {
+    const next = removeLeg(userAssocs, assocId, legIndex);
+    setUserAssocs(next);
+    saveAssociations(next);
+  }
+
+  function setAssocSpan(
+    assocId: string,
+    field: "pathTime" | "pathDistance",
+    quality: "unknown" | "approximate" | "stated",
+    value?: string,
+  ) {
+    const next = updateAssociation(userAssocs, assocId, {
+      [field]: { quality, value: value || undefined, note: "Edited in Reader" },
+    } as Partial<UserAssociation>);
+    const patched = next.map((a) => {
+      if (a.id !== assocId) return a;
+      const span = a[field];
+      return {
+        ...a,
+        legs: a.legs.map((leg) =>
+          field === "pathTime" ? { ...leg, time: span } : { ...leg, distance: span },
+        ),
+      };
+    });
+    setUserAssocs(patched);
+    saveAssociations(patched);
+  }
+
+  function loadAssocIntoBuilder(a: UserAssociation) {
+    setEditingAssocId(a.id);
+    const hub = a.legs[0]?.fromFeatureId ?? hubId;
+    setHubId(hub);
+    setConnKind(
+      a.legs.some((l) => l.kind === "path")
+        ? "path"
+        : a.tags.includes("contains")
+          ? "contains"
+          : "proximity",
+    );
+    setNodes(
+      a.legs.map((leg, i) => ({
+        id: `edit-${a.id}-${i}`,
+        label: leg.viaPhrase || placeLabel(leg.toFeatureId),
+        featureId: leg.toFeatureId,
+        ref: `${a.book} ${a.chapter}:${a.verse}`,
+        kind: classifyNode(leg.viaPhrase || leg.toFeatureId, leg.toFeatureId),
+      })),
+    );
+    setAcceptedFlash(null);
+  }
+
+  function saveBuilderAsEditOrNew() {
+    if (!editingAssocId) {
+      createConnectionFromBuilder();
+      return;
+    }
+    if (!current || nodes.length === 0) return;
+    const hubPlace = places.find((p) => p.id === hubId);
+    const hubLabel = hubPlace?.name ?? hubId;
+    const time =
+      selectionTime ??
+      ({ quality: "unknown" as const, note: "Not stated or not recognized" });
+    const distance =
+      selectionDistance ??
+      ({ quality: "unknown" as const, note: "Not stated or not recognized" });
+    const kindMap = {
+      proximity: "proximity" as const,
+      path: "path" as const,
+      contains: "proximity" as const,
+    };
+    const legs = nodes
+      .filter((n) => n.kind !== "time")
+      .map((n) => ({
+        fromFeatureId: hubId,
+        toFeatureId: n.featureId ?? n.label.toLowerCase().replace(/\s+/g, "-"),
+        viaPhrase: n.label,
+        kind: kindMap[connKind],
+        distance: { ...distance },
+        time: { ...time },
+        elevation: "unknown" as const,
+      }));
+    const title =
+      connKind === "path"
+        ? `${hubLabel} path via ${nodes.map((n) => n.label).join(" · ")}`
+        : connKind === "contains"
+          ? `${hubLabel} contains / near: ${nodes.map((n) => n.label).join(", ")}`
+          : `${hubLabel} proximity: ${nodes.map((n) => n.label).join(", ")}`;
+    const next = userAssocs.map((a) =>
+      a.id === editingAssocId
+        ? {
+            ...a,
+            title,
+            legs,
+            pathDistance: distance,
+            pathTime: time,
+            tags: [
+              connKind,
+              hubLabel,
+              ...nodes.map((n) => n.label),
+              time.quality !== "unknown" ? "time-stated" : "time-unknown",
+            ],
+            notes: `Edited in Reader. Hub=${hubId}`,
+          }
+        : a,
+    );
+    setUserAssocs(next);
+    saveAssociations(next);
+    setEditingAssocId(null);
+    setNodes([]);
+    setAcceptedFlash("builder");
     window.setTimeout(() => setAcceptedFlash(null), 2000);
   }
 
@@ -416,6 +598,7 @@ function ReaderPage() {
     ]);
 
     setNodes([]);
+    setEditingAssocId(null);
     setAcceptedFlash("builder");
     window.setTimeout(() => setAcceptedFlash(null), 2000);
   }
@@ -609,9 +792,12 @@ function ReaderPage() {
                           <Badge key={x}>{x}</Badge>
                         ))}
                       {row.featureIds?.map((f) => (
-                        <Badge key={f} tone="claim">
-                          {f}
-                        </Badge>
+                        <span
+                          key={f}
+                          title="Seeded corpus feature (shared; model-agnostic text layer)"
+                        >
+                          <Badge tone="claim">seed: {f}</Badge>
+                        </span>
                       ))}
                     </div>
                     <p className="scripture text-[15px] leading-relaxed select-text">{row.text}</p>
@@ -793,13 +979,33 @@ function ReaderPage() {
             <button
               type="button"
               disabled={!current || nodes.length === 0}
-              onClick={createConnectionFromBuilder}
+              onClick={saveBuilderAsEditOrNew}
               className="w-full rounded-[var(--radius)] bg-teal px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50"
             >
               {acceptedFlash === "builder"
-                ? "Connection saved"
-                : "Create connection (hub → items)"}
+                ? "Saved — stage more text for another connection"
+                : editingAssocId
+                  ? "Update connection"
+                  : "Create connection (hub → items)"}
             </button>
+            {nodes.length === 0 && (
+              <p className="text-[11px] text-muted text-center leading-relaxed">
+                Ready for another connection: select words in any verse (or accept a suggestion)
+                to stage items. Path suggestions stay available after one is saved.
+              </p>
+            )}
+            {editingAssocId && (
+              <button
+                type="button"
+                className="w-full text-xs text-muted hover:underline"
+                onClick={() => {
+                  setEditingAssocId(null);
+                  setNodes([]);
+                }}
+              >
+                Cancel edit
+              </button>
+            )}
             <Link to="/map-lab" className="block text-center text-xs text-accent hover:underline">
               Open Map Lab to see corridors →
             </Link>
@@ -840,62 +1046,237 @@ function ReaderPage() {
             </Card>
           )}
 
+          
           {assocsOnVerse.length > 0 && (
             <Card className="p-4 space-y-2">
               <h2 className="font-semibold text-sm">Saved on this verse</h2>
+              <p className="text-[11px] text-muted">
+                Edit time/distance, remove a leg, load into builder, or delete.
+              </p>
               {assocsOnVerse.map((a) => (
-                <div key={a.id} className="text-xs border border-border rounded p-2 space-y-1">
+                <div
+                  key={a.id}
+                  className={`text-xs border rounded p-2 space-y-1.5 ${
+                    editingAssocId === a.id ? "border-teal bg-teal-soft/20" : "border-border"
+                  }`}
+                >
                   <div className="font-medium">{a.title}</div>
                   <div className="flex flex-wrap gap-1">
-                    <Badge tone="claim">Dist: {spanLabel(a.pathDistance)}</Badge>
-                    <Badge tone="claim">Time: {spanLabel(a.pathTime)}</Badge>
+                    <Badge tone={a.pathDistance.quality === "unknown" ? "claim" : "teal"}>
+                      Dist: {spanLabel(a.pathDistance)}
+                    </Badge>
+                    <Badge tone={a.pathTime.quality === "unknown" ? "claim" : "teal"}>
+                      Time: {spanLabel(a.pathTime)}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      className="rounded border border-border px-1.5 py-0.5 hover:bg-surface-2"
+                      onClick={() =>
+                        setAssocSpan(
+                          a.id,
+                          "pathTime",
+                          "stated",
+                          parseTimeSpan(
+                            `${current?.text ?? ""} ${a.legs.map((l) => l.viaPhrase ?? "").join(" ")}`,
+                          )?.value ??
+                            a.pathTime.value ??
+                            "space of many days",
+                        )
+                      }
+                    >
+                      Set time from verse
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded border border-border px-1.5 py-0.5 hover:bg-surface-2"
+                      onClick={() => setAssocSpan(a.id, "pathTime", "unknown")}
+                    >
+                      Time unknown
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded border border-border px-1.5 py-0.5 hover:bg-surface-2"
+                      onClick={() => setAssocSpan(a.id, "pathDistance", "unknown")}
+                    >
+                      Dist unknown
+                    </button>
                   </div>
                   {a.legs.map((leg, i) => (
-                    <div key={i} className="text-muted">
-                      {placeLabel(leg.fromFeatureId)} → {placeLabel(leg.toFeatureId)}
-                      {leg.viaPhrase ? ` (“${leg.viaPhrase}”)` : ""}
+                    <div
+                      key={i}
+                      className="flex items-start justify-between gap-2 text-muted border-t border-border/50 pt-1"
+                    >
+                      <span>
+                        {placeLabel(leg.fromFeatureId)} → {placeLabel(leg.toFeatureId)}
+                        {leg.viaPhrase ? ` ("${leg.viaPhrase}")` : ""}
+                        <span className="block text-[10px]">
+                          t:{spanLabel(leg.time)} · d:{spanLabel(leg.distance)}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        className="text-accent shrink-0 hover:underline"
+                        onClick={() => deleteAssocLeg(a.id, i)}
+                      >
+                        remove
+                      </button>
                     </div>
                   ))}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      className="text-accent hover:underline"
+                      onClick={() => loadAssocIntoBuilder(a)}
+                    >
+                      Edit in builder
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted hover:underline"
+                      onClick={() => deleteAssoc(a.id)}
+                    >
+                      Delete connection
+                    </button>
+                  </div>
                 </div>
               ))}
             </Card>
           )}
 
-          {/* Dictionary (collapsed-simple) */}
+          {(tagsOnVerse.get(selectedVerse) ?? []).length > 0 && (
+            <Card className="p-4 space-y-2">
+              <h2 className="font-semibold text-sm">Your tags on this verse</h2>
+              <p className="text-[11px] text-muted">
+                Personal tags (this browser). Distinct from seeded model features on the verse.
+              </p>
+              {(tagsOnVerse.get(selectedVerse) ?? []).map((tg) => (
+                <div key={tg.id} className="text-xs border border-border rounded p-2 space-y-1">
+                  {tg.wordPhrase && (
+                    <div className="font-medium text-accent">"{tg.wordPhrase}"</div>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {tg.tags.map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        title="Click to remove this label"
+                        onClick={() => removeTagLabel(tg.id, label)}
+                        className="rounded-full border border-teal/40 bg-teal-soft/30 px-2 py-0.5 hover:bg-red-50 hover:border-red-300"
+                      >
+                        {label} x
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="text-muted hover:underline"
+                    onClick={() => deleteTag(tg.id)}
+                  >
+                    Delete tag row
+                  </button>
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {/* Dictionary + KJV + concordance */}
           {current && (
             <Card className="p-4 space-y-2">
               <h2 className="font-semibold text-sm flex items-center gap-2">
                 <BookOpen className="h-4 w-4" />
-                Dictionary
+                Dictionary · KJV · concordance
               </h2>
               <p className="text-[11px] text-muted">
-                Select a word in the verse, or use a staged item label.
+                Select any word in the verse (e.g. copper). Lookup updates on select.
               </p>
-              {nodes[0] && dynamicLexiconLookup(nodes[0].label).curated && (
-                <div className="text-xs space-y-1">
-                  <div className="font-medium">{nodes[0].label}</div>
-                  <p className="text-ink-soft leading-relaxed">
-                    {dynamicLexiconLookup(nodes[0].label).curated?.ambiguity}
-                  </p>
-                  {dynamicLexiconLookup(nodes[0].label).curated?.webster1828 && (
-                    <p className="text-muted">
-                      1828: {dynamicLexiconLookup(nodes[0].label).curated?.webster1828}
-                    </p>
-                  )}
-                </div>
-              )}
-              {!nodes[0] && lexiconHitsInText(current.text)[0] && (
-                <div className="text-xs">
-                  <span className="font-medium">
-                    {lexiconHitsInText(current.text)[0]!.term}:
-                  </span>{" "}
-                  {lexiconHitsInText(current.text)[0]!.ambiguity}
-                </div>
-              )}
+              <input
+                value={lookupPhrase}
+                onChange={(e) => setLookupPhrase(e.target.value)}
+                placeholder="Selected word or type here..."
+                className="w-full rounded border border-border px-2 py-1.5 text-sm"
+              />
+              {(() => {
+                const q = lookupPhrase.trim() || nodes[0]?.label || "";
+                if (!q) {
+                  const hit = lexiconHitsInText(current.text)[0];
+                  if (!hit) {
+                    return (
+                      <p className="text-xs text-muted">
+                        No selection yet. Highlight a word in the chapter text.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="text-xs space-y-1">
+                      <div className="font-medium">{hit.term}</div>
+                      <p className="text-ink-soft">{hit.ambiguity}</p>
+                    </div>
+                  );
+                }
+                const lex = dynamicLexiconLookup(q);
+                const bomHits = searchWord(q).slice(0, 8);
+                return (
+                  <div className="text-xs space-y-2">
+                    <div className="font-medium text-sm">"{lex.query}"</div>
+                    {lex.curated ? (
+                      <div className="space-y-1">
+                        <p className="text-ink-soft leading-relaxed">{lex.curated.ambiguity}</p>
+                        <p className="text-muted leading-relaxed">
+                          <span className="font-semibold text-ink">1828: </span>
+                          {lex.curated.webster1828}
+                        </p>
+                        <p className="text-muted leading-relaxed">
+                          <span className="font-semibold text-ink">KJV notes: </span>
+                          {lex.curated.kjvNotes}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-muted">
+                        No curated entry — use external links and BoM concordance below.
+                      </p>
+                    )}
+                    <div className="space-y-1">
+                      <div className="text-[10px] uppercase tracking-wide text-muted font-semibold">
+                        External
+                      </div>
+                      {lex.external.map((ex) => (
+                        <a
+                          key={ex.url}
+                          href={ex.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block text-accent hover:underline"
+                        >
+                          {ex.label}
+                        </a>
+                      ))}
+                    </div>
+                    {bomHits.length > 0 && (
+                      <div className="space-y-1 border-t border-border pt-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted font-semibold">
+                          BoM concordance ({searchWord(q).length} in corpus)
+                        </div>
+                        {bomHits.map((h) => (
+                          <button
+                            key={h.id}
+                            type="button"
+                            onClick={() => goToVerse(h)}
+                            className="block w-full text-left text-accent hover:underline"
+                          >
+                            {h.book} {h.chapter}:{h.verse}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </Card>
           )}
 
-          {tags.length > 0 && (
+{tags.length > 0 && (
             <Card className="p-3">
               <h2 className="font-semibold text-xs mb-1">Your tags ({tags.length})</h2>
               <div className="max-h-28 overflow-auto space-y-1">
