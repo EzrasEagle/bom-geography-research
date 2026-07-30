@@ -1,11 +1,10 @@
-# Gaps (toward G4)
+# Gaps (after A–D)
 
-Full plan: **[G4-MORMONS-CODEX.md](./G4-MORMONS-CODEX.md)**
+Full plan: **[G4-MORMONS-CODEX.md](./G4-MORMONS-CODEX.md)** · Status: **[PASS_STATUS.md](./PASS_STATUS.md)**
 
-Short list:
-- All **~25** Tehuantepec-theater map correspondences as rows
-- Approach **~500** internal geography passages (Sorenson/Clark apparatus)
-- **~400+** cultural/archaeological correspondences as `evidence_item`s (not all map pins)
-- Secondary Alma war cities; Mormon retreat line detail
-- Usumacinta-Sidon **variant** sub-pack
-- Contested-claim flags (metallurgy, elephants, art phenotypes)
+## Remaining polish (not blockers)
+- Page cites from physical *Mormon’s Codex* for Pass A/C rows
+- Map Lab: toggle Pass D site pins on real basemap
+- Usumacinta-Sidon as full alternate sub-pack (currently a contrast pin)
+- Secondary Alma war cities beyond current place dictionary
+- Evidence browser UX separate from model page tables

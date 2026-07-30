@@ -16,6 +16,14 @@ import {
   mesoCulturalCorrespondences,
   passCStats,
 } from "@/data/models/mesoamerica-pass-c";
+import {
+  MESO_PASS_D_META,
+  getPassD,
+  mesoSiteCorrelations,
+  mesoEraSlices,
+  passDStats,
+  passDSiteFeatures,
+} from "@/data/models/mesoamerica-pass-d";
 
 /**
  * Limited Mesoamerica (Sorenson-style) — Model Index Pack (G3 seed)
@@ -1006,6 +1014,7 @@ export function mesoClaimStats() {
     mapCorrespondences: mesoMapCorrespondences.length,
     passB: passBStats(),
     passC: passCStats(),
+    passD: passDStats(),
   };
 }
 
@@ -1028,3 +1037,11 @@ export function getPassA() {
 
 export { MESO_PASS_B_META, getPassB, mesoGeoPassages, passBStats };
 export { MESO_PASS_C_META, getPassC, mesoCulturalCorrespondences, passCStats };
+export {
+  MESO_PASS_D_META,
+  getPassD,
+  mesoSiteCorrelations,
+  mesoEraSlices,
+  passDStats,
+  passDSiteFeatures,
+};

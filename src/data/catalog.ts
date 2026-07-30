@@ -8,6 +8,7 @@ import {
   getPassA,
   getPassB,
   getPassC,
+  getPassD,
   mesoMapCorrespondences,
 } from "@/data/models/mesoamerica-pack";
 
@@ -572,6 +573,7 @@ export function getMesoamericaPack() {
     passA,
     passB: getPassB(),
     passC: getPassC(),
+    passD: getPassD(),
     mapCorrespondences: mesoMapCorrespondences,
   };
 }

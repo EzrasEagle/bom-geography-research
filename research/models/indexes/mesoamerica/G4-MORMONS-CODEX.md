@@ -130,7 +130,7 @@ From Sorenson’s public outline of Codex correspondences (~420 total):
 - **Pass A: LOADED (25/25)**
 - **Pass B: EXPANDED** (~300+ passages; target 500) — continue for G4 completeness
 - **Pass C: LOADED (420 cultural correspondences)**
-- Pass D: era archaeology partly inside C; optional site-layer polish remaining
+- **Pass D: LOADED** (30 site correlations + 4 era slices; optional Map Lab overlay next)
 
 ## Resume checklist for next G4 session
 

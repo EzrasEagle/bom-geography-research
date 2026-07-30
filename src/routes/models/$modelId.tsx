@@ -46,6 +46,11 @@ function ModelDetailPage() {
                   Pass C LOADED ({pack.passC.stats.total} cultural)
                 </Badge>
               )}
+              {pack.passD?.loaded && (
+                <Badge tone="teal">
+                  Pass D LOADED ({pack.passD.stats.totalSites} sites)
+                </Badge>
+              )}
             </>
           )}
         </div>
@@ -263,6 +268,108 @@ function ModelDetailPage() {
                         }
                       >
                         {row.contested ? "contested" : row.strength}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {pack?.passD && (
+        <Card className="p-5 space-y-3 border-teal/30">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold">Pass D — Time-sliced archaeology & site pins</h2>
+            <Badge tone={pack.passD.loaded ? "teal" : "accent"}>
+              {pack.passD.loaded ? "LOADED" : "incomplete"} · {pack.passD.stats.totalSites}{" "}
+              sites · {pack.passD.stats.eras} eras
+            </Badge>
+            <Badge>
+              {pack.passD.stats.high} high · {pack.passD.stats.medium} med ·{" "}
+              {pack.passD.stats.low} low · {pack.passD.stats.contested} contested
+            </Badge>
+            <Badge>{pack.passD.stats.linkedPassA} linked to Pass A</Badge>
+          </div>
+          <p className="text-xs text-muted leading-relaxed">
+            Optional real-world site overlay for testing the limited Mesoamerica package. Most
+            site-level IDs are <strong>low confidence / contested</strong>. Contrast pins
+            (Petén, Palenque, Monte Albán) show what the model does <em>not</em> claim. Usumacinta
+            is flagged as a Sidon <strong>variant</strong>, not the default Grijalva.
+          </p>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            {pack.passD.eras.map((era) => (
+              <div
+                key={era.id}
+                className="rounded-[var(--radius)] border border-border bg-surface-2/50 p-3 text-xs"
+              >
+                <div className="font-semibold text-ink">{era.label}</div>
+                <div className="text-muted mt-0.5">{era.years}</div>
+                <p className="mt-2 text-ink-soft leading-relaxed">{era.bomNarrative}</p>
+                <p className="mt-1 text-muted leading-relaxed">{era.mesoContext}</p>
+                <div className="mt-2 text-[10px] text-muted">
+                  {era.siteIds.length} sites in slice · Pass C: {era.passCDomains.join(", ")}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto max-h-[28rem] overflow-y-auto border border-border rounded-[var(--radius)]">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-2 sticky top-0">
+                <tr>
+                  <th className="p-2">#</th>
+                  <th className="p-2">Site</th>
+                  <th className="p-2">Correlation</th>
+                  <th className="p-2">Coords</th>
+                  <th className="p-2">Str.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pack.passD.sites.map((row) => (
+                  <tr key={row.id} className="border-t border-border/60 align-top">
+                    <td className="p-2 text-muted tabular-nums">{row.n}</td>
+                    <td className="p-2">
+                      <div className="font-medium">{row.siteName}</div>
+                      <div className="text-[10px] text-muted">{row.modernRegion}</div>
+                      <div className="text-[10px] text-muted mt-0.5">
+                        {row.eras.join(" · ")}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      {row.correlation}
+                      {row.bomFeatures.length > 0 && (
+                        <span className="block text-[10px] text-teal-800 mt-0.5">
+                          BoM: {row.bomFeatures.join(", ")}
+                        </span>
+                      )}
+                      {row.passAIds.length > 0 && (
+                        <span className="block text-[10px] text-muted mt-0.5">
+                          Pass A: {row.passAIds.join(", ")}
+                        </span>
+                      )}
+                      <span className="block text-[10px] text-ink-soft mt-0.5">
+                        {row.archaeologyNote}
+                      </span>
+                    </td>
+                    <td className="p-2 tabular-nums text-muted whitespace-nowrap">
+                      {row.lat.toFixed(2)}, {row.lng.toFixed(2)}
+                    </td>
+                    <td className="p-2">
+                      <Badge
+                        tone={
+                          row.contested
+                            ? "accent"
+                            : row.confidence === "high"
+                              ? "teal"
+                              : row.confidence === "medium"
+                                ? "claim"
+                                : "default"
+                        }
+                      >
+                        {row.contested ? "contested" : row.confidence}
                       </Badge>
                     </td>
                   </tr>
