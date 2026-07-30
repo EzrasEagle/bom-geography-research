@@ -23,7 +23,7 @@ export const ALMA_SIDON: CorpusVerse[] = [
     chapter: 2,
     verse: 24,
     text: "Behold, we followed the camp of the Amlicites, and to our great astonishment, in the land of Minon, above the land of Zarahemla, in the course of the land of Nephi, we saw a numerous host of the Lamanites; and behold, the Amlicites have joined them.",
-    featureIds: ["minon", "zarahemla", "nephi"],
+    featureIds: ["minon", "zarahemla", "zarahemla-land", "nephi", "amnihu"],
     domains: ["textual_geography"],
     studyUrl: url(2, 24),
   },

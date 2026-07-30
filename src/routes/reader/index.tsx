@@ -21,6 +21,18 @@ import {
   relationLabel,
   type DetectedRelation,
 } from "@/lib/relation-phrases";
+import {
+  emptyLink,
+  ensureLinks,
+  inferModeFromChain,
+  inferRelationFromPhrase,
+  isRelationWord,
+  linkToLegKind,
+  LINK_RELATIONS,
+  makeStep,
+  suggestLinkBetween,
+  type ChainLink,
+} from "@/lib/builder-chain";
 import { getPlaceDossier } from "@/data/place-scripture";
 import { lexiconHitsInText } from "@/data/lexicon";
 import {
@@ -168,6 +180,9 @@ function ReaderPage() {
   const [hubId, setHubId] = useState("nephi");
   /** Ordered steps for a path (or related items for contains/proximity) */
   const [steps, setSteps] = useState<ConnectionDraftNode[]>([]);
+  const [chainLinks, setChainLinks] = useState<ChainLink[]>([]);
+  const [expandedLink, setExpandedLink] = useState<number | null>(null);
+  const [showBuilderMeta, setShowBuilderMeta] = useState(false);
   const [editingAssocId, setEditingAssocId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -213,15 +228,22 @@ function ReaderPage() {
     if (search.feature) setActiveFeature(search.feature);
   }, [search.book, search.chapter, search.verse, search.q, search.feature]);
 
-  // When verse changes: clear in-progress path unless editing; load chapter dates
+  // Verse change does NOT clear the builder chain (keep Amnihu etc.).
+  // Only refresh chapter date defaults when not mid-edit of chronology label.
   useEffect(() => {
-    if (!editingAssocId) {
-      setSteps([]);
-    }
     const ch = chronologyForChapter(book, chapter);
-    setAssocChronology(ch);
-    setChronoLabel(ch?.label ?? "");
-  }, [book, chapter, selectedVerse]); // eslint-disable-line react-hooks/exhaustive-deps
+    setAssocChronology((prev) => {
+      // keep user override label if they typed one
+      if (chronoLabel && prev?.label === chronoLabel) return prev;
+      return ch;
+    });
+    if (!chronoLabel) setChronoLabel(ch?.label ?? "");
+  }, [book, chapter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep links array aligned with steps
+  useEffect(() => {
+    setChainLinks((prev) => ensureLinks(steps.length, prev));
+  }, [steps.length]);
 
   const chapterList = chaptersForBook(book);
   const chapterVerses = versesFor(book, chapter);
@@ -433,26 +455,88 @@ function ReaderPage() {
   function addStep(label: string, featureId?: string) {
     const trimmed = label.trim();
     if (!trimmed) return;
-    const fid = featureId ?? guessFeaturesForPhrase(trimmed)[0];
+    const ref = current
+      ? `${current.book} ${current.chapter}:${current.verse}`
+      : undefined;
+
+    // Relation words fill the link BEFORE the next place, not a step
+    const asRel = inferRelationFromPhrase(trimmed);
+    if (asRel && isRelationWord(trimmed)) {
+      setChainLinks((prev) => {
+        const links = ensureLinks(steps.length, prev);
+        // If we already have ≥1 step, set the last open link (or next slot)
+        if (steps.length >= 1) {
+          const idx = Math.max(0, steps.length - 1);
+          // if link for next step doesn't exist yet, we're annotating upcoming
+          // store on last link if exists else remember via flash
+          if (links.length === 0) {
+            // no link yet — stash as via on a pending link when next place added
+            return links;
+          }
+          const i = links.length - 1;
+          const next = [...links];
+          next[i] = { ...asRel };
+          return next;
+        }
+        return prev;
+      });
+      // stash pending relation for next place add
+      (window as unknown as { __pendingLink?: ChainLink }).__pendingLink = asRel;
+      setFlash(`Relation "${trimmed}" will apply to the next place you add`);
+      window.setTimeout(() => setFlash(null), 2000);
+      return;
+    }
+
+    const node = makeStep(trimmed, featureId, ref);
     setSteps((prev) => {
-      if (prev.some((p) => p.label.toLowerCase() === trimmed.toLowerCase())) return prev;
-      return [
-        ...prev,
-        {
-          id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-          label: trimmed,
-          featureId: fid,
-          ref: current
-            ? `${current.book} ${current.chapter}:${current.verse}`
-            : undefined,
-          kind: classifyNode(trimmed, fid),
-        },
-      ];
+      if (prev.some((p) => p.label.toLowerCase() === node.label.toLowerCase())) return prev;
+      const next = [...prev, node];
+      setChainLinks((links) => {
+        let L = ensureLinks(next.length, links);
+        if (next.length >= 2) {
+          const pending = (window as unknown as { __pendingLink?: ChainLink }).__pendingLink;
+          const i = next.length - 2;
+          if (pending) {
+            L = [...L];
+            L[i] = pending;
+            (window as unknown as { __pendingLink?: ChainLink }).__pendingLink = undefined;
+          } else if (L[i]?.relation === "unknown") {
+            L = [...L];
+            L[i] = suggestLinkBetween(next[i]!, next[i + 1]!);
+          }
+        }
+        // auto mode
+        setMode(inferModeFromChain(next, L) as ConnMode);
+        return L;
+      });
+      return next;
+    });
+  }
+
+  function updateLink(index: number, patch: Partial<ChainLink>) {
+    setChainLinks((prev) => {
+      const L = ensureLinks(steps.length, prev);
+      const next = [...L];
+      next[index] = { ...next[index]!, ...patch };
+      setMode(inferModeFromChain(steps, next) as ConnMode);
+      return next;
     });
   }
 
   function removeStep(id: string) {
-    setSteps((prev) => prev.filter((s) => s.id !== id));
+    setSteps((prev) => {
+      const idx = prev.findIndex((s) => s.id === id);
+      const next = prev.filter((s) => s.id !== id);
+      setChainLinks((links) => {
+        if (idx < 0) return ensureLinks(next.length, links);
+        // remove link after removed step, or before if last
+        const L = [...links];
+        if (idx < L.length) L.splice(idx, 1);
+        else if (idx > 0 && idx - 1 < L.length) L.splice(idx - 1, 1);
+        return ensureLinks(next.length, L);
+      });
+      return next;
+    });
   }
 
   function moveStep(id: string, dir: -1 | 1) {
@@ -596,23 +680,69 @@ function ReaderPage() {
       setClosenessHard(true);
     }
     if (fromId) setHubId(fromId);
-    setSteps([]);
-    if (fromId) addStep(rel.subjectPhrase, fromId);
-    // addStep is async state - need batch
-    const stepsToAdd: { label: string; id?: string }[] = [];
-    if (fromId) stepsToAdd.push({ label: rel.subjectPhrase, id: fromId });
-    if (toId) stepsToAdd.push({ label: rel.objectPhrase, id: toId });
-    setSteps(
-      stepsToAdd.map((s, i) => ({
-        id: `rel-${Date.now()}-${i}`,
-        label: s.label,
-        featureId: s.id,
-        kind: "place" as const,
-        ref: current
-          ? `${current.book} ${current.chapter}:${current.verse}`
-          : undefined,
-      })),
-    );
+    const stepsToAdd: ConnectionDraftNode[] = [];
+    if (rel.subjectPhrase && rel.subjectPhrase !== "?") {
+      stepsToAdd.push(
+        makeStep(
+          rel.subjectPhrase,
+          fromId,
+          current ? `${current.book} ${current.chapter}:${current.verse}` : undefined,
+        ),
+      );
+    }
+    if (rel.objectPhrase) {
+      stepsToAdd.push(
+        makeStep(
+          rel.objectPhrase,
+          toId,
+          current ? `${current.book} ${current.chapter}:${current.verse}` : undefined,
+        ),
+      );
+    }
+    const inf = presetFromRelation(rel.relation);
+    const link: ChainLink = {
+      relation:
+        rel.relation === "east_of"
+          ? "east_of"
+          : rel.relation === "west_of"
+            ? "west_of"
+            : rel.relation === "by"
+              ? "by"
+              : rel.relation === "in"
+                ? "contains"
+                : "proximity",
+      viaPhrase: rel.viaPhrase,
+      distancePreset: inf.preset,
+      closenessHard: true,
+    };
+    setSteps((prev) => {
+      // If chain empty, use both; else append object (or both if subject not in chain)
+      if (prev.length === 0) {
+        setChainLinks(stepsToAdd.length >= 2 ? [link] : []);
+        return stepsToAdd;
+      }
+      const last = prev[prev.length - 1]!;
+      const sameSub =
+        last.label.toLowerCase() === (stepsToAdd[0]?.label ?? "").toLowerCase();
+      if (sameSub && stepsToAdd[1]) {
+        const next = [...prev, stepsToAdd[1]];
+        setChainLinks((L) => {
+          const e = ensureLinks(next.length, L);
+          e[next.length - 2] = link;
+          return e;
+        });
+        return next;
+      }
+      // append all new nodes
+      const next = [...prev];
+      for (const s of stepsToAdd) {
+        if (!next.some((n) => n.label.toLowerCase() === s.label.toLowerCase())) {
+          next.push(s);
+        }
+      }
+      setChainLinks((L) => ensureLinks(next.length, L));
+      return next;
+    });
     if (fromId) setHubId(fromId);
     setFlash(
       `Staged: ${rel.subjectPhrase} ${relationLabel(rel.relation)} ${rel.objectPhrase}`,
@@ -804,15 +934,15 @@ function ReaderPage() {
   function buildConnection() {
     if (!current || steps.length === 0) return;
 
-    const spatial: DistanceSpec = presetToDistanceSpec(distancePreset, {
+    const links = ensureLinks(steps.length, chainLinks);
+    const inferred = inferModeFromChain(steps, links) as ConnMode;
+    const useMode = steps.length >= 2 ? inferred : mode;
+
+    const spatial = presetToDistanceSpec(distancePreset, {
       closeness: closenessHard ? "hard" : "soft",
       value:
         manualDistQuality !== "auto" && manualDistValue.trim()
           ? manualDistValue.trim()
-          : undefined,
-      note:
-        distancePreset === "same_scene" || distancePreset === "border_adjacent"
-          ? "Text situates these in one locale — models must keep them near (same land theater)."
           : undefined,
     });
 
@@ -825,136 +955,95 @@ function ReaderPage() {
             value: manualTimeValue.trim() || undefined,
             note: "Set in Association Builder",
           };
-    const distance =
-      distancePreset !== "unknown"
-        ? {
-            quality: spatial.quality,
-            value: spatial.value ?? DISTANCE_PRESETS.find((p) => p.id === distancePreset)?.label,
-            note: spatial.note,
-          }
-        : manualDistQuality === "auto"
-          ? selectionDistance ??
-            ({ quality: "unknown" as const, note: "Not stated or not recognized" })
-          : {
-              quality: manualDistQuality,
-              value: manualDistValue.trim() || undefined,
-              note: "Set in Association Builder",
-            };
 
     let legs: UserAssociation["legs"] = [];
     let title = "";
-    const kindMap = {
-      proximity: "proximity" as const,
-      path: "path" as const,
-      contains: "contains" as const,
-      same_region: "same_region" as const,
-      river: "river" as const,
-    };
 
-    if (mode === "path") {
-      // Ordered chain: step0 → step1 → step2 …
-      // If only one step, hub → step
-      const chain =
-        steps.length === 1
-          ? [
-              {
-                id: "hub",
-                label: placeLabel(hubId),
-                featureId: hubId,
-                kind: "place" as const,
-              },
-              steps[0]!,
-            ]
-          : steps;
-      for (let i = 0; i < chain.length - 1; i++) {
-        const a = chain[i]!;
-        const b = chain[i + 1]!;
+    if (steps.length >= 2) {
+      for (let i = 0; i < steps.length - 1; i++) {
+        const a = steps[i]!;
+        const b = steps[i + 1]!;
+        const link = links[i] ?? emptyLink();
+        const legSpatial = presetToDistanceSpec(link.distancePreset, {
+          closeness: link.closenessHard ? "hard" : "soft",
+          value: link.viaPhrase || undefined,
+        });
+        const kind = linkToLegKind(link.relation);
         legs.push({
           fromFeatureId: a.featureId ?? a.label.toLowerCase().replace(/\s+/g, "-"),
           toFeatureId: b.featureId ?? b.label.toLowerCase().replace(/\s+/g, "-"),
-          viaPhrase: b.label,
-          kind: "path",
-          distance: { ...distance },
+          viaPhrase: link.viaPhrase || link.relation,
+          kind,
+          distance: {
+            quality: legSpatial.quality,
+            value: legSpatial.value,
+            note: legSpatial.note,
+          },
           time: { ...time },
           elevation:
-            /came down|went down|down into/i.test(b.label)
-              ? "down"
-              : /went up|go up|up to/i.test(b.label)
-                ? "up"
-                : "unknown",
+            link.relation === "above"
+              ? "up"
+              : link.relation === "below"
+                ? "down"
+                : /came down|went down|down into/i.test(link.viaPhrase)
+                  ? "down"
+                  : /went up|go up|up to/i.test(link.viaPhrase)
+                    ? "up"
+                    : "unknown",
+          distancePreset: link.distancePreset,
+          placement:
+            link.relation === "east_of"
+              ? "east_of"
+              : link.relation === "west_of"
+                ? "west_of"
+                : link.relation === "by"
+                  ? "by"
+                  : link.relation === "above" || link.relation === "below"
+                    ? "unspecified"
+                    : "unspecified",
+          closeness: link.closenessHard ? "hard" : "soft",
+          maxDayFraction: legSpatial.maxDayFraction,
         });
       }
-      title = `Path: ${chain.map((c) => c.label).join(" → ")}`;
-    } else if (mode === "same_region") {
-      // Peer places in one region — chain or star from first step / hub
-      const nodes =
-        steps.length >= 2
-          ? steps
-          : [
-              {
-                id: "hub",
-                label: placeLabel(hubId),
-                featureId: hubId,
-                kind: "place" as const,
-              },
-              ...steps,
-            ];
-      for (let i = 0; i < nodes.length - 1; i++) {
-        const a = nodes[i]!;
-        const b = nodes[i + 1]!;
-        legs.push({
-          fromFeatureId: a.featureId ?? a.label.toLowerCase().replace(/\s+/g, "-"),
-          toFeatureId: b.featureId ?? b.label.toLowerCase().replace(/\s+/g, "-"),
-          viaPhrase: b.label,
-          kind: "same_region",
-          distance: { ...distance },
-          time: { ...time },
-        });
-      }
-      title = `Same region: ${nodes.map((n) => n.label).join(" · ")}`;
-    } else if (mode === "river") {
-      // Hub should be river (sidon); steps = places on it
-      for (const s of steps) {
-        legs.push({
-          fromFeatureId: hubId,
-          toFeatureId: s.featureId ?? s.label.toLowerCase().replace(/\s+/g, "-"),
-          viaPhrase: s.label,
-          kind: "river",
-          distance: { quality: "unknown" },
-          time: { quality: "unknown" },
-        });
-      }
-      title = `River ${placeLabel(hubId)}: ${steps.map((s) => s.label).join(", ")}`;
+      title = steps
+        .map((s, i) =>
+          i === 0
+            ? s.label
+            : `[${links[i - 1]?.relation === "unknown" ? "?" : links[i - 1]?.relation}] ${s.label}`,
+        )
+        .join(" → ");
     } else {
-      // Hub → each related item (contains / proximity)
-      for (const s of steps) {
-        legs.push({
-          fromFeatureId: hubId,
-          toFeatureId: s.featureId ?? s.label.toLowerCase().replace(/\s+/g, "-"),
-          viaPhrase: s.label,
-          kind: kindMap[mode],
-          distance: { quality: "unknown" },
-          time: { quality: "unknown" },
-        });
-      }
-      const hubLabel = placeLabel(hubId);
-      title =
-        mode === "contains"
-          ? `${hubLabel} contains: ${steps.map((s) => s.label).join(", ")}`
-          : `${hubLabel} near: ${steps.map((s) => s.label).join(", ")}`;
+      // single step — hub to step as proximity/path
+      const s = steps[0]!;
+      legs.push({
+        fromFeatureId: hubId,
+        toFeatureId: s.featureId ?? s.label.toLowerCase().replace(/\s+/g, "-"),
+        viaPhrase: s.label,
+        kind: useMode === "path" ? "path" : "proximity",
+        distance: {
+          quality: spatial.quality,
+          value: spatial.value,
+          note: spatial.note,
+        },
+        time: { ...time },
+        distancePreset: spatial.preset,
+        closeness: spatial.closeness,
+        maxDayFraction: spatial.maxDayFraction,
+      });
+      title = `${placeLabel(hubId)} → ${s.label}`;
     }
 
     if (legs.length === 0) return;
 
-    // Stamp spatial distance on every leg for Map Lab
-    legs = legs.map((leg) => ({
-      ...leg,
-      distance: { ...distance },
-      distancePreset: spatial.preset,
-      placement: spatial.placement,
-      closeness: spatial.closeness,
-      maxDayFraction: spatial.maxDayFraction,
-    }));
+    const distance =
+      legs[0]?.distance ??
+      ({ quality: "unknown" as const, note: "Not stated" });
+
+    const chrono: ChronologySpan = assocChronology
+      ? { ...assocChronology, label: chronoLabel || assocChronology.label }
+      : chronologyForChapter(current.book, current.chapter) ?? {
+          quality: "unknown" as const,
+        };
 
     if (editingAssocId) {
       const next = userAssocs.map((a) =>
@@ -965,7 +1054,15 @@ function ReaderPage() {
               legs,
               pathDistance: distance,
               pathTime: time,
-              notes: `Edited in Reader (${mode})`,
+              spatialDistance: presetToDistanceSpec(
+                (legs[0]?.distancePreset as DistancePreset) ?? "unknown",
+                {
+                  closeness: legs[0]?.closeness,
+                  maxDayFraction: legs[0]?.maxDayFraction,
+                },
+              ),
+              chronology: chrono,
+              notes: `Edited in Reader (chain)`,
             }
           : a,
       );
@@ -973,11 +1070,6 @@ function ReaderPage() {
       saveAssociations(next);
       setEditingAssocId(null);
     } else {
-      const chrono: ChronologySpan = assocChronology
-        ? { ...assocChronology, label: chronoLabel || assocChronology.label }
-        : chronologyForChapter(current.book, current.chapter) ?? {
-            quality: "unknown" as const,
-          };
       const assoc: UserAssociation = {
         id: `assoc-${Date.now()}`,
         book: current.book,
@@ -987,20 +1079,25 @@ function ReaderPage() {
         legs,
         pathDistance: distance,
         pathTime: time,
-        spatialDistance: spatial,
+        spatialDistance: presetToDistanceSpec(
+          (legs[0]?.distancePreset as DistancePreset) ?? "unknown",
+          {
+            closeness: legs[0]?.closeness,
+            maxDayFraction: legs[0]?.maxDayFraction,
+          },
+        ),
         chronology: chrono,
         relatedRefs: [],
-        tags: [mode, ...steps.map((s) => s.label)],
+        tags: [useMode, ...steps.map((s) => s.label)],
         createdAt: new Date().toISOString(),
-        notes: `Built in Reader (${mode})`,
+        notes: "Built from step chain",
       };
       const next = [assoc, ...userAssocs];
       setUserAssocs(next);
       saveAssociations(next);
     }
 
-    setSteps([]);
-    setFlash(mode === "path" ? "Path saved" : "Connection saved");
+    setFlash(steps.length >= 3 ? "Path saved" : "Association saved");
     window.setTimeout(() => setFlash(null), 2000);
   }
 
@@ -1569,7 +1666,7 @@ function ReaderPage() {
                             className="rounded-r-full border border-teal/40 border-l-0 bg-teal-soft/40 px-2 py-0.5 text-[11px] text-teal-900 hover:bg-teal hover:text-white"
                             title="Add as next path step"
                           >
-                            path
+                            builder
                           </button>
                         </span>
                       ))}
@@ -1588,447 +1685,284 @@ function ReaderPage() {
               <Link2 className="h-4 w-4 text-teal" />
               Association Builder
             </h2>
-            <div className="text-[11px] text-muted space-y-1 leading-relaxed">
-              <p>
-                <strong className="text-ink">Path</strong> = journey.{" "}
-                <strong className="text-ink">Contains</strong> = inside a land.{" "}
-                <strong className="text-ink">Proximity</strong> = near.{" "}
-                <strong className="text-ink">Same region</strong> = peer places in one theater
-                (east-sea cities) without inventing a road.{" "}
-                <strong className="text-ink">River</strong> = bank / through / head of Sidon etc.
-              </p>
-            </div>
+            <p className="text-[11px] text-muted leading-relaxed">
+              Add places/words from the text (+ Builder). Rearrange the chain. Set the
+              relation <em>between</em> steps. Verse changes keep your chain.
+            </p>
 
-            <div className="rounded border border-border p-2 space-y-1.5 text-xs">
-              <div className="font-medium">Places (gazetteer)</div>
-              <p className="text-[10px] text-muted leading-relaxed">
-                Places are map objects (hills, cities, lands). Tags are text phrases. You can tag
-                “Amnihu” and also add Hill Amnihu as a place for the builder/map.
-              </p>
-              <button
-                type="button"
-                className="w-full rounded border border-teal/40 px-2 py-1.5 hover:bg-teal-soft/30"
-                onClick={() => {
-                  setShowAddPlace((v) => !v);
-                  setNewPlaceName(
-                    selectionBar || lookupPhrase || "Hill Amnihu",
-                  );
-                }}
-              >
-                {showAddPlace ? "Cancel" : "+ Add place to gazetteer"}
-              </button>
-              {showAddPlace && (
-                <div className="space-y-1.5">
-                  <input
-                    value={newPlaceName}
-                    onChange={(e) => setNewPlaceName(e.target.value)}
-                    placeholder="Hill Amnihu"
-                    className="w-full rounded border border-border px-2 py-1.5"
-                  />
-                  <select
-                    value={newPlaceKind}
-                    onChange={(e) =>
-                      setNewPlaceKind(e.target.value as typeof newPlaceKind)
-                    }
-                    className="w-full rounded border border-border px-2 py-1.5 bg-surface"
-                  >
-                    <option value="hill">Hill</option>
-                    <option value="city">City</option>
-                    <option value="land">Land</option>
-                    <option value="river">River</option>
-                    <option value="wilderness">Wilderness</option>
-                    <option value="other">Other</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={createPlaceFromForm}
-                    className="w-full rounded bg-teal px-2 py-1.5 text-white font-medium"
-                  >
-                    Create place & add to builder
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {detectedRelations.length > 0 && (
-              <div className="rounded border border-accent/30 bg-orange-50/40 p-2 space-y-1.5 text-xs">
-                <div className="font-medium">Relations detected in this verse</div>
-                <p className="text-[10px] text-muted">
-                  Words like <em>east of</em>, <em>by</em>, <em>west of</em> situate places. Click to
-                  stage an association.
-                </p>
-                {detectedRelations.slice(0, 8).map((rel) => (
-                  <button
-                    key={rel.id + rel.raw}
-                    type="button"
-                    onClick={() => applyDetectedRelation(rel)}
-                    className="w-full text-left rounded border border-border bg-surface px-2 py-1.5 hover:border-accent"
-                  >
-                    <span className="font-medium">
-                      {rel.subjectPhrase} {relationLabel(rel.relation)} {rel.objectPhrase}
-                    </span>
-                    <span className="block text-[10px] text-muted">
-                      “{rel.viaPhrase}” · {rel.suggestedKind}
-                      {!rel.subjectPlaceId ? " · will create subject place" : ""}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <label className="block text-xs space-y-1">
-              <span className="text-muted">Type</span>
-              <select
-                value={mode}
-                onChange={(e) => {
-                  const m = e.target.value as ConnMode;
-                  setMode(m);
-                  if (m === "river") setHubId("sidon");
-                  if (m === "same_region" && hubId === "sidon") setHubId("east-sea-cluster");
-                }}
-                className="w-full rounded border border-border bg-surface px-2 py-2 text-sm"
-              >
-                <option value="path">Path (ordered travel / journey)</option>
-                <option value="contains">Contains (inside a land/place)</option>
-                <option value="proximity">Proximity (near, not contained)</option>
-                <option value="same_region">Same region (peer places, no path)</option>
-                <option value="river">River / watercourse link</option>
-              </select>
-            </label>
-
-            {(mode !== "path" || steps.length < 2) && (
-              <label className="block text-xs space-y-1">
-                <span className="text-muted">
-                  {mode === "river"
-                    ? "River (hub)"
-                    : mode === "same_region"
-                      ? "Region anchor (optional hub)"
-                      : mode === "path"
-                        ? "Starting place (if only one step)"
-                        : "Hub place"}
-                </span>
-                <select
-                  value={hubId}
-                  onChange={(e) => setHubId(e.target.value)}
-                  className="w-full rounded border border-border bg-surface px-2 py-2 text-sm"
-                >
-                  {placeOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · {p.kind}
-                      {p.parentId ? ` ⊂ ${p.parentId}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-
-            {/* Ordered steps */}
-            <div>
-              <div className="text-xs font-medium mb-1">
-                {mode === "path" ? "Path steps (in order)" : "Related items"}
-              </div>
+            {/* Chain */}
+            <div className="space-y-1">
+              <div className="text-xs font-medium">Chain</div>
               {steps.length === 0 ? (
-                <p className="text-xs text-muted border border-dashed border-border rounded p-2">
-                  Empty. Click a candidate below, or “+ path” on a verse suggestion.
-                  {mode === "path" &&
-                    " Example: Land of Nephi → wilderness → came down → Zarahemla."}
+                <p className="text-xs text-muted border border-dashed border-border rounded-lg p-3">
+                  Empty. Select words → <strong>Add to Builder</strong>, or click candidates
+                  below. Example: Amnihu → Minon → land of Nephi.
                 </p>
               ) : (
-                <ol className="space-y-1.5">
+                <div className="space-y-0">
                   {steps.map((s, i) => (
-                    <li
-                      key={s.id}
-                      className="flex items-center gap-1 text-xs rounded border border-border bg-surface-2/50 px-2 py-1.5"
-                    >
-                      <span className="text-muted tabular-nums w-4">{i + 1}.</span>
-                      <span className="flex-1 font-medium">
-                        {s.label}
-                        {s.featureId && (
-                          <span className="text-muted font-normal"> · {s.featureId}</span>
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        className="px-1 text-muted hover:text-ink"
-                        title="Move up"
-                        onClick={() => moveStep(s.id, -1)}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="px-1 text-muted hover:text-ink"
-                        title="Move down"
-                        onClick={() => moveStep(s.id, 1)}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        className="px-1.5 text-accent hover:underline"
-                        onClick={() => removeStep(s.id)}
-                      >
-                        remove
-                      </button>
-                    </li>
+                    <div key={s.id}>
+                      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-2 text-sm">
+                        <span className="text-[10px] text-muted w-4">{i + 1}</span>
+                        <span className="flex-1 font-medium leading-snug">
+                          {s.label}
+                          {s.featureId && (
+                            <span className="text-muted font-normal text-xs">
+                              {" "}
+                              · {s.featureId}
+                            </span>
+                          )}
+                        </span>
+                        <button type="button" className="text-xs text-muted px-1" onClick={() => moveStep(s.id, -1)}>↑</button>
+                        <button type="button" className="text-xs text-muted px-1" onClick={() => moveStep(s.id, 1)}>↓</button>
+                        <button type="button" className="text-xs text-accent" onClick={() => removeStep(s.id)}>×</button>
+                      </div>
+                      {i < steps.length - 1 && (
+                        <div className="ml-4 my-1 border-l-2 border-dashed border-teal/40 pl-3 py-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <select
+                              value={chainLinks[i]?.relation ?? "unknown"}
+                              onChange={(e) =>
+                                updateLink(i, {
+                                  relation: e.target.value as ChainLink["relation"],
+                                  viaPhrase:
+                                    chainLinks[i]?.viaPhrase ||
+                                    LINK_RELATIONS.find((r) => r.id === e.target.value)?.label ||
+                                    "",
+                                  distancePreset:
+                                    e.target.value === "by"
+                                      ? "by_adjacent"
+                                      : e.target.value === "above" || e.target.value === "below"
+                                        ? "across_feature"
+                                        : e.target.value === "in_course_of" || e.target.value === "contains"
+                                          ? "within_land"
+                                          : e.target.value === "path"
+                                            ? chainLinks[i]?.distancePreset === "unknown"
+                                              ? "unknown"
+                                              : chainLinks[i]?.distancePreset ?? "unknown"
+                                            : chainLinks[i]?.distancePreset ?? "unknown",
+                                  closenessHard:
+                                    e.target.value !== "unknown" && e.target.value !== "path"
+                                      ? true
+                                      : chainLinks[i]?.closenessHard ?? false,
+                                })
+                              }
+                              className="rounded-full border border-teal/40 bg-teal-soft/20 px-2 py-0.5 text-[11px] max-w-[11rem]"
+                            >
+                              {LINK_RELATIONS.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="text-[10px] text-muted hover:text-accent"
+                              onClick={() =>
+                                setExpandedLink(expandedLink === i ? null : i)
+                              }
+                            >
+                              {expandedLink === i ? "hide" : "closeness…"}
+                            </button>
+                          </div>
+                          {expandedLink === i && (
+                            <div className="rounded border border-border bg-surface-2/50 p-2 space-y-1.5 text-[11px]">
+                              <label className="block space-y-0.5">
+                                <span className="text-muted">Via phrase (optional)</span>
+                                <input
+                                  value={chainLinks[i]?.viaPhrase ?? ""}
+                                  onChange={(e) =>
+                                    updateLink(i, { viaPhrase: e.target.value })
+                                  }
+                                  placeholder="e.g. above the land of Zarahemla"
+                                  className="w-full rounded border border-border px-1.5 py-1"
+                                />
+                              </label>
+                              <label className="block space-y-0.5">
+                                <span className="text-muted">Closeness</span>
+                                <select
+                                  value={chainLinks[i]?.distancePreset ?? "unknown"}
+                                  onChange={(e) =>
+                                    updateLink(i, {
+                                      distancePreset: e.target.value as DistancePreset,
+                                    })
+                                  }
+                                  className="w-full rounded border border-border px-1.5 py-1 bg-surface"
+                                >
+                                  {DISTANCE_PRESETS.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="inline-flex items-center gap-1.5">
+                                <input
+                                  type="checkbox"
+                                  checked={chainLinks[i]?.closenessHard ?? false}
+                                  onChange={(e) =>
+                                    updateLink(i, { closenessHard: e.target.checked })
+                                  }
+                                />
+                                Hard near (map conflict if stretched)
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </ol>
+                </div>
               )}
-              {mode === "path" && steps.length > 0 && (
-                <p className="text-[11px] text-muted mt-1">
-                  Preview:{" "}
-                  {steps.length === 1
-                    ? `${placeLabel(hubId)} → ${steps[0]!.label}`
-                    : steps.map((s) => s.label).join(" → ")}
+              {steps.length >= 2 && (
+                <p className="text-[11px] text-muted pt-1">
+                  Mode: <strong>{inferModeFromChain(steps, ensureLinks(steps.length, chainLinks))}</strong>
+                  {" · "}
+                  {steps.map((s) => s.label).join(" → ")}
                 </p>
               )}
             </div>
 
-            {mode === "river" && hubId === "sidon" && (
-              <button
-                type="button"
-                className="w-full rounded border border-border px-2 py-1.5 text-xs hover:bg-surface-2"
-                onClick={() => {
-                  const links = linksForRiver("sidon");
-                  for (const l of links) {
-                    addStep(placeLabel(l.placeId), l.placeId);
-                  }
-                  setFlash("Loaded Sidon-linked places (head → mouth order)");
-                  window.setTimeout(() => setFlash(null), 2000);
-                }}
-              >
-                Load Sidon places from seed hydro graph
-              </button>
-            )}
-
-            {/* Candidates */}
+            {/* Quick add */}
             <div>
               <div className="text-xs font-medium mb-1 flex items-center gap-1">
                 <Sparkles className="h-3.5 w-3.5" />
-                Candidates for this verse
+                Add to chain
               </div>
-              <p className="text-[10px] text-muted mb-1.5">
-                From this verse, nearby verses, saved tags, and seeds. Click to add to the list
-                above (does not delete).
-              </p>
-              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-auto">
-                {candidates.length === 0 && (
-                  <span className="text-xs text-muted">No candidates — select a verse with text.</span>
-                )}
-                {candidates.map((c) => (
+              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-auto">
+                {candidates.slice(0, 16).map((c) => (
                   <button
                     key={c.label + c.source}
                     type="button"
                     onClick={() => addStep(c.label, c.featureId)}
                     className="rounded-full border border-border bg-chip px-2.5 py-1 text-[11px] hover:border-teal hover:bg-teal-soft/40"
-                    title={c.source}
                   >
                     + {c.label}
-                    <span className="text-muted"> · {c.source}</span>
                   </button>
                 ))}
+                {lookupPhrase.trim().length >= 2 && (
+                  <button
+                    type="button"
+                    onClick={() => addStep(lookupPhrase.trim())}
+                    className="rounded-full border border-accent/40 bg-orange-50 px-2.5 py-1 text-[11px] text-accent"
+                  >
+                    + “{lookupPhrase.trim()}”
+                  </button>
+                )}
               </div>
             </div>
 
-            {lookupPhrase.trim().length >= 2 && (
+            <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
-                className="text-xs text-accent hover:underline"
-                onClick={() => {
-                  addStep(lookupPhrase.trim());
-                  addTagPhrase(lookupPhrase.trim());
-                }}
+                className="text-[11px] text-muted hover:underline"
+                onClick={() => setShowAddPlace((v) => !v)}
               >
-                Add selection “{lookupPhrase.trim()}” to builder + tags
+                {showAddPlace ? "Hide new place" : "+ New place"}
               </button>
+              <button
+                type="button"
+                className="text-[11px] text-muted hover:underline"
+                onClick={() => setShowBuilderMeta((v) => !v)}
+              >
+                {showBuilderMeta ? "Hide details" : "Date & travel details"}
+              </button>
+            </div>
+
+            {showAddPlace && (
+              <div className="rounded border border-border p-2 space-y-1.5 text-xs">
+                <input
+                  value={newPlaceName}
+                  onChange={(e) => setNewPlaceName(e.target.value)}
+                  placeholder="Hill Amnihu"
+                  className="w-full rounded border border-border px-2 py-1.5"
+                />
+                <select
+                  value={newPlaceKind}
+                  onChange={(e) => setNewPlaceKind(e.target.value as typeof newPlaceKind)}
+                  className="w-full rounded border border-border px-2 py-1.5 bg-surface"
+                >
+                  <option value="hill">Hill</option>
+                  <option value="city">City</option>
+                  <option value="land">Land</option>
+                  <option value="river">River</option>
+                  <option value="wilderness">Wilderness</option>
+                  <option value="other">Other</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={createPlaceFromForm}
+                  className="w-full rounded bg-teal px-2 py-1.5 text-white font-medium"
+                >
+                  Create & add
+                </button>
+              </div>
             )}
 
-            <div className="space-y-2 rounded border border-border p-2 text-xs">
-              <div className="font-medium">Closeness preset (map + model tests)</div>
-              <p className="text-[10px] text-muted leading-relaxed">
-                Prefer presets from the text (by / east of / same battle) over inventing miles.
-                <strong> Hard</strong> closeness: a model that separates these by another land/city
-                without the named feature should fail.
-              </p>
-              <select
-                value={distancePreset}
-                onChange={(e) => setDistancePreset(e.target.value as DistancePreset)}
-                className="w-full rounded border border-border bg-surface px-1.5 py-1"
-              >
-                {DISTANCE_PRESETS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[10px] text-muted">
-                {DISTANCE_PRESETS.find((p) => p.id === distancePreset)?.description}
-              </p>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={closenessHard}
-                  onChange={(e) => setClosenessHard(e.target.checked)}
-                />
-                Hard constraint (must stay near / same theater)
-              </label>
+            {detectedRelations.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {(
-                  [
-                    ["same_scene", "Same scene"],
-                    ["by_adjacent", "By / adjacent"],
-                    ["border_adjacent", "On border"],
-                    ["across_feature", "East/west of river"],
-                  ] as const
-                ).map(([id, lab]) => (
+                {detectedRelations.slice(0, 4).map((rel) => (
                   <button
-                    key={id}
+                    key={rel.id + rel.raw}
                     type="button"
-                    onClick={() => {
-                      setDistancePreset(id);
-                      setClosenessHard(true);
-                    }}
-                    className="rounded-full border border-border px-2 py-0.5 hover:border-teal"
+                    onClick={() => applyDetectedRelation(rel)}
+                    className="rounded-full border border-accent/30 bg-orange-50 px-2 py-0.5 text-[10px] text-left"
+                    title={rel.viaPhrase}
                   >
-                    {lab}
+                    {rel.subjectPhrase} {relationLabel(rel.relation)} {rel.objectPhrase}
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* Bottom meta ovals */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <span className="rounded-full border border-border bg-chip px-2.5 py-1 text-[11px]">
+                Date: {chronoLabel || (assocChronology ? formatChronologySpan(assocChronology) : "unknown")}
+              </span>
+              {steps.length >= 2 && (
+                <span className="rounded-full border border-border bg-chip px-2.5 py-1 text-[11px]">
+                  Links: {ensureLinks(steps.length, chainLinks).filter((l) => l.relation !== "unknown").length}/
+                  {Math.max(0, steps.length - 1)} set
+                </span>
+              )}
             </div>
 
-            <div className="space-y-2 rounded border border-border p-2 text-xs">
-              <div className="font-medium">Time & distance</div>
-              <p className="text-[10px] text-muted leading-relaxed">
-                Auto reads phrases like “space of many days” from the verse/steps. Override anytime.
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="space-y-0.5">
-                  <span className="text-muted">Time</span>
-                  <select
-                    value={manualTimeQuality}
-                    onChange={(e) =>
-                      setManualTimeQuality(
-                        e.target.value as typeof manualTimeQuality,
-                      )
-                    }
-                    className="w-full rounded border border-border bg-surface px-1.5 py-1"
-                  >
-                    <option value="auto">
-                      Auto
-                      {selectionTime ? ` (→ ${spanLabel(selectionTime)})` : " (unknown)"}
-                    </option>
-                    <option value="unknown">Unknown</option>
-                    <option value="approximate">Approximate</option>
-                    <option value="stated">Stated in text</option>
-                  </select>
+            {showBuilderMeta && (
+              <div className="rounded border border-border p-2 space-y-2 text-xs">
+                <label className="block space-y-0.5">
+                  <span className="text-muted">Historical date label</span>
+                  <input
+                    value={chronoLabel}
+                    onChange={(e) => {
+                      setChronoLabel(e.target.value);
+                      setAssocChronology((c) =>
+                        c
+                          ? { ...c, label: e.target.value }
+                          : { quality: "approximate", label: e.target.value },
+                      );
+                    }}
+                    className="w-full rounded border border-border px-1.5 py-1"
+                  />
                 </label>
-                <label className="space-y-0.5">
-                  <span className="text-muted">Time value</span>
+                <p className="text-[10px] text-muted">
+                  Per-step closeness is under each link’s “closeness…”. Global travel time is rarely
+                  needed for multi-step chains.
+                </p>
+                <label className="block space-y-0.5">
+                  <span className="text-muted">Default travel time (all legs)</span>
                   <input
                     value={manualTimeValue}
                     onChange={(e) => {
                       setManualTimeValue(e.target.value);
-                      if (manualTimeQuality === "auto") setManualTimeQuality("stated");
+                      if (manualTimeQuality === "auto") setManualTimeQuality("approximate");
                     }}
-                    placeholder={selectionTime?.value ?? "e.g. many days"}
-                    className="w-full rounded border border-border px-1.5 py-1"
-                  />
-                </label>
-                <label className="space-y-0.5">
-                  <span className="text-muted">Distance</span>
-                  <select
-                    value={manualDistQuality}
-                    onChange={(e) =>
-                      setManualDistQuality(
-                        e.target.value as typeof manualDistQuality,
-                      )
-                    }
-                    className="w-full rounded border border-border bg-surface px-1.5 py-1"
-                  >
-                    <option value="auto">
-                      Auto
-                      {selectionDistance
-                        ? ` (→ ${spanLabel(selectionDistance)})`
-                        : " (unknown)"}
-                    </option>
-                    <option value="unknown">Unknown</option>
-                    <option value="approximate">Approximate</option>
-                    <option value="stated">Stated in text</option>
-                  </select>
-                </label>
-                <label className="space-y-0.5">
-                  <span className="text-muted">Distance value</span>
-                  <input
-                    value={manualDistValue}
-                    onChange={(e) => {
-                      setManualDistValue(e.target.value);
-                      if (manualDistQuality === "auto") setManualDistQuality("approximate");
-                    }}
-                    placeholder={selectionDistance?.value ?? "e.g. ~40 miles"}
+                    placeholder="unknown / many days…"
                     className="w-full rounded border border-border px-1.5 py-1"
                   />
                 </label>
               </div>
-              <button
-                type="button"
-                className="text-accent hover:underline"
-                onClick={() => {
-                  if (selectionTime) {
-                    setManualTimeQuality(selectionTime.quality);
-                    setManualTimeValue(selectionTime.value ?? "");
-                  } else {
-                    setManualTimeQuality("unknown");
-                    setManualTimeValue("");
-                  }
-                  if (selectionDistance) {
-                    setManualDistQuality(selectionDistance.quality);
-                    setManualDistValue(selectionDistance.value ?? "");
-                  } else {
-                    setManualDistQuality("unknown");
-                    setManualDistValue("");
-                  }
-                }}
-              >
-                Apply auto-parsed values
-              </button>
-            </div>
-
-
-            <div className="space-y-2 rounded border border-border p-2 text-xs">
-              <div className="font-medium">Historical date (time layer)</div>
-              <p className="text-[10px] text-muted leading-relaxed">
-                Defaults from chapter-heading estimates. Attach to every association so size/war
-                overlays can slice by year later.
-              </p>
-              {assocChronology ? (
-                <p className="text-ink-soft">
-                  Auto: {formatChronologySpan(assocChronology)}{" "}
-                  <span className="text-muted">({assocChronology.quality})</span>
-                </p>
-              ) : (
-                <p className="text-muted">No chapter heading date for this chapter yet.</p>
-              )}
-              <label className="block space-y-0.5">
-                <span className="text-muted">Label (editable)</span>
-                <input
-                  value={chronoLabel}
-                  onChange={(e) => {
-                    setChronoLabel(e.target.value);
-                    setAssocChronology((c) =>
-                      c
-                        ? { ...c, label: e.target.value, quality: c.quality === "unknown" ? "approximate" : c.quality }
-                        : {
-                            quality: "approximate",
-                            label: e.target.value,
-                          },
-                    );
-                  }}
-                  placeholder="e.g. ~74 BC"
-                  className="w-full rounded border border-border px-1.5 py-1"
-                />
-              </label>
-            </div>
+            )}
 
             <button
               type="button"
@@ -2038,32 +1972,27 @@ function ReaderPage() {
             >
               {editingAssocId
                 ? "Update association"
-                : mode === "path"
-                  ? "Save path association"
+                : steps.length >= 3
+                  ? "Save path"
                   : "Save association"}
             </button>
-            {editingAssocId && (
+            <div className="flex justify-between text-[11px]">
               <button
                 type="button"
-                className="w-full text-xs text-muted hover:underline"
+                className="text-muted hover:underline"
                 onClick={() => {
-                  setEditingAssocId(null);
                   setSteps([]);
+                  setChainLinks([]);
+                  setExpandedLink(null);
+                  setEditingAssocId(null);
                 }}
               >
-                Cancel edit
+                Clear chain
               </button>
-            )}
-            <button
-              type="button"
-              className="w-full text-xs text-muted hover:underline"
-              onClick={() => setSteps([])}
-            >
-              Clear steps
-            </button>
-            <Link to="/map-lab" className="block text-center text-xs text-accent hover:underline">
-              Map Lab →
-            </Link>
+              <Link to="/map-lab" className="text-accent hover:underline">
+                Map Lab →
+              </Link>
+            </div>
           </Card>
 
           {/* Path suggestions for verse */}
