@@ -381,13 +381,7 @@ function MapLabPage() {
   }, [objectId, loaded]);
   const placeDossier = focusPlaceId ? getPlaceDossier(focusPlaceId) : undefined;
 
-  const activePaths = useMemo(() => {
-    let list = allTravelPaths();
-    if (pathFilter === "feature" && objectId) {
-      list = pathsForFeature(objectId);
-    }
-    return list;
-  }, [pathFilter, objectId]);
+
 
   const edgeDossier = useMemo(() => {
     const e = edges.find((x) => x.id === (hoverEdge || selectedEdge));
@@ -1043,105 +1037,7 @@ function MapLabPage() {
       )}
 
       {/* Multi-path route panel */}
-      {showPaths && (
-        <Card className="p-4 md:p-5 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="font-semibold text-base">Travel paths (multi-route)</h2>
-              <p className="text-xs text-muted mt-0.5 max-w-2xl">
-                Separate historical marches — not one static edge for all refs. Shared wilderness
-                trunks can branch (intended destination ≠ actual). Curves are abstract now; later
-                waypoints snap to real contours.
-              </p>
-            </div>
-            <label className="text-xs space-y-1">
-              <span className="text-muted">Filter</span>
-              <select
-                value={pathFilter}
-                onChange={(e) => setPathFilter(e.target.value as "all" | "feature")}
-                className="block rounded border border-border bg-surface px-2 py-1.5"
-              >
-                <option value="all">All paths</option>
-                <option value="feature">Paths touching selected object</option>
-              </select>
-            </label>
-          </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            {activePaths.map((path) => {
-              const sel = selectedPathId === path.id;
-              return (
-                <button
-                  key={path.id}
-                  type="button"
-                  onClick={() => setSelectedPathId(path.id)}
-                  className={`text-left rounded-[var(--radius)] border p-3 space-y-1 ${
-                    sel ? "border-accent bg-orange-50/50" : "border-border bg-surface-2/40"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2.5 w-6 rounded-full"
-                      style={{
-                        background: path.color,
-                        opacity: path.style === "dotted" ? 0.7 : 1,
-                      }}
-                    />
-                    <span className="font-medium text-sm">{path.name}</span>
-                  </div>
-                  <p className="text-[11px] text-ink-soft leading-relaxed">{path.summary}</p>
-                  <div className="flex flex-wrap gap-1 text-[10px]">
-                    {path.intendedDestinationId && (
-                      <Badge>intended: {path.intendedDestinationId}</Badge>
-                    )}
-                    {path.actualDestinationId && (
-                      <Badge tone="teal">actual: {path.actualDestinationId}</Badge>
-                    )}
-                    <Badge tone="claim">dist {path.distance.quality}</Badge>
-                    <Badge tone="claim">time {path.time.quality}</Badge>
-                  </div>
-                  <div className="text-[10px] text-muted">{path.sourceRefs.join(" · ")}</div>
-                </button>
-              );
-            })}
-          </div>
-          {selectedPathId && (
-            <div className="rounded-[var(--radius)] border border-border p-3 text-xs space-y-1">
-              <div className="font-semibold text-muted uppercase tracking-wide">Selected path detail</div>
-              {(() => {
-                const path = activePaths.find((x) => x.id === selectedPathId);
-                if (!path) return null;
-                return (
-                  <>
-                    <p className="text-ink-soft">{path.summary}</p>
-                    <ol className="list-decimal pl-4 space-y-0.5">
-                      {path.waypoints.map((w, i) => (
-                        <li key={i}>
-                          {w.role && <span className="text-muted">[{w.role}] </span>}
-                          {w.label ?? w.featureId}
-                          {w.featureId && (
-                            <button
-                              type="button"
-                              className="text-accent hover:underline ml-1"
-                              onClick={() => w.featureId && setSelectedPlace(w.featureId)}
-                            >
-                              focus
-                            </button>
-                          )}
-                        </li>
-                      ))}
-                    </ol>
-                    {path.sharesTrunkWith && path.sharesTrunkWith.length > 0 && (
-                      <p className="text-muted">
-                        Shares corridor family with: {path.sharesTrunkWith.join(", ")}
-                      </p>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          )}
-        </Card>
-      )}
+      
 
 
       <div className="grid gap-4 xl:grid-cols-[1fr_18rem_18rem]">
