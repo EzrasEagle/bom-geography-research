@@ -85,6 +85,11 @@ export const SEED_TAG_PHRASES = [
   "sailed",
   "space of many days",
   "pitch our tents",
+  "hill Amnihu",
+  "Amnihu",
+  "river Sidon",
+  "east of",
+  "west of",
 ];
 
 type TagLike = {
@@ -156,6 +161,11 @@ export function guessFeaturesForPhrase(phrase: string): string[] {
   if (p.includes("zarahemla")) return ["zarahemla"];
   if (p.includes("sidon")) return ["sidon"];
   if (p.includes("desolation")) return ["desolation"];
+  if (p.includes("amnihu")) return ["amnihu"];
+  if (p.includes("gideon")) return ["gideon"];
+  if (p.includes("manti")) return ["manti"];
+  if (p.includes("melek")) return ["melek"];
+  if (p.includes("minon")) return ["minon"];
   if (p.includes("bountiful")) return ["bountiful-nw"];
   if (p.includes("narrow neck") || p.includes("narrow pass")) return ["narrow-neck"];
   if (p.includes("sea east")) return ["sea-east"];

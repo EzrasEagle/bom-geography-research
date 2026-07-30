@@ -13,7 +13,7 @@ export const ALMA_SIDON: CorpusVerse[] = [
     chapter: 2,
     verse: 15,
     text: "And it came to pass that the Amlicites came upon the hill Amnihu, which was east of the river Sidon, which ran by the land of Zarahemla, and there they began to make war with the Nephites.",
-    featureIds: ["sidon", "zarahemla", "gideon"],
+    featureIds: ["sidon", "zarahemla", "amnihu"],
     domains: ["textual_geography"],
     studyUrl: url(2, 15),
   },

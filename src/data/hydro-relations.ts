@@ -67,6 +67,17 @@ export const rivers: RiverFeature[] = [
         strength: "soft",
       },
       {
+        id: "sidon-amnihu",
+        riverId: "sidon",
+        placeId: "amnihu",
+        bank: "east",
+        placement: "on_bank",
+        orderIndex: 2.5,
+        verseRefs: ["Alma 2:15"],
+        note: "Hill Amnihu east of the river Sidon",
+        strength: "hard",
+      },
+      {
         id: "sidon-gideon",
         riverId: "sidon",
         placeId: "gideon",

@@ -7,7 +7,7 @@ import {
   type AssociationSuggestion,
 } from "@/data/suggested-associations";
 import type { UserAssociation } from "@/lib/user-associations";
-import { places } from "@/data/catalog";
+import { allPlaces } from "@/lib/user-places";
 
 export type ConnectionListItem = {
   id: string;
@@ -26,7 +26,7 @@ export type ConnectionListItem = {
 };
 
 function placeName(id: string) {
-  return places.find((p) => p.id === id)?.name ?? id;
+  return allPlaces().find((p) => p.id === id)?.name ?? id;
 }
 
 function stepsFromSug(s: AssociationSuggestion): string[] {

@@ -314,6 +314,38 @@ export const associationSuggestions: AssociationSuggestion[] = [
     ],
   },
   {
+    id: "sug-alma-2-amnihu",
+    book: "Alma",
+    chapter: 2,
+    verse: 15,
+    title: "Hill Amnihu east of Sidon, by Zarahemla",
+    summary:
+      "Amnihu is a hill east of Sidon; Sidon ran by the land of Zarahemla. Relational language: “east of” + “ran by”.",
+    tags: ["amnihu", "sidon", "zarahemla", "east of", "by"],
+    legs: [
+      {
+        fromFeatureId: "amnihu",
+        toFeatureId: "sidon",
+        viaPhrase: "east of the river Sidon",
+        kind: "proximity",
+        distance: { quality: "unknown", note: "east of = directional proximity" },
+        time: { quality: "unknown" },
+      },
+      {
+        fromFeatureId: "sidon",
+        toFeatureId: "zarahemla",
+        viaPhrase: "which ran by the land of Zarahemla",
+        kind: "river",
+        distance: { quality: "unknown", note: "by = situating adjacency" },
+        time: { quality: "unknown" },
+      },
+    ],
+    relatedRefs: [
+      { ref: "Alma 2:15", note: "Hill Amnihu east of Sidon; Sidon by Zarahemla" },
+      { ref: "Alma 2:17–19", note: "Battle on hill Amnihu" },
+    ],
+  },
+  {
     id: "sug-alma-2-sidon-banks",
     book: "Alma",
     chapter: 2,

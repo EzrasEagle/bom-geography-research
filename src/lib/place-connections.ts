@@ -5,6 +5,7 @@
  */
 
 import { assumptions, constraints, places, type GeoConstraint } from "@/data/catalog";
+import { allPlaces } from "@/lib/user-places";
 import { getPlaceDossier } from "@/data/place-scripture";
 import { layerOf, taxonomyFor, type ObjectLayer } from "@/data/object-taxonomy";
 import {
@@ -38,7 +39,7 @@ export type PlaceConnectionBundle = {
 };
 
 export function getPlaceConnectionBundle(placeId: string): PlaceConnectionBundle | null {
-  const place = places.find((p) => p.id === placeId);
+  const place = allPlaces().find((p) => p.id === placeId);
   if (!place) return null;
   const d = getPlaceDossier(placeId);
   const tax = taxonomyFor(placeId);
@@ -81,10 +82,10 @@ export function assumptionsForIds(ids: string[]) {
 }
 
 export function placeLabel(id: string) {
-  return places.find((p) => p.id === id)?.name ?? id;
+  return allPlaces().find((p) => p.id === id)?.name ?? id;
 }
 
 export function placesInLayers(layers: ObjectLayer[]) {
   const set = new Set(layers);
-  return places.filter((p) => set.has(layerOf(p.id)));
+  return allPlaces().filter((p) => set.has(layerOf(p.id)));
 }

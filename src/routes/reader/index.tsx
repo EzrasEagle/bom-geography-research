@@ -10,7 +10,17 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { places } from "@/data/catalog";
+import {
+  addUserPlace,
+  allPlaces,
+  loadUserPlaces,
+  type UserPlace,
+} from "@/lib/user-places";
+import {
+  detectRelationsInText,
+  relationLabel,
+  type DetectedRelation,
+} from "@/lib/relation-phrases";
 import { getPlaceDossier } from "@/data/place-scripture";
 import { lexiconHitsInText } from "@/data/lexicon";
 import {
@@ -133,6 +143,12 @@ function ReaderPage() {
   const [manualDistValue, setManualDistValue] = useState("");
   const [assocChronology, setAssocChronology] = useState<ChronologySpan | null>(null);
   const [chronoLabel, setChronoLabel] = useState("");
+  const [showAddPlace, setShowAddPlace] = useState(false);
+  const [newPlaceName, setNewPlaceName] = useState("");
+  const [newPlaceKind, setNewPlaceKind] = useState<
+    "hill" | "city" | "land" | "river" | "wilderness" | "other"
+  >("hill");
+  const [userPlaces, setUserPlaces] = useState<UserPlace[]>([]);
   const [modelForked, setModelForked] = useState(false);
   const [showSeedInPanel, setShowSeedInPanel] = useState(true);
   const [showYoursInPanel, setShowYoursInPanel] = useState(true);
@@ -148,6 +164,7 @@ function ReaderPage() {
     setTagSets(loadTagSets());
     setUserAssocs(loadAssociations());
     setStudyNotes(loadStudyNotes());
+    setUserPlaces(loadUserPlaces());
     try {
       setModelForked(localStorage.getItem("bom-atlas-model-forked") === "1");
     } catch {
@@ -261,7 +278,7 @@ function ReaderPage() {
       }
     }
     for (const f of current.featureIds ?? []) {
-      const name = places.find((p) => p.id === f)?.name ?? f;
+      const name = allPlaces().find((p) => p.id === f)?.name ?? f;
       push(name, f, "seed feature");
     }
     // Nearby verses ±2
@@ -324,7 +341,12 @@ function ReaderPage() {
     return parseDistanceSpan(texts);
   }, [current, steps]);
 
-  const placeOptions = places;
+  const detectedRelations = useMemo(() => {
+    if (!current?.text) return [] as DetectedRelation[];
+    return detectRelationsInText(current.text);
+  }, [current, userPlaces]);
+
+  const placeOptions = useMemo(() => allPlaces(), [userPlaces]);
 
   function goToVerse(v: CorpusVerse) {
     setBook(v.book);
@@ -470,6 +492,117 @@ function ReaderPage() {
     setFlash(`Saved study note for "${term}"`);
     window.setTimeout(() => setFlash(null), 2000);
     return true;
+  }
+
+
+  function createPlaceFromForm() {
+    const name = newPlaceName.trim() || selectionBar.trim() || lookupPhrase.trim();
+    if (!name) {
+      setFlash("Enter a place name (e.g. Hill Amnihu)");
+      window.setTimeout(() => setFlash(null), 2000);
+      return;
+    }
+    const result = addUserPlace({
+      name,
+      kind: newPlaceKind,
+      sizeTier: newPlaceKind === "hill" ? "point" : newPlaceKind === "city" ? "settlement_city" : "land_local",
+      aliases: [name, name.replace(/^hill\s+/i, ""), name.replace(/^the\s+/i, "")],
+      sourceVerse: current
+        ? `${current.book} ${current.chapter}:${current.verse}`
+        : undefined,
+      note: "Created from Reader",
+    });
+    if (result.error) {
+      setFlash(result.error);
+      window.setTimeout(() => setFlash(null), 3000);
+      return;
+    }
+    setUserPlaces(result.places);
+    setHubId(result.place.id);
+    addStep(result.place.name, result.place.id);
+    addTagPhrase(result.place.name, [result.place.id]);
+    setShowAddPlace(false);
+    setNewPlaceName("");
+    setFlash(`Place added: ${result.place.name} (${result.place.kind})`);
+    window.setTimeout(() => setFlash(null), 2500);
+  }
+
+  function applyDetectedRelation(rel: DetectedRelation) {
+    // Ensure subject is a place step; create user place if missing and looks like a named hill/city
+    let fromId = rel.subjectPlaceId;
+    let toId = rel.objectPlaceId;
+    if (!fromId && rel.subjectPhrase && rel.subjectPhrase !== "?") {
+      const created = addUserPlace({
+        name: rel.subjectPhrase,
+        kind: /hill/i.test(rel.subjectPhrase)
+          ? "hill"
+          : /city/i.test(rel.subjectPhrase)
+            ? "city"
+            : /land/i.test(rel.subjectPhrase)
+              ? "land"
+              : /river/i.test(rel.subjectPhrase)
+                ? "river"
+                : "other",
+        sourceVerse: current
+          ? `${current.book} ${current.chapter}:${current.verse}`
+          : undefined,
+      });
+      if (created.place) {
+        fromId = created.place.id;
+        setUserPlaces(created.places);
+      }
+    }
+    if (!toId && rel.objectPhrase) {
+      const created = addUserPlace({
+        name: rel.objectPhrase,
+        kind: /river/i.test(rel.objectPhrase)
+          ? "river"
+          : /land/i.test(rel.objectPhrase)
+            ? "land"
+            : /city/i.test(rel.objectPhrase)
+              ? "city"
+              : "other",
+        sourceVerse: current
+          ? `${current.book} ${current.chapter}:${current.verse}`
+          : undefined,
+      });
+      if (created.place) {
+        toId = created.place.id;
+        setUserPlaces(loadUserPlaces());
+      }
+    }
+    setMode(
+      rel.suggestedKind === "river"
+        ? "river"
+        : rel.suggestedKind === "contains"
+          ? "contains"
+          : rel.suggestedKind === "same_region"
+            ? "same_region"
+            : "proximity",
+    );
+    if (fromId) setHubId(fromId);
+    setSteps([]);
+    if (fromId) addStep(rel.subjectPhrase, fromId);
+    // addStep is async state - need batch
+    const stepsToAdd: { label: string; id?: string }[] = [];
+    if (fromId) stepsToAdd.push({ label: rel.subjectPhrase, id: fromId });
+    if (toId) stepsToAdd.push({ label: rel.objectPhrase, id: toId });
+    setSteps(
+      stepsToAdd.map((s, i) => ({
+        id: `rel-${Date.now()}-${i}`,
+        label: s.label,
+        featureId: s.id,
+        kind: "place" as const,
+        ref: current
+          ? `${current.book} ${current.chapter}:${current.verse}`
+          : undefined,
+      })),
+    );
+    if (fromId) setHubId(fromId);
+    setFlash(
+      `Staged: ${rel.subjectPhrase} ${relationLabel(rel.relation)} ${rel.objectPhrase}`,
+    );
+    window.setTimeout(() => setFlash(null), 2500);
   }
 
   function createNoteFromForm() {
@@ -1409,6 +1542,83 @@ function ReaderPage() {
                 <strong className="text-ink">River</strong> = bank / through / head of Sidon etc.
               </p>
             </div>
+
+            <div className="rounded border border-border p-2 space-y-1.5 text-xs">
+              <div className="font-medium">Places (gazetteer)</div>
+              <p className="text-[10px] text-muted leading-relaxed">
+                Places are map objects (hills, cities, lands). Tags are text phrases. You can tag
+                “Amnihu” and also add Hill Amnihu as a place for the builder/map.
+              </p>
+              <button
+                type="button"
+                className="w-full rounded border border-teal/40 px-2 py-1.5 hover:bg-teal-soft/30"
+                onClick={() => {
+                  setShowAddPlace((v) => !v);
+                  setNewPlaceName(
+                    selectionBar || lookupPhrase || "Hill Amnihu",
+                  );
+                }}
+              >
+                {showAddPlace ? "Cancel" : "+ Add place to gazetteer"}
+              </button>
+              {showAddPlace && (
+                <div className="space-y-1.5">
+                  <input
+                    value={newPlaceName}
+                    onChange={(e) => setNewPlaceName(e.target.value)}
+                    placeholder="Hill Amnihu"
+                    className="w-full rounded border border-border px-2 py-1.5"
+                  />
+                  <select
+                    value={newPlaceKind}
+                    onChange={(e) =>
+                      setNewPlaceKind(e.target.value as typeof newPlaceKind)
+                    }
+                    className="w-full rounded border border-border px-2 py-1.5 bg-surface"
+                  >
+                    <option value="hill">Hill</option>
+                    <option value="city">City</option>
+                    <option value="land">Land</option>
+                    <option value="river">River</option>
+                    <option value="wilderness">Wilderness</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={createPlaceFromForm}
+                    className="w-full rounded bg-teal px-2 py-1.5 text-white font-medium"
+                  >
+                    Create place & add to builder
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {detectedRelations.length > 0 && (
+              <div className="rounded border border-accent/30 bg-orange-50/40 p-2 space-y-1.5 text-xs">
+                <div className="font-medium">Relations detected in this verse</div>
+                <p className="text-[10px] text-muted">
+                  Words like <em>east of</em>, <em>by</em>, <em>west of</em> situate places. Click to
+                  stage an association.
+                </p>
+                {detectedRelations.slice(0, 8).map((rel) => (
+                  <button
+                    key={rel.id + rel.raw}
+                    type="button"
+                    onClick={() => applyDetectedRelation(rel)}
+                    className="w-full text-left rounded border border-border bg-surface px-2 py-1.5 hover:border-accent"
+                  >
+                    <span className="font-medium">
+                      {rel.subjectPhrase} {relationLabel(rel.relation)} {rel.objectPhrase}
+                    </span>
+                    <span className="block text-[10px] text-muted">
+                      “{rel.viaPhrase}” · {rel.suggestedKind}
+                      {!rel.subjectPlaceId ? " · will create subject place" : ""}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             <label className="block text-xs space-y-1">
               <span className="text-muted">Type</span>
