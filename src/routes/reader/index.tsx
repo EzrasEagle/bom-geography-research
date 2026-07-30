@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { places } from "@/data/catalog";
 import { getPlaceDossier } from "@/data/place-scripture";
-import { dynamicLexiconLookup, lexiconHitsInText } from "@/data/lexicon";
+import { lexiconHitsInText } from "@/data/lexicon";
 import {
   booksInCorpus,
   chaptersForBook,
@@ -59,6 +59,10 @@ import {
   getSuggestionById,
   listConnectionsForChapter,
 } from "@/lib/reader-connections";
+import {
+  fetchEmbeddedLexicon,
+  type EmbeddedLexicon,
+} from "@/lib/embed-lexicon";
 
 type ReaderSearch = {
   q?: string;
@@ -96,6 +100,9 @@ function ReaderPage() {
   const [userAssocs, setUserAssocs] = useState<UserAssociation[]>([]);
   const [flash, setFlash] = useState<string | null>(null);
   const [lookupPhrase, setLookupPhrase] = useState("");
+  const [embeddedLex, setEmbeddedLex] = useState<EmbeddedLexicon | null>(null);
+  const [embedLoading, setEmbedLoading] = useState(false);
+  const [selectionBar, setSelectionBar] = useState<string>("");
   const [modelForked, setModelForked] = useState(false);
   const [showSeedInPanel, setShowSeedInPanel] = useState(true);
   const [showYoursInPanel, setShowYoursInPanel] = useState(true);
@@ -120,6 +127,25 @@ function ReaderPage() {
   useEffect(() => {
     saveTagSets(tagSets);
   }, [tagSets]);
+
+  useEffect(() => {
+    const q = lookupPhrase.trim();
+    if (!q || q.length < 1) {
+      setEmbeddedLex(null);
+      return;
+    }
+    let cancelled = false;
+    setEmbedLoading(true);
+    fetchEmbeddedLexicon(q).then((r) => {
+      if (!cancelled) {
+        setEmbeddedLex(r);
+        setEmbedLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lookupPhrase]);
 
   useEffect(() => {
     if (search.book) setBook(search.book);
@@ -291,9 +317,25 @@ function ReaderPage() {
 
   function onTextSelect() {
     const sel = window.getSelection()?.toString().trim();
-    if (!sel || sel.length > 80) return;
+    if (!sel || sel.length > 120) return;
     setLookupPhrase(sel);
-    // Does NOT auto-save tags or auto-stage — user chooses
+    setSelectionBar(sel);
+  }
+
+  function tagSelection() {
+    const phrase = (selectionBar || lookupPhrase).trim();
+    if (!phrase || !current) return;
+    addTagPhrase(phrase);
+    setFlash(`Tagged "${phrase}" on ${current.book} ${current.chapter}:${current.verse}`);
+    window.setTimeout(() => setFlash(null), 2000);
+  }
+
+  function pathSelection() {
+    const phrase = (selectionBar || lookupPhrase).trim();
+    if (!phrase) return;
+    addStep(phrase);
+    setFlash(`Added path step "${phrase}"`);
+    window.setTimeout(() => setFlash(null), 1500);
   }
 
   function addTagPhrase(phrase: string, featureIds: string[] = []) {
@@ -543,6 +585,9 @@ function ReaderPage() {
 
   function loadAssocIntoBuilder(a: UserAssociation) {
     setEditingAssocId(a.id);
+    setBook(a.book);
+    setChapter(a.chapter);
+    setSelectedVerse(a.verse);
     setMode(a.legs.some((l) => l.kind === "path") ? "path" : "proximity");
     if (a.legs[0]) setHubId(a.legs[0].fromFeatureId);
     // Reconstruct ordered steps from legs
@@ -567,10 +612,6 @@ function ReaderPage() {
     setSteps(ids);
   }
 
-  const lex = useMemo(
-    () => dynamicLexiconLookup(lookupPhrase.trim()),
-    [lookupPhrase],
-  );
 
   return (
     <div className="space-y-4">
@@ -708,8 +749,8 @@ function ReaderPage() {
                       Adopt into my model
                     </button>
                   )}
-                  {c.source === "yours" && c.userId && (
-                    <div className="flex gap-2">
+                  {c.userId && (
+                    <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         className="text-accent hover:underline"
@@ -789,9 +830,40 @@ function ReaderPage() {
           </div>
 
           <p className="text-xs text-muted">
-            Select a word → dictionary (right). Use <strong>+ tag</strong> or{" "}
-            <strong>+ path</strong> on suggestions — selecting text alone does not save tags.
+            Highlight words, then click <strong>Tag selection</strong> or <strong>Add to path</strong>
+            below (or on the right). Suggestions still offer one-click + tag / path.
           </p>
+
+          {selectionBar && (
+            <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-[var(--radius)] border border-accent/40 bg-orange-50 p-2.5 shadow-sm">
+              <span className="text-xs text-ink-soft">
+                Selected: <strong className="text-ink">"{selectionBar}"</strong>
+              </span>
+              <button
+                type="button"
+                onClick={tagSelection}
+                className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg"
+              >
+                Tag selection
+              </button>
+              <button
+                type="button"
+                onClick={pathSelection}
+                className="rounded bg-teal px-3 py-1.5 text-xs font-medium text-white"
+              >
+                Add to path
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectionBar("");
+                }}
+                className="text-xs text-muted hover:underline ml-auto"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
           {activeFeature && (
             <div className="rounded bg-teal-soft/50 border border-teal/20 p-2 text-sm">
@@ -1234,90 +1306,113 @@ function ReaderPage() {
             </Card>
           )}
 
-          {/* Dictionary */}
+          
+          {/* Dictionary — embedded text */}
           <Card className="p-3 space-y-2">
             <h2 className="font-semibold text-sm flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
-              Dictionary · KJV
+              Dictionary · KJV (in-app)
             </h2>
-            <input
-              value={lookupPhrase}
-              onChange={(e) => setLookupPhrase(e.target.value)}
-              placeholder="Select a word in the text…"
-              className="w-full rounded border border-border px-2 py-1.5 text-sm"
-            />
-            {lookupPhrase.trim() ? (
-              <div className="text-xs space-y-2">
-                <div className="font-medium">“{lex.query}”</div>
-                {lex.curated ? (
-                  <>
-                    <p className="text-ink-soft leading-relaxed">{lex.curated.ambiguity}</p>
-                    <p className="text-muted">
-                      <strong className="text-ink">1828:</strong> {lex.curated.webster1828}
+            <p className="text-[11px] text-muted">
+              Definitions load here — no need to leave the app. Highlight a word or type below.
+            </p>
+            <div className="flex gap-1.5">
+              <input
+                value={lookupPhrase}
+                onChange={(e) => {
+                  setLookupPhrase(e.target.value);
+                  setSelectionBar(e.target.value);
+                }}
+                placeholder="Selected word or type…"
+                className="flex-1 rounded border border-border px-2 py-1.5 text-sm"
+              />
+            </div>
+            {(lookupPhrase.trim() || selectionBar) && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={tagSelection}
+                  className="rounded bg-accent px-2.5 py-1 text-xs font-medium text-accent-fg"
+                >
+                  Tag selection
+                </button>
+                <button
+                  type="button"
+                  onClick={pathSelection}
+                  className="rounded bg-teal px-2.5 py-1 text-xs font-medium text-white"
+                >
+                  Add to path
+                </button>
+              </div>
+            )}
+            {embedLoading && (
+              <p className="text-xs text-muted">Loading definitions…</p>
+            )}
+            {embeddedLex && embeddedLex.senses.length > 0 && (
+              <div className="space-y-3 max-h-72 overflow-auto">
+                {embeddedLex.senses.map((s, i) => (
+                  <div
+                    key={i}
+                    className="rounded border border-border bg-surface-2/40 p-2 text-xs space-y-1"
+                  >
+                    <div className="font-semibold text-[11px] uppercase tracking-wide text-muted">
+                      {s.title}
+                    </div>
+                    <p className="text-ink-soft leading-relaxed whitespace-pre-wrap">
+                      {s.body}
                     </p>
-                    <p className="text-muted">
-                      <strong className="text-ink">KJV:</strong> {lex.curated.kjvNotes}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-muted">No curated entry — use links below.</p>
-                )}
-                {lex.external.map((ex) => (
+                  </div>
+                ))}
+              </div>
+            )}
+            {lookupPhrase.trim() &&
+              !embedLoading &&
+              embeddedLex &&
+              embeddedLex.senses.length === 0 && (
+                <p className="text-xs text-muted">
+                  No embedded entry for "{lookupPhrase}". Try another form of the word, or use
+                  external links below.
+                </p>
+              )}
+            {embeddedLex && embeddedLex.curated.external.length > 0 && (
+              <div className="border-t border-border pt-2 space-y-0.5">
+                <div className="text-[10px] uppercase text-muted font-semibold">
+                  Optional external
+                </div>
+                {embeddedLex.curated.external.slice(0, 3).map((ex) => (
                   <a
                     key={ex.url}
                     href={ex.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="block text-accent hover:underline"
+                    className="block text-[11px] text-accent hover:underline"
                   >
                     {ex.label}
                   </a>
                 ))}
-                {searchWord(lookupPhrase).length > 0 && (
-                  <div className="border-t border-border pt-2 space-y-0.5">
-                    <div className="text-[10px] uppercase text-muted font-semibold">
-                      BoM hits ({searchWord(lookupPhrase).length})
-                    </div>
-                    {searchWord(lookupPhrase)
-                      .slice(0, 6)
-                      .map((h) => (
-                        <button
-                          key={h.id}
-                          type="button"
-                          onClick={() => goToVerse(h)}
-                          className="block text-accent hover:underline"
-                        >
-                          {h.book} {h.chapter}:{h.verse}
-                        </button>
-                      ))}
-                  </div>
-                )}
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    className="text-accent hover:underline"
-                    onClick={() => addTagPhrase(lookupPhrase.trim())}
-                  >
-                    + tag
-                  </button>
-                  <button
-                    type="button"
-                    className="text-teal hover:underline"
-                    onClick={() => addStep(lookupPhrase.trim())}
-                  >
-                    + path step
-                  </button>
-                </div>
               </div>
-            ) : current && lexiconHitsInText(current.text)[0] ? (
-              <p className="text-xs text-muted">
-                Tip: “{lexiconHitsInText(current.text)[0]!.term}” appears in this verse —
-                select it to look up.
-              </p>
-            ) : (
-              <p className="text-xs text-muted">Select any word in the chapter.</p>
+            )}
+            {lookupPhrase.trim() && searchWord(lookupPhrase).length > 0 && (
+              <div className="border-t border-border pt-2 space-y-0.5">
+                <div className="text-[10px] uppercase text-muted font-semibold">
+                  BoM concordance ({searchWord(lookupPhrase).length})
+                </div>
+                {searchWord(lookupPhrase)
+                  .slice(0, 6)
+                  .map((h) => (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => goToVerse(h)}
+                      className="block text-xs text-accent hover:underline"
+                    >
+                      {h.book} {h.chapter}:{h.verse}
+                    </button>
+                  ))}
+              </div>
             )}
           </Card>
+
         </div>
       </div>
     </div>

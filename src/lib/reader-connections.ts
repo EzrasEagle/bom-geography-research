@@ -21,6 +21,7 @@ export type ConnectionListItem = {
   steps: string[];
   adopted?: boolean;
   seedId?: string;
+  /** Present when this row can be edited (user assoc or adopted seed) */
   userId?: string;
 };
 
@@ -54,24 +55,33 @@ export function listConnectionsForChapter(
   const seeds = associationSuggestions
     .filter((s) => s.book === book && s.chapter === chapter)
     .map((s) => {
-      const adopted = userAssocs.some((u) => u.sourceSuggestionId === s.id);
+      const user = userAssocs.find((u) => u.sourceSuggestionId === s.id);
       return {
         id: `seed-${s.id}`,
         source: "seed" as const,
-        title: s.title,
+        // Prefer user's edited title when adopted
+        title: user?.title ?? s.title,
         summary: s.summary,
         book: s.book,
         chapter: s.chapter,
         verse: s.verse,
         ref: `${s.book} ${s.chapter}:${s.verse}`,
-        steps: stepsFromSug(s),
-        adopted,
+        steps: user ? stepsFromUser(user) : stepsFromSug(s),
+        adopted: Boolean(user),
         seedId: s.id,
+        userId: user?.id,
       };
     });
 
+  // Yours that are NOT adopted seeds (custom-built)
+  const seedIds = new Set(associationSuggestions.map((s) => s.id));
   const yours = userAssocs
-    .filter((a) => a.book === book && a.chapter === chapter)
+    .filter(
+      (a) =>
+        a.book === book &&
+        a.chapter === chapter &&
+        (!a.sourceSuggestionId || !seedIds.has(a.sourceSuggestionId)),
+    )
     .map((a) => ({
       id: `user-${a.id}`,
       source: "yours" as const,
@@ -85,14 +95,7 @@ export function listConnectionsForChapter(
       seedId: a.sourceSuggestionId,
     }));
 
-  // Prefer listing seeds first, then yours not already mirrored as seed-adopted
-  const seedAdopted = new Set(
-    yours.filter((y) => y.seedId).map((y) => y.seedId),
-  );
-  return [
-    ...seeds,
-    ...yours.filter((y) => !y.seedId || !seedAdopted.has(y.seedId)),
-  ];
+  return [...seeds, ...yours];
 }
 
 export function getSuggestionById(id: string): AssociationSuggestion | undefined {
