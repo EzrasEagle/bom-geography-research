@@ -1,11 +1,36 @@
 import type { Point } from "@/lib/model-map-state";
-import type { CorridorAssociation } from "@/data/soft-regions";
-import { DEFAULT_DAY_PIXELS } from "@/data/soft-regions";
+import type { RouteAssociation } from "@/data/route-associations";
+
+/** Interpolate along polyline at t∈[0,1] */
+export function pointAlongPolyline(pts: Point[], t: number): Point {
+  if (pts.length === 0) return { x: 0, y: 0 };
+  if (pts.length === 1) return { ...pts[0]! };
+  const clamped = Math.min(1, Math.max(0, t));
+  // cumulative lengths
+  const segs: number[] = [];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y);
+    segs.push(d);
+    total += d;
+  }
+  if (total < 1e-6) return { ...pts[0]! };
+  let dist = clamped * total;
+  for (let i = 0; i < segs.length; i++) {
+    if (dist <= segs[i]!) {
+      const a = pts[i]!;
+      const b = pts[i + 1]!;
+      const u = segs[i]! < 1e-6 ? 0 : dist / segs[i]!;
+      return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u };
+    }
+    dist -= segs[i]!;
+  }
+  return { ...pts[pts.length - 1]! };
+}
 
 /**
- * Full-route wilderness band: polygon along the entire path A → B
- * (or multi-waypoint polyline), with half-width = perimeter.
- * Ends leave a small gap so the band does not swallow city pins.
+ * Full-route band along waypoints with half-width perimeter.
+ * endGapPx keeps band from covering city pin centers.
  */
 export function fullRouteBand(
   waypoints: Point[],
@@ -13,7 +38,6 @@ export function fullRouteBand(
   endGapPx = 12,
 ): Point[] {
   if (waypoints.length < 2) return [];
-  // Build left and right offsets along the polyline
   const left: Point[] = [];
   const right: Point[] = [];
 
@@ -21,7 +45,6 @@ export function fullRouteBand(
     const prev = waypoints[Math.max(0, i - 1)]!;
     const cur = waypoints[i]!;
     const next = waypoints[Math.min(waypoints.length - 1, i + 1)]!;
-    // Tangent: average of segments
     let tx = 0;
     let ty = 0;
     if (i === 0) {
@@ -42,7 +65,6 @@ export function fullRouteBand(
 
     let x = cur.x;
     let y = cur.y;
-    // Pull ends inward so wilderness approaches but does not cover city centers
     if (i === 0 && waypoints.length >= 2) {
       const d = Math.hypot(waypoints[1]!.x - cur.x, waypoints[1]!.y - cur.y) || 1;
       const g = Math.min(endGapPx, d * 0.2);
@@ -56,42 +78,77 @@ export function fullRouteBand(
       x = cur.x - ((cur.x - a.x) / d) * g;
       y = cur.y - ((cur.y - a.y) / d) * g;
     }
-
     left.push({ x: x + px, y: y + py });
     right.push({ x: x - px, y: y - py });
   }
-
-  // Closed band: left forward + right reverse
   return [...left, ...right.reverse()];
 }
 
-/** Short stub from place toward other (legacy / optional partial association). */
-export function corridorBandPolygon(
-  from: Point,
-  toward: Point,
-  lengthPx: number,
-  halfWidthPx: number,
+/**
+ * Spine points for a route. Branch routes insert split point ON parent wilderness trunk.
+ */
+export function routeSpine(
+  route: RouteAssociation,
+  all: RouteAssociation[],
+  layout: Record<string, Point>,
 ): Point[] {
-  const dx = toward.x - from.x;
-  const dy = toward.y - from.y;
-  const dist = Math.hypot(dx, dy) || 1;
-  const ux = dx / dist;
-  const uy = dy / dist;
-  const along = Math.min(lengthPx, dist * 0.92);
-  const gap = Math.min(14, along * 0.15);
-  if (along <= gap + 2) return [];
-  const x0 = from.x + ux * gap;
-  const y0 = from.y + uy * gap;
-  const x1 = from.x + ux * along;
-  const y1 = from.y + uy * along;
-  const px = -uy * halfWidthPx;
-  const py = ux * halfWidthPx;
-  return [
-    { x: x0 + px, y: y0 + py },
-    { x: x1 + px, y: y1 + py },
-    { x: x1 - px, y: y1 - py },
-    { x: x0 - px, y: y0 - py },
-  ];
+  const resolve = (ids: string[]) =>
+    ids.map((id) => layout[id]).filter((p): p is Point => !!p);
+
+  if (route.branchesFromRouteId) {
+    const parent = all.find((r) => r.id === route.branchesFromRouteId);
+    if (parent) {
+      const parentPts = resolve(parent.placeIds);
+      if (parentPts.length >= 2) {
+        const t = route.branchT ?? 0.5;
+        const branchPt = pointAlongPolyline(parentPts, t);
+        // start at first place of route if on parent, else use parent start direction
+        const start = layout[route.placeIds[0]!];
+        const end = layout[route.actualDestinationId ?? route.placeIds[route.placeIds.length - 1]!]
+          ?? layout[route.placeIds[route.placeIds.length - 1]!];
+        // Path: start (nephi) → along parent toward zara until branchT → to desolation
+        // For Limhi: placeIds nephi, desolation; parent is nephi-zarahemla
+        if (start && end && parentPts.length >= 2) {
+          // Use start → branch (on trunk) → end
+          // If start is parent[0], spine is parent[0]..branch..end
+          return [start, branchPt, end];
+        }
+        return [branchPt, ...(end ? [end] : [])];
+      }
+    }
+  }
+  return resolve(route.placeIds);
+}
+
+/** All wilderness bands from enabled wilderness-corridor routes (multi-endpoint stretch). */
+export function wildernessBandsFromRoutes(
+  routes: RouteAssociation[],
+  layout: Record<string, Point>,
+  halfWidthPx: number,
+): { id: string; points: Point[]; mid: Point; route: RouteAssociation; spine: Point[] }[] {
+  const enabled = routes.filter((r) => r.enabled && r.corridor === "wilderness");
+  const out: { id: string; points: Point[]; mid: Point; route: RouteAssociation; spine: Point[] }[] = [];
+  for (const route of enabled) {
+    const spine = routeSpine(route, routes, layout);
+    if (spine.length < 2) continue;
+    const points = fullRouteBand(spine, halfWidthPx);
+    if (points.length < 3) continue;
+    const mid = pointAlongPolyline(spine, 0.5);
+    out.push({ id: route.id, points, mid, route, spine });
+  }
+  return out;
+}
+
+/** Unique endpoints touched by wilderness (for multi-end shape summary). */
+export function wildernessEndpoints(routes: RouteAssociation[]): string[] {
+  const s = new Set<string>();
+  for (const r of routes) {
+    if (!r.enabled || r.corridor !== "wilderness") continue;
+    for (const id of r.placeIds) s.add(id);
+    if (r.actualDestinationId) s.add(r.actualDestinationId);
+    if (r.intendedDestinationId) s.add(r.intendedDestinationId);
+  }
+  return [...s];
 }
 
 export function dayLengthPixels(
@@ -103,84 +160,24 @@ export function dayLengthPixels(
   return baseDayPixels * ratio;
 }
 
-/**
- * Full routes that use wilderness corridor for their entire length.
- * Keyed by route id → waypoint feature ids.
- */
-export type FullWildernessRoute = {
-  id: string;
-  /** Ordered place ids defining the spine (wilderness via can be mid auto-point) */
-  placeIds: string[];
-  sourceRefs?: string[];
-  note?: string;
-};
-
-export const DEFAULT_FULL_WILDERNESS_ROUTES: FullWildernessRoute[] = [
-  {
-    id: "route-nephi-zarahemla-omni",
-    placeIds: ["nephi", "zarahemla"],
-    sourceRefs: ["Omni 1:12–13"],
-    note: "Mosiah party: entire journey through wilderness until down into Zarahemla",
-  },
-  {
-    id: "route-nephi-desolation-limhi-branch",
-    placeIds: ["nephi", "desolation"],
-    sourceRefs: ["Mosiah 8:7–11"],
-    note: "Lost-party branch corridor family (optional overlay)",
-  },
-];
-
-export function fullRouteBands(
-  routes: FullWildernessRoute[],
-  layout: Record<string, Point>,
-  halfWidthPx: number,
-  /** which route ids are enabled */
-  enabledIds?: Set<string>,
-): { id: string; points: Point[]; mid: Point }[] {
-  const out: { id: string; points: Point[]; mid: Point }[] = [];
-  for (const route of routes) {
-    if (enabledIds && !enabledIds.has(route.id)) continue;
-    const pts = route.placeIds
-      .map((id) => layout[id])
-      .filter((p): p is Point => !!p);
-    if (pts.length < 2) continue;
-    const points = fullRouteBand(pts, halfWidthPx);
-    if (points.length < 3) continue;
-    // Midpoint of spine for diamond label
-    const midIdx = Math.floor(pts.length / 2);
-    const mid =
-      pts.length === 2
-        ? { x: (pts[0]!.x + pts[1]!.x) / 2, y: (pts[0]!.y + pts[1]!.y) / 2 }
-        : { ...pts[midIdx]! };
-    out.push({ id: route.id, points, mid });
-  }
-  return out;
-}
-
-/** Still support stub corridors for partial associations */
-export function regionCorridorPaths(
-  links: CorridorAssociation[],
-  layout: Record<string, Point>,
-  dayPixelsOpen: number,
-  halfWidthPx = 16,
-): { id: string; points: Point[] }[] {
-  const out: { id: string; points: Point[] }[] = [];
-  for (const link of links) {
-    const a = layout[link.placeId];
-    const b = layout[link.towardPlaceId];
-    if (!a || !b) continue;
-    const lengthPx = link.proximityDays * dayPixelsOpen;
-    const poly = corridorBandPolygon(a, b, lengthPx, halfWidthPx);
-    if (poly.length >= 3) out.push({ id: link.id, points: poly });
-  }
-  return out;
-}
-
 export function polyToSvgPath(pts: Point[]): string {
   if (pts.length < 2) return "";
   let d = `M ${pts[0]!.x} ${pts[0]!.y}`;
   for (let i = 1; i < pts.length; i++) d += ` L ${pts[i]!.x} ${pts[i]!.y}`;
   return d + " Z";
+}
+
+export function polylineToSvgD(pts: Point[]): string {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0]!.x} ${pts[0]!.y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1]!;
+    const cur = pts[i]!;
+    const cpx = (prev.x + cur.x) / 2;
+    const cpy = (prev.y + cur.y) / 2;
+    d += ` Q ${cpx} ${cpy} ${cur.x} ${cur.y}`;
+  }
+  return d;
 }
 
 export function transformPoints(
@@ -199,11 +196,21 @@ export function dayRingRadius(days: number, dayPixels: number): number {
   return Math.max(6, days * dayPixels);
 }
 
+// compat stubs
+export function fullRouteBands() {
+  return [] as { id: string; points: Point[]; mid: Point }[];
+}
+export const DEFAULT_FULL_WILDERNESS_ROUTES: never[] = [];
+export function regionCorridorPaths() {
+  return [] as { id: string; points: Point[] }[];
+}
 export function softRegionHull() {
   return [] as Point[];
 }
 export function hullToSvgPath() {
   return "";
 }
-
-export { DEFAULT_DAY_PIXELS };
+export function corridorBandPolygon() {
+  return [] as Point[];
+}
+export { DEFAULT_DAY_PIXELS } from "@/data/soft-regions";

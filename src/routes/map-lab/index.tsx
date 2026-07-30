@@ -22,22 +22,26 @@ import {
 } from "@/data/object-taxonomy";
 import { lookupLexicon } from "@/data/lexicon";
 import { loadAssociations, spanLabel } from "@/lib/user-associations";
-import { allTravelPaths, pathsForFeature, type TravelPath } from "@/data/travel-paths";
-import { pathToSvgD, resolveWaypoints } from "@/lib/path-geometry";
 import {
   DEFAULT_DAY_PIXELS,
-  corridorsForRegion,
   isSoftRegionFeature,
-  type CorridorAssociation,
 } from "@/data/soft-regions";
 import {
-  DEFAULT_FULL_WILDERNESS_ROUTES,
   dayLengthPixels,
   dayRingRadius,
-  fullRouteBands,
+  pointAlongPolyline,
+  polylineToSvgD,
   polyToSvgPath,
   transformPoints,
+  wildernessBandsFromRoutes,
+  wildernessEndpoints,
 } from "@/lib/soft-region-geometry";
+import {
+  loadRouteAssociations,
+  saveRouteAssociations,
+  type RouteAssociation,
+  type SpanField,
+} from "@/data/route-associations";
 import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
@@ -89,16 +93,12 @@ function MapLabPage() {
   const [showPaths, setShowPaths] = useState(true);
   const [selectedPathId, setSelectedPathId] = useState<string | null>("path-limhi-lost-to-desolation");
   const [pathFilter, setPathFilter] = useState<"all" | "feature">("all");
-  /** placeId → proximity days for wilderness (and other soft regions later) */
-  const [proximityOverrides, setProximityOverrides] = useState<Record<string, number>>({});
   const [dayPixels, setDayPixels] = useState(DEFAULT_DAY_PIXELS);
   const [showSoftRegions, setShowSoftRegions] = useState(true);
-  /** Perimeter / half-width of wilderness band along full routes (px) */
   const [corridorHalfWidth, setCorridorHalfWidth] = useState(22);
-  const [enabledWildRoutes, setEnabledWildRoutes] = useState<string[]>([
-    "route-nephi-zarahemla-omni",
-  ]);
   const [showConstraintEdges, setShowConstraintEdges] = useState(true);
+  const [routeAssocs, setRouteAssocs] = useState<RouteAssociation[]>([]);
+  const [editRouteId, setEditRouteId] = useState<string | null>("route-nephi-zarahemla-omni");
   const [assocForObject, setAssocForObject] = useState<{ title: string; dist: string; time: string }[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(true);
@@ -131,7 +131,28 @@ function MapLabPage() {
     setModelId(initial);
     setPack(p);
     setLoaded(true);
+    setRouteAssocs(loadRouteAssociations());
   }, []);
+
+  function patchRoute(id: string, patch: Partial<RouteAssociation>) {
+    setRouteAssocs((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, ...patch } : r));
+      saveRouteAssociations(next);
+      return next;
+    });
+  }
+
+  function patchRouteSpan(
+    id: string,
+    field: "distance" | "time",
+    span: SpanField,
+  ) {
+    setRouteAssocs((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, [field]: span } : r));
+      saveRouteAssociations(next);
+      return next;
+    });
+  }
 
   function switchModel(id: string) {
     const user = userModels.find((u) => u.id === id);
@@ -205,22 +226,50 @@ function MapLabPage() {
     [layout, macro.directionRotation, macro.globalScale],
   );
 
-  const wildernessCorridors: CorridorAssociation[] = useMemo(() => {
-    return corridorsForRegion("wilderness").map((l) => ({
-      ...l,
-      // override key: placeId+towardPlaceId
-      proximityDays:
-        proximityOverrides[`${l.placeId}>${l.towardPlaceId}`] ??
-        proximityOverrides[l.placeId] ??
-        l.proximityDays,
-    }));
-  }, [proximityOverrides]);
+  const wildernessBandsDisplay = useMemo(() => {
+    const bands = wildernessBandsFromRoutes(routeAssocs, layout, corridorHalfWidth);
+    return bands.map((b) => ({
+      id: b.id,
+      route: b.route,
+      spine: transformPoints(b.spine, (keyed) =>
+        applyMacroTransform(keyed, macro.directionRotation, macro.globalScale),
+      ),
+      points: transformPoints(b.points, (keyed) =>
+        applyMacroTransform(keyed, macro.directionRotation, macro.globalScale),
+      ),
+      mid: transformPoints([b.mid], (keyed) =>
+        applyMacroTransform(keyed, macro.directionRotation, macro.globalScale),
+      )[0]!,
+      branchPt:
+        b.route.branchesFromRouteId && b.spine.length >= 2
+          ? transformPoints(
+              [
+                pointAlongPolyline(
+                  b.spine,
+                  // branch is second point in spine for branch routes (start, branch, end)
+                  b.spine.length >= 3 ? 0.5 : b.route.branchT ?? 0.5,
+                ),
+              ],
+              // wait - spine already in model space; transform after
+              (keyed) => keyed,
+            )[0]
+          : null,
+    })).map((b) => {
+      // Fix branchPt transform properly
+      let branchPt = null as { x: number; y: number } | null;
+      if (b.route.branchesFromRouteId && b.spine.length >= 3) {
+        // spine already display-transformed: [start, branch, end]
+        branchPt = b.spine[1]!;
+      }
+      return { ...b, branchPt };
+    });
+  }, [routeAssocs, layout, corridorHalfWidth, macro.directionRotation, macro.globalScale]);
 
-  /** Open-ground day length on canvas; wilderness-slower days use terrain ratio for rings */
-  const dayPxOpen = useMemo(
-    () => dayLengthPixels(dayPixels, macro.dayMilesOpen, macro.dayMilesOpen),
-    [dayPixels, macro.dayMilesOpen],
+  const wildEndpoints = useMemo(
+    () => wildernessEndpoints(routeAssocs),
+    [routeAssocs],
   );
+
   const dayPxWild = useMemo(
     () =>
       dayLengthPixels(
@@ -231,33 +280,11 @@ function MapLabPage() {
     [dayPixels, macro.dayMilesOpen, macro.dayMilesJungle, macro.dayMilesMountain],
   );
 
-  const wildernessBandsDisplay = useMemo(() => {
-    const enabled = new Set(enabledWildRoutes);
-    const bands = fullRouteBands(DEFAULT_FULL_WILDERNESS_ROUTES, layout, corridorHalfWidth, enabled);
-    return bands.map((b) => ({
-      id: b.id,
-      points: transformPoints(b.points, (keyed) =>
-        applyMacroTransform(keyed, macro.directionRotation, macro.globalScale),
-      ),
-      mid: transformPoints([b.mid], (keyed) =>
-        applyMacroTransform(keyed, macro.directionRotation, macro.globalScale),
-      )[0]!,
-    }));
-  }, [
-    layout,
-    corridorHalfWidth,
-    enabledWildRoutes,
-    macro.directionRotation,
-    macro.globalScale,
-  ]);
 
-  /** Keep wilderness layout pin on primary route midpoint so paths through it stay on route */
-  const wildernessRouteMid = useMemo(() => {
-    const a = layout["nephi"];
-    const b = layout["zarahemla"];
-    if (!a || !b) return null;
-    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-  }, [layout]);
+  const editingRoute = useMemo(
+    () => routeAssocs.find((r) => r.id === editRouteId) ?? null,
+    [routeAssocs, editRouteId],
+  );
 
   const edges = useMemo(() => {
     return seedConstraints.map((c) => {
@@ -361,27 +388,6 @@ function MapLabPage() {
     }
     return list;
   }, [pathFilter, objectId]);
-
-  const pathDraw = useMemo(() => {
-    return activePaths.map((path) => {
-      // resolve in model space then transform each point for display
-      const modelPts = resolveWaypoints(path, layout);
-      const displayPts = modelPts.map((pt) => {
-        const transformed = applyMacroTransform(
-          { _: { x: pt.x, y: pt.y } },
-          macro.directionRotation,
-          macro.globalScale,
-        )._;
-        return { ...pt, x: transformed.x, y: transformed.y };
-      });
-      return {
-        path,
-        displayPts,
-        dMain: pathToSvgD(displayPts, "main"),
-        dGhost: pathToSvgD(displayPts, "intended_ghost"),
-      };
-    });
-  }, [activePaths, layout, macro.directionRotation, macro.globalScale]);
 
   const edgeDossier = useMemo(() => {
     const e = edges.find((x) => x.id === (hoverEdge || selectedEdge));
@@ -882,21 +888,19 @@ function MapLabPage() {
       </Card>
 
 
-      {/* Soft region corridor controls */}
+      {/* Route association editor + multi-endpoint wilderness */}
       {showSoftRegions && (
         <Card className="p-4 md:p-5 space-y-3 border-emerald-800/20">
           <div>
-            <h2 className="font-semibold text-base">Wilderness · full route band</h2>
+            <h2 className="font-semibold text-base">Routes & associations</h2>
             <p className="text-xs text-muted mt-0.5 max-w-2xl leading-relaxed">
-              For Omni 1:12–13 the party travels <strong>through the wilderness the whole way</strong>{" "}
-              from the land of Nephi to Zarahemla. The green band follows that entire spine (not stubs
-              only at each end). It stops just short of city pins. Perimeter (band width) is
-              adjustable. Enable extra routes to expand along other associations (e.g. Desolation
-              branch).
+              Edit each <strong>route association</strong> (distance, time, lost, branch). Wilderness
+              shape is the union of enabled wilderness routes — more endpoints stretch the green
+              bands. Branch splits are placed <em>inside</em> the parent wilderness corridor.
             </p>
           </div>
           <label className="block text-xs space-y-1 max-w-md">
-            <span className="text-muted">Corridor perimeter (half-width, px)</span>
+            <span className="text-muted">Corridor perimeter (half-width)</span>
             <input
               type="range"
               min={8}
@@ -905,44 +909,136 @@ function MapLabPage() {
               onChange={(e) => setCorridorHalfWidth(Number(e.target.value))}
               className="w-full"
             />
-            <span className="tabular-nums font-medium">{corridorHalfWidth}px each side of route</span>
+            <span className="tabular-nums font-medium">{corridorHalfWidth}px</span>
           </label>
+          <p className="text-[11px] text-muted">
+            Endpoints in wilderness now:{" "}
+            {wildEndpoints.map((id) => placeLabel(id)).join(", ") || "none"}
+          </p>
           <div className="space-y-2">
-            {DEFAULT_FULL_WILDERNESS_ROUTES.map((route) => {
-              const on = enabledWildRoutes.includes(route.id);
-              return (
-                <label
-                  key={route.id}
-                  className="flex items-start gap-2 text-xs rounded border border-border p-2"
-                >
+            {routeAssocs.map((route) => (
+              <div
+                key={route.id}
+                className={`rounded-[var(--radius)] border p-3 space-y-2 ${
+                  editRouteId === route.id ? "border-accent bg-orange-50/40" : "border-border"
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="checkbox"
-                    className="mt-0.5"
-                    checked={on}
-                    onChange={() =>
-                      setEnabledWildRoutes((prev) =>
-                        on ? prev.filter((x) => x !== route.id) : [...prev, route.id],
-                      )
-                    }
+                    checked={route.enabled}
+                    onChange={(e) => patchRoute(route.id, { enabled: e.target.checked })}
                   />
-                  <span>
-                    <span className="font-medium text-ink">
-                      {route.placeIds.map((id) => placeLabel(id)).join(" → ")}
-                    </span>
-                    <span className="block text-muted mt-0.5">{route.note}</span>
-                    {route.sourceRefs && (
-                      <span className="text-[10px] text-muted">{route.sourceRefs.join(" · ")}</span>
+                  <button
+                    type="button"
+                    className="font-medium text-sm text-left hover:underline"
+                    onClick={() => setEditRouteId(route.id)}
+                  >
+                    {route.name}
+                  </button>
+                  {route.lost && <Badge tone="accent">lost</Badge>}
+                  <Badge tone="claim">dist {route.distance.quality}</Badge>
+                  <Badge tone="claim">time {route.time.quality}</Badge>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {route.objects.map((o) => (
+                    <Badge key={o}>{o}</Badge>
+                  ))}
+                </div>
+                {editRouteId === route.id && (
+                  <div className="grid gap-2 sm:grid-cols-2 border-t border-border pt-2">
+                    <label className="text-xs space-y-1">
+                      <span className="text-muted">Distance</span>
+                      <select
+                        className="w-full rounded border border-border px-2 py-1.5"
+                        value={route.distance.quality}
+                        onChange={(e) =>
+                          patchRouteSpan(route.id, "distance", {
+                            ...route.distance,
+                            quality: e.target.value as SpanField["quality"],
+                          })
+                        }
+                      >
+                        <option value="unknown">Unknown</option>
+                        <option value="approximate">Approximate</option>
+                        <option value="stated">Stated</option>
+                      </select>
+                      <input
+                        className="w-full rounded border border-border px-2 py-1 text-xs"
+                        placeholder="value e.g. many days"
+                        value={route.distance.value ?? ""}
+                        onChange={(e) =>
+                          patchRouteSpan(route.id, "distance", {
+                            ...route.distance,
+                            value: e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="text-xs space-y-1">
+                      <span className="text-muted">Travel time</span>
+                      <select
+                        className="w-full rounded border border-border px-2 py-1.5"
+                        value={route.time.quality}
+                        onChange={(e) =>
+                          patchRouteSpan(route.id, "time", {
+                            ...route.time,
+                            quality: e.target.value as SpanField["quality"],
+                          })
+                        }
+                      >
+                        <option value="unknown">Unknown</option>
+                        <option value="approximate">Approximate</option>
+                        <option value="stated">Stated</option>
+                      </select>
+                      <input
+                        className="w-full rounded border border-border px-2 py-1 text-xs"
+                        placeholder="value"
+                        value={route.time.value ?? ""}
+                        onChange={(e) =>
+                          patchRouteSpan(route.id, "time", {
+                            ...route.time,
+                            value: e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={!!route.lost}
+                        onChange={(e) => patchRoute(route.id, { lost: e.target.checked })}
+                      />
+                      Lost / failed to reach intended destination
+                    </label>
+                    {route.branchesFromRouteId && (
+                      <label className="text-xs space-y-1 sm:col-span-2">
+                        <span className="text-muted">
+                          Branch position along parent wilderness (0 = start, 1 = end)
+                        </span>
+                        <input
+                          type="range"
+                          min={0.15}
+                          max={0.85}
+                          step={0.05}
+                          value={route.branchT ?? 0.5}
+                          onChange={(e) =>
+                            patchRoute(route.id, { branchT: Number(e.target.value) })
+                          }
+                          className="w-full"
+                        />
+                        <span className="tabular-nums">{((route.branchT ?? 0.5) * 100).toFixed(0)}% along trunk</span>
+                      </label>
                     )}
-                  </span>
-                </label>
-              );
-            })}
+                    <p className="text-[11px] text-muted sm:col-span-2">{route.summary}</p>
+                    <p className="text-[10px] text-muted sm:col-span-2">
+                      {route.sourceRefs.join(" · ")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-          <p className="text-[11px] text-muted leading-relaxed">
-            Constraint links (city–city graph) are separate from multi-paths and the wilderness band.
-            Toggle "Constraint links" if they are hidden. Paths with a wilderness corridor
-            are drawn through the band midpoint.
-          </p>
         </Card>
       )}
 
@@ -1063,6 +1159,7 @@ function MapLabPage() {
             
             
 
+
             {/* Constraint graph edges (city–city links) */}
             {showConstraintEdges &&
               edges.map((e) => {
@@ -1097,7 +1194,7 @@ function MapLabPage() {
                 );
               })}
 
-            {/* Full-route wilderness bands (entire Nephi→Zarahemla spine + optional branches) */}
+            {/* Wilderness bands — one per enabled route; multi-endpoint stretches shape */}
             {showSoftRegions &&
               wildernessBandsDisplay.map((band) => (
                 <path
@@ -1105,30 +1202,92 @@ function MapLabPage() {
                   d={polyToSvgPath(band.points)}
                   fill="#3f6212"
                   fillOpacity={
-                    selectedPlace === "wilderness" || hoverPlace === "wilderness" ? 0.34 : 0.2
+                    editRouteId === band.id || selectedPlace === "wilderness" ? 0.36 : 0.18
                   }
                   stroke="#14532d"
-                  strokeWidth={1.5}
+                  strokeWidth={editRouteId === band.id ? 2 : 1.25}
                   strokeDasharray="6 3"
                   className="cursor-pointer"
-                  onClick={() => setSelectedPlace("wilderness")}
-                  onPointerEnter={() => setHoverPlace("wilderness")}
-                  onPointerLeave={() => setHoverPlace((h) => (h === "wilderness" ? null : h))}
+                  onClick={() => {
+                    setSelectedPlace("wilderness");
+                    setEditRouteId(band.id);
+                  }}
                 >
                   <title>
-                    Wilderness along full route {band.id} — perimeter adjustable; does not cover city
-                    centers
+                    {band.route.name} · dist {band.route.distance.quality} · time{" "}
+                    {band.route.time.quality}
+                    {band.route.lost ? " · LOST" : ""}
                   </title>
                 </path>
               ))}
 
-            {/* Day rings at ends of primary corridor */}
+            {/* Route centerlines (editable associations) */}
+            {showPaths &&
+              wildernessBandsDisplay.map((band) => {
+                const d = polylineToSvgD(band.spine);
+                const sel = editRouteId === band.id;
+                const dash =
+                  band.route.style === "dashed"
+                    ? "8 5"
+                    : band.route.style === "dotted"
+                      ? "2 5"
+                      : undefined;
+                return (
+                  <g key={`line-${band.id}`}>
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke={band.route.color}
+                      strokeWidth={sel ? 4 : 2.5}
+                      strokeDasharray={dash}
+                      opacity={0.9}
+                      className="cursor-pointer"
+                      onClick={() => setEditRouteId(band.id)}
+                    />
+                    {/* Branch split marker INSIDE wilderness */}
+                    {band.branchPt && (
+                      <g>
+                        <circle
+                          cx={band.branchPt.x}
+                          cy={band.branchPt.y}
+                          r={7}
+                          fill="#fffdf8"
+                          stroke={band.route.color}
+                          strokeWidth={2.5}
+                        />
+                        <text
+                          x={band.branchPt.x + 10}
+                          y={band.branchPt.y - 6}
+                          fontSize="9"
+                          fill={band.route.color}
+                          className="select-none pointer-events-none font-semibold"
+                        >
+                          split / lost
+                        </text>
+                      </g>
+                    )}
+                    {/* Ghost intended destination */}
+                    {band.route.lost &&
+                      band.route.intendedDestinationId &&
+                      displayLayout[band.route.intendedDestinationId] &&
+                      band.branchPt && (
+                        <path
+                          d={`M ${band.branchPt.x} ${band.branchPt.y} L ${displayLayout[band.route.intendedDestinationId]!.x} ${displayLayout[band.route.intendedDestinationId]!.y}`}
+                          fill="none"
+                          stroke={band.route.color}
+                          strokeWidth={1.5}
+                          strokeDasharray="4 4"
+                          opacity={0.4}
+                        />
+                      )}
+                  </g>
+                );
+              })}
+
+            {/* Day rings on wilderness endpoints */}
             {showSoftRegions &&
-              (selectedPlace === "wilderness" ||
-                hoverPlace === "wilderness" ||
-                selectedPlace === "nephi" ||
-                selectedPlace === "zarahemla") &&
-              ["nephi", "zarahemla"].map((pid) => {
+              (selectedPlace === "wilderness" || hoverPlace === "wilderness") &&
+              wildEndpoints.map((pid) => {
                 const c = displayLayout[pid];
                 if (!c) return null;
                 const r = dayRingRadius(1, dayPxWild) * macro.globalScale;
@@ -1140,91 +1299,10 @@ function MapLabPage() {
                     r={r}
                     fill="none"
                     stroke="#3f6212"
-                    strokeWidth={1.25}
+                    strokeWidth={1}
                     strokeDasharray="4 3"
-                    opacity={0.5}
-                  >
-                    <title>1 day at wilderness pace from {pid}</title>
-                  </circle>
-                );
-              })}
-
-            {/* Multi-path routes — use live wilderness midpoint so route goes through corridor */}
-            {showPaths &&
-              pathDraw.map(({ path, dMain, dGhost, displayPts }) => {
-                const sel = selectedPathId === path.id;
-                const dash =
-                  path.style === "dashed" ? "8 5" : path.style === "dotted" ? "2 5" : undefined;
-                // Rebuild display pts so wilderness via sits on route mid
-                let pts = displayPts;
-                if (path.corridor === "wilderness" && wildernessBandsDisplay[0]?.mid) {
-                  const mid = wildernessBandsDisplay[0].mid;
-                  pts = displayPts.map((pt) =>
-                    pt.featureId === "wilderness" || pt.role === "via"
-                      ? { ...pt, x: mid.x, y: mid.y }
-                      : pt,
-                  );
-                }
-                // recompute path d from adjusted pts
-                const dAdj =
-                  path.corridor === "wilderness" && wildernessBandsDisplay[0]?.mid
-                    ? (() => {
-                        const main = pts.filter((p) => p.role !== "intended");
-                        if (main.length < 2) return dMain;
-                        let d = `M ${main[0]!.x} ${main[0]!.y}`;
-                        for (let i = 1; i < main.length; i++) {
-                          const prev = main[i - 1]!;
-                          const cur = main[i]!;
-                          const cpx = (prev.x + cur.x) / 2;
-                          const cpy = (prev.y + cur.y) / 2;
-                          d += ` Q ${cpx} ${cpy} ${cur.x} ${cur.y}`;
-                        }
-                        return d;
-                      })()
-                    : dMain;
-                return (
-                  <g key={path.id} className="cursor-pointer" onClick={() => setSelectedPathId(path.id)}>
-                    {dAdj && (
-                      <path
-                        d={dAdj}
-                        fill="none"
-                        stroke={path.color}
-                        strokeWidth={sel ? 4 : 2.5}
-                        strokeDasharray={dash}
-                        opacity={sel ? 1 : 0.8}
-                      />
-                    )}
-                    {dGhost && (
-                      <path
-                        d={dGhost}
-                        fill="none"
-                        stroke={path.color}
-                        strokeWidth={1.5}
-                        strokeDasharray="4 4"
-                        opacity={0.45}
-                      />
-                    )}
-                    <title>
-                      {path.name}
-                      {path.intendedDestinationId
-                        ? ` · intended ${path.intendedDestinationId}`
-                        : ""}
-                      {path.actualDestinationId ? ` · actual ${path.actualDestinationId}` : ""}
-                    </title>
-                    {pts
-                      .filter((pt) => pt.role === "branch")
-                      .map((pt, i) => (
-                        <circle
-                          key={i}
-                          cx={pt.x}
-                          cy={pt.y}
-                          r={5}
-                          fill="#fffdf8"
-                          stroke={path.color}
-                          strokeWidth={2}
-                        />
-                      ))}
-                  </g>
+                    opacity={0.45}
+                  />
                 );
               })}
 
@@ -1240,11 +1318,15 @@ function MapLabPage() {
               const nRefs = dossier?.scriptures.length ?? 0;
               // Soft regions: centroid handle only (blob drawn separately)
               if (isSoft && p.id === "wilderness") {
-                const mid = wildernessBandsDisplay[0]?.mid;
-                const a = displayLayout["nephi"];
-                const b = displayLayout["zarahemla"];
-                const cx = mid?.x ?? (a && b ? (a.x + b.x) / 2 : pos.x);
-                const cy = mid?.y ?? (a && b ? (a.y + b.y) / 2 : pos.y);
+                const mids = wildernessBandsDisplay.map((b) => b.mid);
+                const cx =
+                  mids.length > 0
+                    ? mids.reduce((s, m) => s + m.x, 0) / mids.length
+                    : pos.x;
+                const cy =
+                  mids.length > 0
+                    ? mids.reduce((s, m) => s + m.y, 0) / mids.length
+                    : pos.y;
                 return (
                   <g
                     key={p.id}
