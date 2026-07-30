@@ -8,7 +8,6 @@ import { getPlaceDossier } from "@/data/place-scripture";
 import {
   dynamicLexiconLookup,
   lexiconHitsInText,
-  lookupLexicon,
 } from "@/data/lexicon";
 import {
   booksInCorpus,
@@ -573,19 +572,26 @@ function ReaderPage() {
               });
 
               return (
-                <div key={row.id} className="relative">
-                  <button
-                    type="button"
+                <div
+                  key={row.id}
+                  className={`relative rounded-[var(--radius)] border p-3 transition-colors ${
+                    active
+                      ? "border-accent bg-orange-50/60"
+                      : hasTag
+                        ? "border-teal/40 bg-teal-soft/20"
+                        : "border-border bg-surface hover:bg-surface-2"
+                  } ${highlighted ? "ring-1 ring-accent/30" : ""}`}
+                  onMouseEnter={() => setHoverVerse(row.verse)}
+                  onMouseLeave={() => setHoverVerse((h) => (h === row.verse ? null : h))}
+                >
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => goToVerse(row)}
-                    onMouseEnter={() => setHoverVerse(row.verse)}
-                    onMouseLeave={() => setHoverVerse((h) => (h === row.verse ? null : h))}
-                    className={`w-full text-left rounded-[var(--radius)] border p-3 transition-colors ${
-                      active
-                        ? "border-accent bg-orange-50/60"
-                        : hasTag
-                          ? "border-teal/40 bg-teal-soft/20"
-                          : "border-border bg-surface hover:bg-surface-2"
-                    } ${highlighted ? "ring-1 ring-accent/30" : ""}`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") goToVerse(row);
+                    }}
+                    className="w-full text-left cursor-pointer"
                   >
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
                       <span className="text-xs font-semibold text-muted tabular-nums">
@@ -609,40 +615,34 @@ function ReaderPage() {
                       ))}
                     </div>
                     <p className="scripture text-[15px] leading-relaxed select-text">{row.text}</p>
+                  </div>
 
-                    {/* Inline smart suggestions for this verse */}
-                    {rowSmart.length > 0 && (
-                      <div
-                        className="mt-2 flex flex-wrap gap-1.5 pointer-events-auto"
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        <span className="text-[10px] text-muted uppercase tracking-wide self-center">
-                          Suggest
-                        </span>
-                        {rowSmart.slice(0, 6).map((s) => (
-                          <button
-                            key={s.phrase}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedVerse(row.verse);
-                              acceptSmartTag(s.phrase, s.featureIds);
-                            }}
-                            className="rounded-full border border-accent/40 bg-orange-50 px-2 py-0.5 text-[11px] text-accent hover:bg-accent hover:text-accent-fg"
-                            title={
-                              s.priorCount
-                                ? `Used in ${s.priorCount} of your tags`
-                                : "Seed phrase in this verse"
-                            }
-                          >
-                            + {s.phrase}
-                            {s.priorCount > 0 ? ` (${s.priorCount})` : ""}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </button>
+                  {rowSmart.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="text-[10px] text-muted uppercase tracking-wide self-center">
+                        Suggest
+                      </span>
+                      {rowSmart.slice(0, 6).map((s) => (
+                        <button
+                          key={s.phrase}
+                          type="button"
+                          onClick={() => {
+                            setSelectedVerse(row.verse);
+                            acceptSmartTag(s.phrase, s.featureIds);
+                          }}
+                          className="rounded-full border border-accent/40 bg-orange-50 px-2 py-0.5 text-[11px] text-accent hover:bg-accent hover:text-accent-fg"
+                          title={
+                            s.priorCount
+                              ? `Used in ${s.priorCount} of your tags`
+                              : "Seed phrase in this verse"
+                          }
+                        >
+                          + {s.phrase}
+                          {s.priorCount > 0 ? ` (${s.priorCount})` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
