@@ -1,3 +1,4 @@
+import type { PathObject } from "./path-phrases";
 /**
  * Editable route associations: path + span + narrative flags.
  * Wilderness soft-region shape is derived from enabled routes' endpoints.
@@ -38,8 +39,10 @@ export type RouteAssociation = {
   name: string;
   /** Ordered endpoints / via place ids (spine of the route) */
   placeIds: string[];
-  /** Narrative objects/phrases for this association */
+  /** Narrative objects/phrases for this association (ordered beads on the path) */
   objects: string[];
+  /** Rich path objects (went up, came down, places…) with optional t along route */
+  pathObjects?: PathObject[];
   sourceRefs: string[];
   summary: string;
   distance: SpanField;
@@ -67,6 +70,13 @@ export const defaultRouteAssociations: RouteAssociation[] = [
     name: "Mosiah: Nephi → wilderness → down → Zarahemla",
     placeIds: ["nephi", "zarahemla"],
     objects: ["land of Nephi", "wilderness", "came down", "land of Zarahemla"],
+    pathObjects: [
+      { id: "po-nephi", label: "land of Nephi", kind: "place", t: 0, placeId: "nephi" },
+      { id: "po-wild", label: "into the wilderness", kind: "phrase", t: 0.1 },
+      { id: "po-through", label: "through the wilderness", kind: "phrase", t: 0.5 },
+      { id: "po-down", label: "came down", kind: "elevation", t: 0.85 },
+      { id: "po-zara", label: "land of Zarahemla", kind: "place", t: 1, placeId: "zarahemla" },
+    ],
     sourceRefs: ["Omni 1:12–13"],
     summary:
       "Entire journey through wilderness until they came down into Zarahemla. Distance/time unknown.",

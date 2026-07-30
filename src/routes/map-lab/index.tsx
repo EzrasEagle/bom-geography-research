@@ -37,6 +37,7 @@ import {
   wildernessEndpoints,
   elevationMarkersForRoute,
 } from "@/lib/soft-region-geometry";
+import { PATH_PHRASE_SUGGESTIONS, type PathObject } from "@/data/path-phrases";
 import {
   loadRouteAssociations,
   saveRouteAssociations,
@@ -117,6 +118,8 @@ function MapLabPage() {
     to: "zarahemla",
     name: "",
     corridor: "wilderness" as RouteAssociation["corridor"],
+    objects: ["land of Nephi", "into the wilderness", "came down", "land of Zarahemla"] as string[],
+    customObject: "",
   });
 
   // Model-space layout (what we store). Display applies macro rot/scale on top.
@@ -168,15 +171,57 @@ function MapLabPage() {
     });
   }
 
-  function addNewRoute(fromId: string, toId: string, name?: string, corridor: RouteAssociation["corridor"] = "wilderness") {
+  function addNewRoute(
+    fromId: string,
+    toId: string,
+    name?: string,
+    corridor: RouteAssociation["corridor"] = "wilderness",
+    objectLabels?: string[],
+  ) {
     const id = `route-user-${Date.now()}`;
+    const labels =
+      objectLabels && objectLabels.length > 0
+        ? objectLabels
+        : [
+            placeLabel(fromId),
+            corridor === "wilderness" ? "into the wilderness" : corridor,
+            placeLabel(toId),
+          ];
+    // Ensure endpoints present
+    const objs = [...labels];
+    if (!objs.some((o) => o.toLowerCase().includes(placeLabel(fromId).toLowerCase().split(" ")[0] ?? ""))) {
+      objs.unshift(placeLabel(fromId));
+    }
+    if (!objs.some((o) => o.toLowerCase().includes(placeLabel(toId).toLowerCase().split(" ")[0] ?? ""))) {
+      objs.push(placeLabel(toId));
+    }
+    const pathObjects: PathObject[] = objs.map((label, i) => {
+      const lower = label.toLowerCase();
+      let kind: PathObject["kind"] = "phrase";
+      if (lower.includes("up")) kind = "elevation";
+      else if (lower.includes("down")) kind = "elevation";
+      else if (lower.includes("wilderness")) kind = "phrase";
+      else if (lower.includes("lost")) kind = "event";
+      else if (places.some((pl) => pl.name.toLowerCase() === lower || pl.id === lower)) kind = "place";
+      const placeHit = places.find(
+        (pl) => pl.name.toLowerCase() === lower || label.toLowerCase().includes(pl.name.toLowerCase()),
+      );
+      return {
+        id: `${id}-po-${i}`,
+        label,
+        kind: placeHit ? "place" : kind,
+        t: objs.length <= 1 ? 0 : i / (objs.length - 1),
+        placeId: placeHit?.id,
+      };
+    });
     const row: RouteAssociation = {
       id,
       name: name || `${placeLabel(fromId)} → ${placeLabel(toId)}`,
       placeIds: [fromId, toId],
-      objects: [placeLabel(fromId), corridor === "wilderness" ? "wilderness" : corridor, placeLabel(toId)],
+      objects: objs,
+      pathObjects,
       sourceRefs: [],
-      summary: "User-created association",
+      summary: "User-created association — edit path objects, elevation, distance/time",
       distance: {
         quality: "unknown",
         strength: "estimate",
@@ -244,6 +289,71 @@ function MapLabPage() {
       routeId,
       route.elevation.filter((s) => s.id !== segId),
     );
+  }
+
+  function syncObjectsFromPathObjects(routeId: string, pathObjects: PathObject[]) {
+    patchRoute(routeId, {
+      pathObjects,
+      objects: pathObjects.map((o) => o.label),
+    });
+  }
+
+  function addPathObject(routeId: string, label: string) {
+    const route = routeAssocs.find((r) => r.id === routeId);
+    if (!route || !label.trim()) return;
+    const existing = route.pathObjects ?? route.objects.map((o, i) => ({
+      id: `${routeId}-legacy-${i}`,
+      label: o,
+      kind: "phrase" as const,
+      t: route.objects.length <= 1 ? 0 : i / Math.max(1, route.objects.length - 1),
+    }));
+    if (existing.some((o) => o.label.toLowerCase() === label.trim().toLowerCase())) return;
+    const next = [
+      ...existing,
+      {
+        id: `po-${Date.now()}`,
+        label: label.trim(),
+        kind: (label.toLowerCase().includes("up") || label.toLowerCase().includes("down")
+          ? "elevation"
+          : label.toLowerCase().includes("wilderness")
+            ? "phrase"
+            : "phrase") as PathObject["kind"],
+        t: 0.5,
+      },
+    ];
+    // re-spread t
+    const spaced = next.map((o, i) => ({
+      ...o,
+      t: next.length <= 1 ? 0 : i / (next.length - 1),
+    }));
+    syncObjectsFromPathObjects(routeId, spaced);
+  }
+
+  function removePathObject(routeId: string, poId: string) {
+    const route = routeAssocs.find((r) => r.id === routeId);
+    if (!route) return;
+    const existing = route.pathObjects ?? [];
+    const next = existing.filter((o) => o.id !== poId);
+    const spaced = next.map((o, i) => ({
+      ...o,
+      t: next.length <= 1 ? 0 : i / (next.length - 1),
+    }));
+    syncObjectsFromPathObjects(routeId, spaced);
+  }
+
+  function movePathObject(routeId: string, poId: string, dir: -1 | 1) {
+    const route = routeAssocs.find((r) => r.id === routeId);
+    if (!route?.pathObjects) return;
+    const segs = [...route.pathObjects];
+    const i = segs.findIndex((s) => s.id === poId);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= segs.length) return;
+    [segs[i], segs[j]] = [segs[j]!, segs[i]!];
+    const spaced = segs.map((o, idx) => ({
+      ...o,
+      t: segs.length <= 1 ? 0 : idx / (segs.length - 1),
+    }));
+    syncObjectsFromPathObjects(routeId, spaced);
   }
 
   function moveElevSeg(routeId: string, segId: string, dir: -1 | 1) {
@@ -920,6 +1030,51 @@ function MapLabPage() {
               })}
 
 
+            {/* Path object beads on selected/edited route */}
+            {showPaths &&
+              wildernessBandsDisplay
+                .filter((b) => b.id === editRouteId || b.route.pathObjects?.length)
+                .flatMap((band) => {
+                  const pos = band.route.pathObjects ?? [];
+                  return pos.map((po) => {
+                    if (po.t == null && !po.placeId) return null;
+                    let pt = po.placeId && displayLayout[po.placeId]
+                      ? displayLayout[po.placeId]!
+                      : pointAlongPolyline(band.spine, po.t ?? 0.5);
+                    // pointAlongPolyline expects model? spine is display space
+                    return (
+                      <g key={`${band.id}-${po.id}`}>
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={band.id === editRouteId ? 5 : 3.5}
+                          fill="#fffdf8"
+                          stroke={
+                            po.kind === "elevation"
+                              ? "#b45309"
+                              : po.kind === "event"
+                                ? "#b91c1c"
+                                : "#0f766e"
+                          }
+                          strokeWidth={1.5}
+                        />
+                        {(band.id === editRouteId || po.kind === "elevation") && (
+                          <text
+                            x={pt.x + 7}
+                            y={pt.y - 6}
+                            fontSize="8"
+                            fill="#44403c"
+                            className="select-none pointer-events-none"
+                          >
+                            {po.label.length > 22 ? po.label.slice(0, 20) + "…" : po.label}
+                          </text>
+                        )}
+                        <title>{po.label}</title>
+                      </g>
+                    );
+                  });
+                })}
+
             {/* Elevation signals along corridors */}
             {showPaths &&
               elevMarkersDisplay.map((m) => {
@@ -1421,6 +1576,99 @@ function MapLabPage() {
                 placeholder="e.g. Scout party A"
               />
             </label>
+          </div>
+          <div className="space-y-2 border-t border-border pt-3">
+            <div className="text-xs font-semibold text-muted uppercase tracking-wide">
+              Path objects (ordered along the route)
+            </div>
+            <p className="text-[11px] text-muted">
+              Not just endpoints — include phrases like <em>went up</em>, <em>came down</em>,{" "}
+              <em>into the wilderness</em>. Order = sequence along the path.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {newRouteForm.objects.map((o, i) => (
+                <span
+                  key={`${o}-${i}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-chip px-2.5 py-1 text-xs"
+                >
+                  <span className="text-muted tabular-nums">{i + 1}.</span>
+                  {o}
+                  <button
+                    type="button"
+                    className="text-muted hover:text-ink ml-0.5"
+                    onClick={() =>
+                      setNewRouteForm((f) => ({
+                        ...f,
+                        objects: f.objects.filter((_, j) => j !== i),
+                      }))
+                    }
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {PATH_PHRASE_SUGGESTIONS.map((phrase) => {
+                const on = newRouteForm.objects.includes(phrase);
+                return (
+                  <button
+                    key={phrase}
+                    type="button"
+                    className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                      on
+                        ? "border-accent bg-accent/10 text-ink"
+                        : "border-border text-muted hover:border-accent"
+                    }`}
+                    onClick={() =>
+                      setNewRouteForm((f) => ({
+                        ...f,
+                        objects: on
+                          ? f.objects.filter((x) => x !== phrase)
+                          : [...f.objects, phrase],
+                      }))
+                    }
+                  >
+                    {on ? "✓ " : "+ "}
+                    {phrase}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 rounded border border-border px-2 py-1.5 text-sm"
+                placeholder="Custom phrase from the text…"
+                value={newRouteForm.customObject}
+                onChange={(e) => setNewRouteForm((f) => ({ ...f, customObject: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newRouteForm.customObject.trim()) {
+                    e.preventDefault();
+                    setNewRouteForm((f) => ({
+                      ...f,
+                      objects: [...f.objects, f.customObject.trim()],
+                      customObject: "",
+                    }));
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="rounded border border-border px-3 py-1.5 text-sm"
+                onClick={() => {
+                  if (!newRouteForm.customObject.trim()) return;
+                  setNewRouteForm((f) => ({
+                    ...f,
+                    objects: [...f.objects, f.customObject.trim()],
+                    customObject: "",
+                  }));
+                }}
+              >
+                Add phrase
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="rounded-[var(--radius)] bg-accent px-3 py-2 text-sm font-medium text-accent-fg"
@@ -1430,6 +1678,7 @@ function MapLabPage() {
                   newRouteForm.to,
                   newRouteForm.name || undefined,
                   newRouteForm.corridor,
+                  newRouteForm.objects,
                 )
               }
             >
@@ -1837,12 +2086,149 @@ function MapLabPage() {
                   <Badge tone="claim">time {route.time.quality}</Badge>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {route.objects.map((o) => (
-                    <Badge key={o}>{o}</Badge>
+                  {(route.pathObjects ?? route.objects.map((label) => ({ label }))).map((o, i) => (
+                    <Badge key={"label" in o ? `${o.label}-${i}` : i}>
+                      {typeof o === "string" ? o : o.label}
+                    </Badge>
                   ))}
                 </div>
                 {editRouteId === route.id && (
                   <div className="grid gap-2 sm:grid-cols-2 border-t border-border pt-2">
+                    <div className="sm:col-span-2 space-y-2 rounded border border-teal/30 bg-teal-soft/20 p-3">
+                      <div className="text-xs font-semibold text-muted uppercase tracking-wide">
+                        Path objects along this association
+                      </div>
+                      <p className="text-[11px] text-muted">
+                        Ordered beads: places, went up / came down, wilderness, lost, etc. Reorder
+                        with arrows. Map markers use position % when set.
+                      </p>
+                      <ul className="space-y-1.5">
+                        {(route.pathObjects ??
+                          route.objects.map((label, i) => ({
+                            id: `${route.id}-leg-${i}`,
+                            label,
+                            kind: "phrase" as const,
+                            t: route.objects.length <= 1 ? 0 : i / (route.objects.length - 1),
+                          }))).map((po, idx, arr) => (
+                          <li
+                            key={po.id}
+                            className="flex flex-wrap items-center gap-2 text-xs rounded bg-surface border border-border px-2 py-1.5"
+                          >
+                            <span className="text-muted tabular-nums w-5">{idx + 1}.</span>
+                            <input
+                              className="flex-1 min-w-[8rem] rounded border border-border px-2 py-1"
+                              value={po.label}
+                              onChange={(e) => {
+                                const base =
+                                  route.pathObjects ??
+                                  route.objects.map((label, i) => ({
+                                    id: `${route.id}-leg-${i}`,
+                                    label,
+                                    kind: "phrase" as const,
+                                    t: route.objects.length <= 1 ? 0 : i / (route.objects.length - 1),
+                                  }));
+                                const next = base.map((x) =>
+                                  x.id === po.id ? { ...x, label: e.target.value } : x,
+                                );
+                                syncObjectsFromPathObjects(route.id, next);
+                              }}
+                            />
+                            <label className="flex items-center gap-1 text-muted">
+                              @%
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                className="w-14 rounded border border-border px-1 py-0.5"
+                                value={Math.round((po.t ?? 0) * 100)}
+                                onChange={(e) => {
+                                  const base =
+                                    route.pathObjects ??
+                                    route.objects.map((label, i) => ({
+                                      id: `${route.id}-leg-${i}`,
+                                      label,
+                                      kind: "phrase" as const,
+                                      t: route.objects.length <= 1 ? 0 : i / (route.objects.length - 1),
+                                    }));
+                                  const next = base.map((x) =>
+                                    x.id === po.id
+                                      ? { ...x, t: Number(e.target.value) / 100 }
+                                      : x,
+                                  );
+                                  syncObjectsFromPathObjects(route.id, next);
+                                }}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              className="border rounded px-1"
+                              disabled={idx === 0}
+                              onClick={() => movePathObject(route.id, po.id, -1)}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="border rounded px-1"
+                              disabled={idx === arr.length - 1}
+                              onClick={() => movePathObject(route.id, po.id, 1)}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              className="border rounded px-1 text-red-700"
+                              onClick={() => removePathObject(route.id, po.id)}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="flex flex-wrap gap-1">
+                        {PATH_PHRASE_SUGGESTIONS.slice(0, 16).map((phrase) => (
+                          <button
+                            key={phrase}
+                            type="button"
+                            className="rounded-full border border-border px-2 py-0.5 text-[11px] hover:border-accent"
+                            onClick={() => addPathObject(route.id, phrase)}
+                          >
+                            + {phrase}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          id={`custom-po-${route.id}`}
+                          className="flex-1 rounded border border-border px-2 py-1 text-xs"
+                          placeholder="Custom path object from text…"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const v = (e.target as HTMLInputElement).value.trim();
+                              if (v) {
+                                addPathObject(route.id, v);
+                                (e.target as HTMLInputElement).value = "";
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="rounded border border-border px-2 py-1 text-xs"
+                          onClick={() => {
+                            const el = document.getElementById(
+                              `custom-po-${route.id}`,
+                            ) as HTMLInputElement | null;
+                            if (el?.value.trim()) {
+                              addPathObject(route.id, el.value.trim());
+                              el.value = "";
+                            }
+                          }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
                     <div className="text-xs space-y-1.5 sm:col-span-2 rounded bg-surface-2/60 p-2">
                       <div className="font-semibold text-muted uppercase tracking-wide">
                         Layout-derived (moves with map)
