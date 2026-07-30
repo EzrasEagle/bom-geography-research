@@ -89,6 +89,10 @@ export const placeTaxonomy: Record<
 > = {
   nephi: { layer: "region", role: "land", elevationBand: "highland" },
   zarahemla: { layer: "settlement", role: "city", elevationBand: "lowland" },
+  "zarahemla-land": { layer: "region", role: "land", elevationBand: "lowland" },
+  "city-nephi": { layer: "settlement", role: "city", elevationBand: "highland" },
+  amnihu: { layer: "topo", role: "hill", elevationBand: "lowland" },
+  "east-sea-cluster": { layer: "region", role: "land", elevationBand: "coastal" },
   sidon: { layer: "hydro", role: "river", elevationBand: "unknown" },
   "bountiful-nw": { layer: "region", role: "land", elevationBand: "unknown" },
   desolation: { layer: "region", role: "land", elevationBand: "unknown" },

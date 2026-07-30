@@ -6,6 +6,8 @@
 import type { AssociationKind, AssociationLeg, SpanQuality } from "@/data/suggested-associations";
 import type { ChronologySpan } from "@/data/chronology";
 import { chronologyForChapter, unknownChronology } from "@/data/chronology";
+import type { ClosenessStrength, DistancePreset, DistanceSpec, SpatialPlacement } from "@/data/spatial-distance";
+import { distanceSpecLabel, presetToDistanceSpec } from "@/data/spatial-distance";
 
 export type SpanField = { quality: SpanQuality; value?: string; note?: string };
 
@@ -19,6 +21,8 @@ export type UserAssociation = {
   legs: AssociationLeg[];
   pathDistance: SpanField;
   pathTime: SpanField;
+  /** Structured distance for Map Lab (presets beat raw unknown) */
+  spatialDistance?: DistanceSpec;
   /** When this association holds historically (chapter heading default) */
   chronology: ChronologySpan;
   relatedRefs: { ref: string; note: string }[];
@@ -139,6 +143,66 @@ export function spanLabel(s: { quality: SpanQuality; value?: string; note?: stri
   if (s.quality === "stated") return "Stated";
   if (s.quality === "approximate") return "Approximate";
   return s.quality;
+}
+
+export function associationDistanceLabel(a: UserAssociation): string {
+  if (a.spatialDistance) return distanceSpecLabel(a.spatialDistance);
+  return spanLabel(a.pathDistance);
+}
+
+/** Convert user associations → lightweight map edges for layout/conflict */
+export function associationsAsMapEdges(rows: UserAssociation[]): {
+  id: string;
+  from: string;
+  to: string;
+  type: "adjacent" | "days_travel" | "same_region" | "river_between";
+  strength: "hard" | "soft";
+  value?: string;
+  sourceVerse?: string;
+  maxDayFraction: number;
+  placement?: SpatialPlacement;
+  notes?: string;
+}[] {
+  const out: ReturnType<typeof associationsAsMapEdges> = [];
+  for (const a of rows) {
+    for (let i = 0; i < a.legs.length; i++) {
+      const leg = a.legs[i]!;
+      const spatial =
+        a.spatialDistance ??
+        (leg.distancePreset
+          ? presetToDistanceSpec(leg.distancePreset, {
+              closeness: leg.closeness,
+              placement: leg.placement,
+              maxDayFraction: leg.maxDayFraction,
+              value: leg.distance.value,
+              note: leg.distance.note,
+            })
+          : undefined);
+      const closeness = spatial?.closeness ?? (leg.kind === "path" ? "soft" : "hard");
+      const maxDay = spatial?.maxDayFraction ?? 1;
+      const type =
+        leg.kind === "river"
+          ? "river_between"
+          : leg.kind === "same_region"
+            ? "same_region"
+            : maxDay <= 1
+              ? "adjacent"
+              : "days_travel";
+      out.push({
+        id: `ua-${a.id}-${i}`,
+        from: leg.fromFeatureId,
+        to: leg.toFeatureId,
+        type,
+        strength: closeness === "hard" ? "hard" : "soft",
+        value: spatial ? distanceSpecLabel(spatial) : leg.viaPhrase,
+        sourceVerse: `${a.book} ${a.chapter}:${a.verse}`,
+        maxDayFraction: maxDay,
+        placement: spatial?.placement ?? leg.placement,
+        notes: spatial?.note ?? a.notes,
+      });
+    }
+  }
+  return out;
 }
 
 export function updateAssociation(

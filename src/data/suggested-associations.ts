@@ -25,6 +25,13 @@ export type AssociationLeg = {
   distance: { quality: SpanQuality; value?: string; note?: string };
   time: { quality: SpanQuality; value?: string; note?: string };
   elevation?: "up" | "down" | "level" | "unknown";
+  /** Spatial distance preset (Map Lab + model tests) */
+  distancePreset?: import("./spatial-distance").DistancePreset;
+  placement?: import("./spatial-distance").SpatialPlacement;
+  /** hard = model should not separate these by foreign land/mountain without accounting for text */
+  closeness?: import("./spatial-distance").ClosenessStrength;
+  /** Max day-walk fraction for layout / conflict */
+  maxDayFraction?: number;
 };
 
 export type AssociationSuggestion = {
@@ -328,21 +335,53 @@ export const associationSuggestions: AssociationSuggestion[] = [
         toFeatureId: "sidon",
         viaPhrase: "east of the river Sidon",
         kind: "proximity",
-        distance: { quality: "unknown", note: "east of = directional proximity" },
+        distance: {
+          quality: "approximate",
+          value: "across Sidon (east bank)",
+          note: "Directional: east of river — same theater, river between",
+        },
         time: { quality: "unknown" },
+        distancePreset: "across_feature",
+        placement: "east_of",
+        closeness: "hard",
+        maxDayFraction: 0.5,
       },
       {
         fromFeatureId: "sidon",
-        toFeatureId: "zarahemla",
+        toFeatureId: "zarahemla-land",
         viaPhrase: "which ran by the land of Zarahemla",
         kind: "river",
-        distance: { quality: "unknown", note: "by = situating adjacency" },
+        distance: {
+          quality: "approximate",
+          value: "by (adjacent)",
+          note: "Sidon bounds/runs by land of Zarahemla",
+        },
         time: { quality: "unknown" },
+        distancePreset: "by_adjacent",
+        placement: "by",
+        closeness: "hard",
+        maxDayFraction: 0.25,
+      },
+      {
+        fromFeatureId: "amnihu",
+        toFeatureId: "zarahemla-land",
+        viaPhrase: "battle locale by Zarahemla / east of Sidon",
+        kind: "proximity",
+        distance: {
+          quality: "approximate",
+          value: "border of land of Zarahemla (same scene)",
+          note: "Co-mentioned battle with Sidon by Zarahemla — Amnihu must sit at/near Zarahemla land on east bank; models that put Amnihu far outside Zarahemla theater fail this hard constraint.",
+        },
+        time: { quality: "unknown" },
+        distancePreset: "border_adjacent",
+        placement: "on_border",
+        closeness: "hard",
+        maxDayFraction: 0.35,
       },
     ],
     relatedRefs: [
       { ref: "Alma 2:15", note: "Hill Amnihu east of Sidon; Sidon by Zarahemla" },
-      { ref: "Alma 2:17–19", note: "Battle on hill Amnihu" },
+      { ref: "Alma 2:17–19", note: "Battle on hill Amnihu — same scene" },
     ],
   },
   {

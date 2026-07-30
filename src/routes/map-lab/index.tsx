@@ -21,7 +21,12 @@ import {
   type ObjectLayer,
 } from "@/data/object-taxonomy";
 import { lookupLexicon } from "@/data/lexicon";
-import { loadAssociations, spanLabel } from "@/lib/user-associations";
+import {
+  associationDistanceLabel,
+  associationsAsMapEdges,
+  loadAssociations,
+  spanLabel,
+} from "@/lib/user-associations";
 import {
   DEFAULT_DAY_PIXELS,
   isSoftRegionFeature,
@@ -580,7 +585,24 @@ function MapLabPage() {
   );
 
   const edges = useMemo(() => {
-    return seedConstraints.map((c) => {
+    const userEdges = associationsAsMapEdges(loadAssociations()).map((u) => ({
+      id: u.id,
+      from: u.from,
+      to: u.to,
+      type: u.type as (typeof seedConstraints)[0]["type"],
+      value: u.value,
+      sourceVerse: u.sourceVerse,
+      notes: u.notes,
+      strength: u.strength,
+      maxDayFraction: u.maxDayFraction,
+    }));
+
+    const combined = [
+      ...seedConstraints.map((c) => ({ ...c, maxDayFraction: c.type === "adjacent" ? 0.5 : 2 })),
+      ...userEdges,
+    ];
+
+    return combined.map((c) => {
       const o = micro[c.id] ?? {};
       const enabled = o.enabled !== false;
       const strength = o.strength ?? c.strength;
@@ -588,6 +610,9 @@ function MapLabPage() {
       let dayMiles = macro.dayMilesOpen;
       if (terrain === "mountain") dayMiles = macro.dayMilesMountain;
       if (terrain === "jungle") dayMiles = macro.dayMilesJungle;
+
+      const maxDayFraction = (c as { maxDayFraction?: number }).maxDayFraction ?? 1;
+      const maxPx = dayPixels * maxDayFraction;
 
       let color = strength === "hard" ? "#1e3a5f" : "#a8a29e";
       let conflict = false;
@@ -603,20 +628,33 @@ function MapLabPage() {
         conflict = true;
       }
 
-      // Distance-based soft warning: very stretched hard adjacent edges
+      // Hard near edges: stretched beyond maxDayFraction of a day-walk → conflict
       const a = displayLayout[c.from];
       const b = displayLayout[c.to];
-      if (a && b && enabled && strength === "hard" && c.type === "adjacent") {
+      if (a && b && enabled && strength === "hard") {
         const dist = Math.hypot(a.x - b.x, a.y - b.y);
-        if (dist > 200) {
+        const limit =
+          c.type === "adjacent" || maxDayFraction <= 1 ? Math.max(maxPx, 80) : 220;
+        if (dist > limit) {
           color = "#b45309";
           conflict = true;
         }
       }
 
-      return { ...c, enabled, strength, terrain, days: o.days, dayMiles, color, conflict, note: o.note };
+      return {
+        ...c,
+        enabled,
+        strength,
+        terrain,
+        days: o.days,
+        dayMiles,
+        color,
+        conflict,
+        note: o.note ?? (c as { notes?: string }).notes,
+        maxDayFraction,
+      };
     });
-  }, [macro, micro, displayLayout]);
+  }, [macro, micro, displayLayout, dayPixels, assocCount]);
 
   const selected = edges.find((e) => e.id === selectedEdge) ?? edges[0];
   const redCount = edges.filter((e) => e.conflict && e.enabled).length;
@@ -666,7 +704,7 @@ function MapLabPage() {
     setAssocForObject(
       hit.map((a) => ({
         title: a.title,
-        dist: spanLabel(a.pathDistance),
+        dist: associationDistanceLabel(a),
         time: spanLabel(a.pathTime),
       })),
     );

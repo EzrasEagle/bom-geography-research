@@ -578,6 +578,10 @@ export const places: PlaceNode[] = [
 
 /** Seed constraints (internal). Conflicts intentionally possible when day-scale changes. */
 export const constraints: GeoConstraint[] = [
+  { id: "c-amnihu-sidon", from: "amnihu", to: "sidon", type: "adjacent", value: "east of Sidon (hard near)", sourceVerse: "Alma 2:15", strength: "hard", notes: "Directional bank constraint" },
+  { id: "c-amnihu-zarahemla-land", from: "amnihu", to: "zarahemla-land", type: "adjacent", value: "border / same theater as land of Zarahemla", sourceVerse: "Alma 2:15", strength: "hard", notes: "Co-mention + Sidon by Zarahemla ⇒ Amnihu not across foreign land" },
+  { id: "c-sidon-zarahemla-land", from: "sidon", to: "zarahemla-land", type: "river_between", value: "Sidon ran by land of Zarahemla", sourceVerse: "Alma 2:15", strength: "hard" },
+
   { id: "c-east-sea-lehi-morianton", from: "lehi-city", to: "morianton", type: "same_region", value: "east-sea city chain", sourceVerse: "Alma 50–51", strength: "soft" },
   { id: "c-east-sea-morianton-mulek", from: "morianton", to: "mulek", type: "same_region", value: "east-sea city chain", sourceVerse: "Alma 50–52", strength: "soft" },
   { id: "c-city-land-nephi", from: "city-nephi", to: "nephi", type: "adjacent", value: "city within land of Nephi", sourceVerse: "Mosiah 7–22", strength: "soft" },

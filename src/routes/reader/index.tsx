@@ -44,6 +44,7 @@ import {
   removeLeg,
   saveAssociations,
   spanLabel,
+  associationDistanceLabel,
   updateAssociation,
   type UserAssociation,
 } from "@/lib/user-associations";
@@ -53,6 +54,13 @@ import {
   formatChronologySpan,
   type ChronologySpan,
 } from "@/data/chronology";
+import {
+  DISTANCE_PRESETS,
+  presetFromRelation,
+  presetToDistanceSpec,
+  type DistancePreset,
+  type DistanceSpec,
+} from "@/data/spatial-distance";
 import { linksForRiver, riverById } from "@/data/hydro-relations";
 import {
   classifyNode,
@@ -149,6 +157,8 @@ function ReaderPage() {
     "hill" | "city" | "land" | "river" | "wilderness" | "other"
   >("hill");
   const [userPlaces, setUserPlaces] = useState<UserPlace[]>([]);
+  const [distancePreset, setDistancePreset] = useState<DistancePreset>("unknown");
+  const [closenessHard, setClosenessHard] = useState(true);
   const [modelForked, setModelForked] = useState(false);
   const [showSeedInPanel, setShowSeedInPanel] = useState(true);
   const [showYoursInPanel, setShowYoursInPanel] = useState(true);
@@ -580,6 +590,11 @@ function ReaderPage() {
             ? "same_region"
             : "proximity",
     );
+    {
+      const inf = presetFromRelation(rel.relation);
+      setDistancePreset(inf.preset);
+      setClosenessHard(true);
+    }
     if (fromId) setHubId(fromId);
     setSteps([]);
     if (fromId) addStep(rel.subjectPhrase, fromId);
@@ -709,10 +724,22 @@ function ReaderPage() {
       base.pathDistance.quality !== "unknown"
         ? base.pathDistance
         : parsedDist ?? base.pathDistance;
+    const leg0 = base.legs[0];
+    const spatialFromLegs =
+      leg0?.distancePreset
+        ? presetToDistanceSpec(leg0.distancePreset, {
+            closeness: leg0.closeness,
+            placement: leg0.placement,
+            maxDayFraction: leg0.maxDayFraction,
+            value: pathDistance.value ?? leg0.distance.value,
+            note: leg0.distance.note,
+          })
+        : undefined;
     const row: UserAssociation = {
       ...base,
       pathTime,
       pathDistance,
+      spatialDistance: spatialFromLegs,
       legs: base.legs.map((leg) => ({
         ...leg,
         time:
@@ -777,6 +804,18 @@ function ReaderPage() {
   function buildConnection() {
     if (!current || steps.length === 0) return;
 
+    const spatial: DistanceSpec = presetToDistanceSpec(distancePreset, {
+      closeness: closenessHard ? "hard" : "soft",
+      value:
+        manualDistQuality !== "auto" && manualDistValue.trim()
+          ? manualDistValue.trim()
+          : undefined,
+      note:
+        distancePreset === "same_scene" || distancePreset === "border_adjacent"
+          ? "Text situates these in one locale — models must keep them near (same land theater)."
+          : undefined,
+    });
+
     const time =
       manualTimeQuality === "auto"
         ? selectionTime ??
@@ -787,14 +826,20 @@ function ReaderPage() {
             note: "Set in Association Builder",
           };
     const distance =
-      manualDistQuality === "auto"
-        ? selectionDistance ??
-          ({ quality: "unknown" as const, note: "Not stated or not recognized" })
-        : {
-            quality: manualDistQuality,
-            value: manualDistValue.trim() || undefined,
-            note: "Set in Association Builder",
-          };
+      distancePreset !== "unknown"
+        ? {
+            quality: spatial.quality,
+            value: spatial.value ?? DISTANCE_PRESETS.find((p) => p.id === distancePreset)?.label,
+            note: spatial.note,
+          }
+        : manualDistQuality === "auto"
+          ? selectionDistance ??
+            ({ quality: "unknown" as const, note: "Not stated or not recognized" })
+          : {
+              quality: manualDistQuality,
+              value: manualDistValue.trim() || undefined,
+              note: "Set in Association Builder",
+            };
 
     let legs: UserAssociation["legs"] = [];
     let title = "";
@@ -901,6 +946,16 @@ function ReaderPage() {
 
     if (legs.length === 0) return;
 
+    // Stamp spatial distance on every leg for Map Lab
+    legs = legs.map((leg) => ({
+      ...leg,
+      distance: { ...distance },
+      distancePreset: spatial.preset,
+      placement: spatial.placement,
+      closeness: spatial.closeness,
+      maxDayFraction: spatial.maxDayFraction,
+    }));
+
     if (editingAssocId) {
       const next = userAssocs.map((a) =>
         a.id === editingAssocId
@@ -932,6 +987,7 @@ function ReaderPage() {
         legs,
         pathDistance: distance,
         pathTime: time,
+        spatialDistance: spatial,
         chronology: chrono,
         relatedRefs: [],
         tags: [mode, ...steps.map((s) => s.label)],
@@ -1789,6 +1845,59 @@ function ReaderPage() {
             )}
 
             <div className="space-y-2 rounded border border-border p-2 text-xs">
+              <div className="font-medium">Closeness preset (map + model tests)</div>
+              <p className="text-[10px] text-muted leading-relaxed">
+                Prefer presets from the text (by / east of / same battle) over inventing miles.
+                <strong> Hard</strong> closeness: a model that separates these by another land/city
+                without the named feature should fail.
+              </p>
+              <select
+                value={distancePreset}
+                onChange={(e) => setDistancePreset(e.target.value as DistancePreset)}
+                className="w-full rounded border border-border bg-surface px-1.5 py-1"
+              >
+                {DISTANCE_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-muted">
+                {DISTANCE_PRESETS.find((p) => p.id === distancePreset)?.description}
+              </p>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={closenessHard}
+                  onChange={(e) => setClosenessHard(e.target.checked)}
+                />
+                Hard constraint (must stay near / same theater)
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {(
+                  [
+                    ["same_scene", "Same scene"],
+                    ["by_adjacent", "By / adjacent"],
+                    ["border_adjacent", "On border"],
+                    ["across_feature", "East/west of river"],
+                  ] as const
+                ).map(([id, lab]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      setDistancePreset(id);
+                      setClosenessHard(true);
+                    }}
+                    className="rounded-full border border-border px-2 py-0.5 hover:border-teal"
+                  >
+                    {lab}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded border border-border p-2 text-xs">
               <div className="font-medium">Time & distance</div>
               <p className="text-[10px] text-muted leading-relaxed">
                 Auto reads phrases like “space of many days” from the verse/steps. Override anytime.
@@ -2027,9 +2136,12 @@ function ReaderPage() {
                 <div key={a.id} className="text-xs border border-border rounded p-2 space-y-1">
                   <div className="font-medium">{a.title}</div>
                   <div className="flex flex-wrap gap-1">
-                    <Badge tone={a.pathDistance.quality === "unknown" ? "claim" : "teal"}>
-                      Dist: {spanLabel(a.pathDistance)}
+                    <Badge tone={a.pathDistance.quality === "unknown" && !a.spatialDistance ? "claim" : "teal"}>
+                      Dist: {associationDistanceLabel(a)}
                     </Badge>
+                    {a.spatialDistance?.closeness === "hard" && (
+                      <Badge tone="accent">hard near</Badge>
+                    )}
                     <Badge tone={a.pathTime.quality === "unknown" ? "claim" : "teal"}>
                       Travel time: {spanLabel(a.pathTime)}
                     </Badge>
