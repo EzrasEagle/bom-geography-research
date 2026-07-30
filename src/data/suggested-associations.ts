@@ -321,8 +321,6 @@ export const associationSuggestions: AssociationSuggestion[] = [
     ],
   },
   {
-
-  {
     id: "sug-alma-2-amlicite-minon",
     book: "Alma",
     chapter: 2,
