@@ -1,0 +1,76 @@
+id,ref,book,chapter,verse,fact,features,relation,strength,pass_a_ids
+gp-1ne-18-23,"1 Nephi 18:23",1 Nephi,18,23,"Arrived at promised land; went forth upon the land",landing,location,hard,
+gp-1ne-18-24,"1 Nephi 18:24",1 Nephi,18,24,"Tilled earth; seeds grew exceedingly",landing,other,soft,
+gp-1ne-18-25,"1 Nephi 18:25",1 Nephi,18,25,"Beasts in forests; ore of all kinds in the land",landing,other,soft,
+gp-2ne-5-7,"2 Nephi 5:7",2 Nephi,5,7,"Journeyed many days in the wilderness",landing|nephi|wilderness,travel,soft,
+gp-2ne-5-8,"2 Nephi 5:8",2 Nephi,5,8,"Called the name of the place Nephi",nephi,location,hard,
+gp-omni-12,"Omni 1:12",Omni,1,12,"Mosiah warned to flee out of land of Nephi",nephi,political,hard,
+gp-omni-13a,"Omni 1:13",Omni,1,13,"Departed into the wilderness",nephi|wilderness,travel,hard,mc-map-16-wilderness-strip
+gp-omni-13b,"Omni 1:13",Omni,1,13,"Came down into the land of Zarahemla",zarahemla|wilderness,elevation,hard,mc-map-09-zarahemla-grijalva|mc-map-07-nephi-highlands
+gp-omni-14,"Omni 1:14",Omni,1,14,"Discovered a people called the people of Zarahemla",zarahemla,location,hard,
+gp-omni-16,"Omni 1:16",Omni,1,16,"People of Zarahemla came out from Jerusalem at captivity; brought no records",zarahemla,other,soft,
+gp-omni-20,"Omni 1:20",Omni,1,20,"Large stone with engravings; Coriantumr lived with people of Zarahemla",zarahemla|desolation,other,soft,mc-map-18-desolation-north-neck
+gp-omni-27,"Omni 1:27",Omni,1,27,"A number went up into the wilderness to return to land of Nephi",zarahemla|wilderness|nephi,elevation,hard,
+gp-omni-28,"Omni 1:28",Omni,1,28,"Contentions; majority slain; remnant returned to Zarahemla",nephi|zarahemla,travel,soft,
+gp-mos-7-4,"Mosiah 7:4",Mosiah,7,4,"Wandered forty days in wilderness seeking land of Nephi",zarahemla|nephi|wilderness,distance,hard,mc-map-16-wilderness-strip
+gp-mos-7-5,"Mosiah 7:5",Mosiah,7,5,"Pitched tents on hill north of land of Shilom",shilom|nephi,adjacency,hard,
+gp-mos-8-7,"Mosiah 8:7",Mosiah,8,7,"Limhi sent 43 into wilderness to find Zarahemla",nephi|zarahemla|wilderness,travel,hard,
+gp-mos-8-8,"Mosiah 8:8",Mosiah,8,8,"Lost in wilderness; found land of many waters; bones; ruins",desolation|wilderness,location,hard,mc-map-18-desolation-north-neck
+gp-mos-8-9,"Mosiah 8:9",Mosiah,8,9,"Brought 24 gold plates",desolation,other,soft,
+gp-mos-21-25,"Mosiah 21:25",Mosiah,21,25,"Parallel lost expedition narrative",desolation|nephi,travel,hard,
+gp-mos-22-11,"Mosiah 22:11",Mosiah,22,11,"Limhi people took wilderness course around land of Shilom/Shemlon by night",nephi|shilom|shemlon|wilderness,travel,hard,
+gp-mos-22-13,"Mosiah 22:13",Mosiah,22,13,"Joined people of Zarahemla",zarahemla,location,hard,
+gp-mos-23-3,"Mosiah 23:3",Mosiah,23,3,"Fled eight days into wilderness",nephi|helam|wilderness,distance,hard,
+gp-mos-23-4,"Mosiah 23:4",Mosiah,23,4,"Land of pure water; called Helam",helam,location,hard,
+gp-mos-24-20,"Mosiah 24:20",Mosiah,24,20,"Pitched tents in valley of Alma after flight",helam|wilderness,travel,soft,
+gp-mos-24-25,"Mosiah 24:25",Mosiah,24,25,"Arrived in Zarahemla after twelve days in wilderness",helam|zarahemla|wilderness,distance,hard,
+gp-alma-2-15,"Alma 2:15",Alma,2,15,"Battle on hill Amnihu east of river Sidon",sidon|zarahemla,hydrology,hard,mc-map-12-alma2-microtopo|mc-map-11-sidon-grijalva
+gp-alma-2-17,"Alma 2:17",Alma,2,17,"Contended with Amlicites on hill east of Sidon",sidon,direction,hard,
+gp-alma-2-20,"Alma 2:20",Alma,2,20,"Pitched in valley of Gideon",gideon,location,hard,mc-map-13-gideon-east
+gp-alma-2-34,"Alma 2:34",Alma,2,34,"Cleared the waters of Sidon; fled to wilderness of Hermounts",sidon,hydrology,hard,
+gp-alma-2-35,"Alma 2:35",Alma,2,35,"Bodies cast into waters of Sidon; carried to the sea",sidon|sea-west,hydrology,soft,
+gp-alma-6-7,"Alma 6:7",Alma,6,7,"Valley of Gideon east of river Sidon",gideon|sidon|zarahemla,direction,hard,mc-map-13-gideon-east
+gp-alma-8-3,"Alma 8:3",Alma,8,3,"Alma to Melek west of river Sidon",melek|sidon,direction,hard,mc-map-14-melek-west
+gp-alma-8-6,"Alma 8:6",Alma,8,6,"Three days journey on north of Melek to Ammonihah",melek|ammonihah,distance,hard,
+gp-alma-16-6,"Alma 16:6",Alma,16,6,"Lamanites beyond borders of Manti in south wilderness by head of Sidon",manti|sidon|wilderness,hydrology,hard,mc-map-15-manti-head-sidon
+gp-alma-16-7,"Alma 16:7",Alma,16,7,"Zoram crossed Sidon with armies; marched beyond borders of Manti",sidon|manti,travel,hard,
+gp-alma-22-27a,"Alma 22:27",Alma,22,27,"King’s land divided from east to west sea",sea-east|sea-west|nephi,coast,hard,mc-map-03-sea-west|mc-map-04-sea-east
+gp-alma-22-27b,"Alma 22:27",Alma,22,27,"Narrow strip of wilderness from east to west sea",wilderness|sea-east|sea-west,boundary,hard,mc-map-16-wilderness-strip
+gp-alma-22-27c,"Alma 22:27",Alma,22,27,"Wilderness borders ran by head of river Sidon",sidon|wilderness|manti,hydrology,hard,
+gp-alma-22-28,"Alma 22:28",Alma,22,28,"Lamanites more numerous in wilderness west/east by seashore; also in south",wilderness|sea-west|sea-east,coast,soft,
+gp-alma-22-29,"Alma 22:29",Alma,22,29,"Nephites possessed land northward of narrow strip; even to land northward",bountiful-nw|zarahemla,direction,hard,
+gp-alma-22-30,"Alma 22:30",Alma,22,30,"Land of Desolation so far northward; bones; discovered by people of Zarahemla",desolation,location,hard,mc-map-18-desolation-north-neck
+gp-alma-22-31,"Alma 22:31",Alma,22,31,"Land on south was called Bountiful; land on north Desolation",bountiful-nw|desolation,direction,hard,mc-map-17-bountiful-south-neck
+gp-alma-22-32a,"Alma 22:32",Alma,22,32,"It was only the distance of a day and a half’s journey for a Nephite on the line Bountiful/Desolation from east to west sea",narrow-neck|bountiful-nw|desolation|sea-east|sea-west,distance,hard,mc-map-06-day-half-neck|mc-map-01-narrow-neck
+gp-alma-22-32b,"Alma 22:32",Alma,22,32,"Land of Nephi and land of Zarahemla nearly surrounded by water; small neck of land between land northward and land southward",narrow-neck|nephi|zarahemla,boundary,hard,mc-map-05-nearly-surrounded
+gp-alma-22-33,"Alma 22:33",Alma,22,33,"Nephites had inhabited Bountiful from east to west sea; hemmed in Lamanites on south",bountiful-nw|sea-east|sea-west,boundary,hard,
+gp-alma-22-34,"Alma 22:34",Alma,22,34,"Had fortified to keep Lamanites from overrunning northward",bountiful-nw|narrow-neck,boundary,hard,mc-map-02-narrow-pass
+gp-alma-27-22,"Alma 27:22",Alma,27,22,"Land of Jershon east by the sea; south of land of Bountiful",jershon|sea-east|bountiful-nw,coast,hard,mc-map-19-jershon-east-sea
+gp-alma-27-24,"Alma 27:24",Alma,27,24,"Armies between Jershon and land of Nephi",jershon|nephi,boundary,soft,
+gp-alma-43-22,"Alma 43:22",Alma,43,22,"Lamanites toward land of Manti in south wilderness",manti|wilderness,direction,hard,
+gp-alma-43-27,"Alma 43:27",Alma,43,27,"Moroni concealed army in valley by bank of river Sidon west",sidon|manti,hydrology,hard,
+gp-alma-43-32,"Alma 43:32",Alma,43,32,"Part of army in valley on west/east of river Sidon",sidon,hydrology,hard,
+gp-alma-50-8,"Alma 50:8",Alma,50,8,"Land of Nephi ran in straight course from east sea to west",nephi|sea-east|sea-west,boundary,soft,
+gp-alma-50-11,"Alma 50:11",Alma,50,11,"Fortifications from east sea to west sea",sea-east|sea-west|bountiful-nw,boundary,hard,
+gp-alma-50-13,"Alma 50:13",Alma,50,13,"Began city of Moroni by east sea south",sea-east,coast,hard,mc-map-20-east-sea-cities
+gp-alma-50-14,"Alma 50:14",Alma,50,14,"City of Nephihah between Moroni and Aaron",sea-east,adjacency,soft,
+gp-alma-50-15,"Alma 50:15",Alma,50,15,"Cities of Lehi and Morianton on borders by seashore",lehi-city|morianton|sea-east,coast,hard,mc-map-20-east-sea-cities
+gp-alma-50-29,"Alma 50:29",Alma,50,29,"Morianton people flee to land northward",morianton|desolation|narrow-neck,travel,hard,mc-map-02-narrow-pass
+gp-alma-50-34,"Alma 50:34",Alma,50,34,"Teancum heads them by the narrow pass which led by the sea into land northward",narrow-neck|sea-east,boundary,hard,mc-map-02-narrow-pass
+gp-alma-51-26,"Alma 51:26",Alma,51,26,"Amalickiah took many cities on east borders by seashore including Mulek",mulek|sea-east,coast,hard,
+gp-alma-52-9,"Alma 52:9",Alma,52,9,"Fortify land Bountiful; keep the narrow pass which led into land northward",bountiful-nw|narrow-neck,boundary,hard,
+gp-alma-63-5,"Alma 63:5",Alma,63,5,"Hagoth built ship on borders of land Bountiful by land Desolation; launched into west sea by the narrow neck",sea-west|narrow-neck|bountiful-nw|desolation,coast,hard,mc-map-21-hagoth-west-port
+gp-hel-3-3,"Helaman 3:3",Helaman,3,3,"Many departed out of Zarahemla into land northward",zarahemla|desolation,travel,hard,
+gp-hel-3-8,"Helaman 3:8",Helaman,3,8,"Spread from sea south to sea north, sea west to sea east",sea-west|sea-east,coast,soft,
+gp-hel-4-7,"Helaman 4:7",Helaman,4,7,"Fortification line from west sea to east; Bountiful retained",sea-west|sea-east|bountiful-nw,boundary,hard,
+gp-morm-2-3,"Mormon 2:3",Mormon,2,3,"Lamanites came down against Nephites; retreat",zarahemla,elevation,soft,
+gp-morm-2-6,"Mormon 2:6",Mormon,2,6,"Took flight to land of Joshua by west sea borders",joshua|sea-west,coast,hard,
+gp-morm-2-16,"Mormon 2:16",Mormon,2,16,"Battle by Angola / borders of Desolation",desolation,location,hard,
+gp-morm-2-29,"Mormon 2:29",Mormon,2,29,"Treaty: Nephites land northward; Lamanites land southward",narrow-neck|desolation,boundary,hard,mc-map-01-narrow-neck
+gp-morm-3-5,"Mormon 3:5",Mormon,3,5,"Gather to land of Desolation to a city by the narrow pass which led into land southward",desolation|narrow-neck,boundary,hard,mc-map-02-narrow-pass
+gp-morm-6-2,"Mormon 6:2",Mormon,6,2,"Wrote to Lamanite king to gather at land of Cumorah",cumorah,location,hard,mc-map-22-cumorah-vigia
+gp-morm-6-4,"Mormon 6:4",Mormon,6,4,"Land of Cumorah; many waters, rivers, fountains",cumorah,hydrology,hard,
+gp-morm-6-6,"Mormon 6:6",Mormon,6,6,"Hid records in hill Cumorah except plates given to Moroni",cumorah,location,hard,
+gp-ether-9-3,"Ether 9:3",Ether,9,3,"Omer fled to Ablom by seashore east; hill east of Shim / Cumorah region",cumorah|sea-east,coast,soft,
+gp-ether-10-20,"Ether 10:20",Ether,10,20,"Built great city by narrow neck; sea east and west; animals in land southward",narrow-neck|sea-east|sea-west,boundary,hard,mc-map-24-jaredite-great-city-neck
+gp-ether-15-11,"Ether 15:11",Ether,15,11,"Hill Ramah same as hill Cumorah of Nephites",cumorah,location,hard,mc-map-22-cumorah-vigia

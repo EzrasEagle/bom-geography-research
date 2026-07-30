@@ -5,6 +5,9 @@ import {
   mesoamericaPlaces,
   mesoamericaVerseClaims,
   mesoClaimStats,
+  getPassA,
+  getPassB,
+  mesoMapCorrespondences,
 } from "@/data/models/mesoamerica-pack";
 
 /** Typed mirror of data/catalog + research frontmatter. Keep in sync when cataloging. */
@@ -557,6 +560,7 @@ export const stats = {
 
 /** Full Sorenson-style pack (G3) for model detail + Map Lab */
 export function getMesoamericaPack() {
+  const passA = getPassA();
   return {
     meta: MESOAMERICA_META,
     places: mesoamericaPlaces,
@@ -564,6 +568,9 @@ export function getMesoamericaPack() {
     assumptions: mesoamericaAssumptions,
     constraints: mesoamericaConstraints,
     stats: mesoClaimStats(),
+    passA,
+    passB: getPassB(),
+    mapCorrespondences: mesoMapCorrespondences,
   };
 }
 

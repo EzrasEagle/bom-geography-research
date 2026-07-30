@@ -1,3 +1,16 @@
+import {
+  MESO_PASS_A_META,
+  mesoMapCorrespondences,
+  passAConstraints,
+  passAStats,
+} from "@/data/models/mesoamerica-pass-a";
+import {
+  MESO_PASS_B_META,
+  getPassB,
+  mesoGeoPassages,
+  passBStats,
+} from "@/data/models/mesoamerica-pass-b";
+
 /**
  * Limited Mesoamerica (Sorenson-style) — Model Index Pack (G3 seed)
  *
@@ -977,10 +990,33 @@ export function mesoClaimsForFeature(featureId: string) {
 }
 
 export function mesoClaimStats() {
+  const a = passAStats();
   return {
     places: mesoamericaPlaces.length,
     verseClaims: mesoamericaVerseClaims.length,
     assumptions: mesoamericaAssumptions.length,
     constraints: mesoamericaConstraints.length,
+    passA: a,
+    mapCorrespondences: mesoMapCorrespondences.length,
+    passB: passBStats(),
   };
 }
+
+export {
+  MESO_PASS_A_META,
+  mesoMapCorrespondences,
+  passAConstraints,
+  passAStats,
+};
+
+export function getPassA() {
+  return {
+    meta: MESO_PASS_A_META,
+    correspondences: mesoMapCorrespondences,
+    constraints: passAConstraints(),
+    stats: passAStats(),
+    loaded: mesoMapCorrespondences.length === 25,
+  };
+}
+
+export { MESO_PASS_B_META, getPassB, mesoGeoPassages, passBStats };

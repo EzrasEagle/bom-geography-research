@@ -31,10 +31,17 @@ function ModelDetailPage() {
           <Badge tone="accent">{m.category}</Badge>
           <Badge>{m.status}</Badge>
           {pack && (
-            <Badge tone="teal">
-              Index grade {pack.meta.grade} · {pack.stats.verseClaims} verse claims ·{" "}
-              {pack.stats.places} places
-            </Badge>
+            <>
+              <Badge tone="teal">
+                Index grade {pack.meta.grade} · {pack.stats.verseClaims} verse claims ·{" "}
+                {pack.stats.places} places
+              </Badge>
+              {pack.passA?.loaded && (
+                <Badge tone="teal">
+                  Pass A LOADED ({pack.passA.stats.total} map correspondences)
+                </Badge>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -72,6 +79,120 @@ function ModelDetailPage() {
           ))}
         </dl>
       </Card>
+
+      {pack?.passA && (
+        <Card className="p-5 space-y-3 border-teal/40">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold">Pass A — Map correspondences</h2>
+            <Badge tone={pack.passA.loaded ? "teal" : "accent"}>
+              {pack.passA.loaded ? "LOADED" : "incomplete"} · {pack.passA.stats.total}/25
+            </Badge>
+            <Badge>
+              {pack.passA.stats.high} high · {pack.passA.stats.medium} med · {pack.passA.stats.low}{" "}
+              low · {pack.passA.stats.contested} contested
+            </Badge>
+          </div>
+          <p className="text-xs text-muted leading-relaxed">
+            Sorenson-style pointed map matches (Tehuantepec theater). Geography layer only —
+            cultural ~400 points are Pass C. Site pins (Kaminaljuyú, Santa Rosa, El Vigía…) stay
+            low-confidence / contested where noted.
+          </p>
+          <div className="overflow-x-auto max-h-[32rem] overflow-y-auto border border-border rounded-[var(--radius)]">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-2 sticky top-0">
+                <tr>
+                  <th className="p-2">#</th>
+                  <th className="p-2">Title</th>
+                  <th className="p-2">Real-world</th>
+                  <th className="p-2">Conf.</th>
+                  <th className="p-2">Map Lab</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pack.passA.correspondences.map((row) => (
+                  <tr key={row.id} className="border-t border-border/60 align-top">
+                    <td className="p-2 tabular-nums text-muted">{row.n}</td>
+                    <td className="p-2">
+                      <div className="font-medium">{row.title}</div>
+                      <div className="text-muted mt-0.5">{row.claim}</div>
+                      <div className="text-[10px] text-muted mt-0.5">
+                        {row.verseHints.join(" · ")}
+                      </div>
+                    </td>
+                    <td className="p-2 text-ink-soft">{row.realWorld}</td>
+                    <td className="p-2">
+                      <Badge
+                        tone={
+                          row.contested
+                            ? "accent"
+                            : row.confidence === "high"
+                              ? "teal"
+                              : row.confidence === "medium"
+                                ? "claim"
+                                : "default"
+                        }
+                      >
+                        {row.contested ? "contested" : row.confidence}
+                      </Badge>
+                    </td>
+                    <td className="p-2 text-muted">{row.mapLab}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {pack?.passB && (
+        <Card className="p-5 space-y-3 border-accent/30">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold">Pass B — Geography passages</h2>
+            <Badge tone="claim">
+              {pack.passB.stats.total} / {pack.passB.stats.target} ({pack.passB.stats.pctOfTarget}%)
+            </Badge>
+            <Badge>
+              {pack.passB.stats.hard} hard · {pack.passB.stats.soft} soft ·{" "}
+              {pack.passB.stats.linkedToPassA} linked to Pass A
+            </Badge>
+          </div>
+          <p className="text-xs text-muted leading-relaxed">
+            Internal text facts (toward ~500). Seed loaded — not complete. Rows with Pass A links
+            externalize onto the Tehuantepec map package.
+          </p>
+          <div className="overflow-x-auto max-h-[28rem] overflow-y-auto border border-border rounded-[var(--radius)]">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-2 sticky top-0">
+                <tr>
+                  <th className="p-2">Ref</th>
+                  <th className="p-2">Fact</th>
+                  <th className="p-2">Relation</th>
+                  <th className="p-2">Str.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pack.passB.passages.map((row) => (
+                  <tr key={row.id} className="border-t border-border/60 align-top">
+                    <td className="p-2 font-medium whitespace-nowrap">{row.ref}</td>
+                    <td className="p-2 text-ink-soft">
+                      {row.fact}
+                      {row.passAIds && row.passAIds.length > 0 && (
+                        <span className="block text-[10px] text-teal-800 mt-0.5">
+                          → Pass A: {row.passAIds.join(", ")}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2 text-muted">{row.relation}</td>
+                    <td className="p-2">
+                      <Badge tone={row.strength === "hard" ? "teal" : "claim"}>{row.strength}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {pack && (
         <Card className="p-5 space-y-3">

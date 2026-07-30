@@ -126,10 +126,15 @@ From Sorenson’s public outline of Codex correspondences (~420 total):
 
 ---
 
+## Status (2026-07-29)
+- **Pass A: LOADED (25/25)**
+- **Pass B: seed loaded** (~70 passages; target 500) — continue expanding
+- Pass C/D: not started
+
 ## Resume checklist for next G4 session
 
-- [ ] Create `correspondences.csv` template (420 rows empty IDs by domain)  
-- [ ] Encode all 25 map correspondences with `source: Codex` + page when available  
+- [ ] Create `correspondences.csv` template (420 rows empty IDs by domain) — Pass C  
+- [x] Encode all 25 map correspondences (public apparatus; page cites still optional)  
 - [ ] Link Kaminaljuyú / Santa Rosa / El Vigía / La Venta as optional site pins (confidence low–medium)  
 - [ ] Import *Mormon’s Map* chapter outline as internal-only constraints  
 - [ ] Add contested flags for biology/metallurgy/elephant claims  
