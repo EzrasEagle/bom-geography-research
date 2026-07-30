@@ -1,9 +1,45 @@
-verse_ref,claim_summary,confidence,source_note,status
-Alma 22:27-34,Neck = Tehuantepec region; seas east/west; Bountiful/Desolation,high,Sorenson-style tradition,seed
-Alma 22:32,Day and a half across neck,high,Sorenson-style,seed
-Hel 3:7-11,Cement in land northward as cultural fit,medium,Sorenson/codex apparatus,seed
-1 Ne 18:23-25,Pacific landing feasible for Meso stage,medium,Sorenson-style,seed
-Morm 6,Final Cumorah not NY hill (many versions),medium,Limited geography tradition,seed
-Alma 2:15,Sidon near Zarahemla → Grijalva system candidates,medium,Sorenson-style,seed
-Ether 15,Ramah correlates with southern Cumorah area,medium,Limited models,seed
-Alma 50:34,Narrow pass by the sea,high,Sorenson-style,seed
+ref,book,chapter,verse,claim,feature_ids,confidence,source,tags
+1 Nephi 18:23–25,1 Nephi,18,23,"Landing in promised land; till ground; seeds grow exceedingly — Pacific Mesoamerica climate viable in model",landing,medium,"Sorenson-style landing essays; AAS",landing|agriculture
+2 Nephi 5:7–8,2 Nephi,5,7,"Journey many days to land of Nephi — highland settlement after coastal landing",landing|nephi,medium,"AAS place sequence",nephi|travel
+Omni 1:12–13,Omni,1,13,"Mosiah leads people from Nephi through wilderness; comes down into Zarahemla (elevation + distance)",nephi|wilderness|zarahemla,high,"Core limited-geo spine; AAS",elevation|wilderness|zarahemla
+Omni 1:14–19,Omni,1,14,"People of Zarahemla (Mulekites) already in land; language/culture contact",zarahemla,high,"AAS",zarahemla|mulekites
+Omni 1:20–22,Omni,1,20,"Large stone with engravings; Coriantumr; land of Zarahemla aware of destroyed people northward",zarahemla|desolation,medium,"AAS / Codex summaries",jaredite|desolation
+Omni 1:27–30,Omni,1,27,"Group goes up out of Zarahemla into wilderness toward Nephi",zarahemla|wilderness|nephi,high,"Elevation reverse of Omni 13",elevation|travel
+Mosiah 7:1–6,Mosiah,7,4,"Forty days wilderness travel Zarahemla → Nephi region (model treats as limited theater days)",zarahemla|nephi|wilderness,high,"AAS distance discussions",days_travel|wilderness
+Mosiah 8:7–11,Mosiah,8,8,"Limhi party lost seeking Zarahemla; finds land of many waters / bones / plates (Desolation / Jaredite north)",nephi|wilderness|desolation|zarahemla,high,"AAS; classic lost-party northward",lost_party|desolation
+Mosiah 21:25–27,Mosiah,21,25,"Parallel account of Limhi search; land covered with bones",desolation,high,"AAS",lost_party|desolation
+Mosiah 22:11–13,Mosiah,22,11,"Limhi people escape around wilderness to Zarahemla",nephi|wilderness|zarahemla,high,"AAS",travel|wilderness
+Mosiah 23:1–4,Mosiah,23,3,"Alma’s people flee 8 days into wilderness to Helam",nephi|helam|wilderness,medium,"AAS day counts",days_travel|helam
+Mosiah 24:20–25,Mosiah,24,25,"Alma’s people reach Zarahemla after further wilderness travel (12 days motif in narrative)",helam|zarahemla|wilderness,medium,"AAS",days_travel
+Alma 2:15–17,Alma,2,15,"Battle on hill Amnihu east of Sidon; river as military axis by Zarahemla",sidon|zarahemla,high,"AAS river orientation",sidon|war
+Alma 2:34–35,Alma,2,34,"Cross waters of Sidon; valley of Gideon east of river",sidon|gideon|zarahemla,high,"AAS",sidon|gideon
+Alma 6:7,Alma,6,7,"Valley of Gideon east of river Sidon from Zarahemla",gideon|sidon|zarahemla,high,"Text + AAS",gideon|direction
+Alma 8:3–6,Alma,8,3,"Alma to Melek west of Sidon; then three days to Ammonihah",melek|sidon|ammonihah,high,"AAS city graph",days_travel|ammonihah
+Alma 16:6–7,Alma,16,6,"Wilderness south of Manti; head of Sidon; Lamanite invasion corridor",manti|sidon|wilderness,high,"AAS",manti|sidon
+Alma 22:27,Alma,22,27,"Lamanite king’s land from east to west sea; borders; narrow strip of wilderness",sea-east|sea-west|wilderness|nephi,high,"AAS foundational map verse",alma22|seas|wilderness
+Alma 22:28–29,Alma,22,28,"Lamanites in wilderness west & east; Nephites hemmed; land northward / southward orientation",wilderness|nephi|zarahemla,high,"AAS",alma22|direction
+Alma 22:30–31,Alma,22,30,"Desolation north; bones; Bountiful south of Desolation; land northward filled with people",desolation|bountiful-nw,high,"AAS Tehuantepec package",alma22|desolation|bountiful
+Alma 22:32,Alma,22,32,"Nearly surrounded by water; small neck; day and a half journey for Nephite from east to west sea",narrow-neck|sea-east|sea-west|bountiful-nw,high,"AAS Tehuantepec ≈ day-and-a-half",alma22|narrow_neck|days_travel
+Alma 22:33–34,Alma,22,33,"Nephites keep Lamanites from getting possession northward; land northward / southward strategic",bountiful-nw|desolation|narrow-neck,high,"AAS",alma22|strategy
+Alma 27:22–24,Alma,27,22,"Jershon east by sea; south of land of Bountiful; Ammonites settled",jershon|sea-east|bountiful-nw,high,"AAS coastal east",jershon|sea-east
+Alma 43:22–27,Alma,43,22,"Lamanites toward Manti; head of Sidon; wilderness; Moroni intercepts",manti|sidon|wilderness,high,"AAS war geography",manti|war
+Alma 50:7–11,Alma,50,8,"East wilderness cleared; cities by east sea; fortification line",sea-east|jershon|bountiful-nw,medium,"AAS",sea-east|fortification
+Alma 50:13–15,Alma,50,13,"Cities of Moroni, Lehi, Morianton by east sea south of Bountiful corridor",sea-east|morianton|lehi-city|bountiful-nw,medium,"AAS coastal chain",sea-east|cities
+Alma 50:25–36,Alma,50,25,"Morianton dispute; flight northward toward land northward via borders by seashore",morianton|bountiful-nw|desolation|narrow-neck,high,"AAS neck transit",narrow_neck|travel
+Alma 51:26–28,Alma,51,26,"Amalickiah takes east-sea cities toward Bountiful",sea-east|mulek|bountiful-nw,medium,"AAS",war|sea-east
+Alma 52:9,Alma,52,9,"Keep pass that leads by the sea into land northward; Bountiful fortification",narrow-neck|bountiful-nw|sea-east,high,"AAS",narrow_neck|bountiful
+Alma 63:4–5,Alma,63,5,"Hagoth ships on west sea by narrow neck; launch into land northward",sea-west|narrow-neck|desolation,high,"AAS Pacific / neck port",hagoth|sea-west|narrow_neck
+Helaman 3:3–9,Helaman,3,3,"Many migrate to land northward; timber; cement houses — model links to northern Mesoamerica",desolation,medium,"AAS / Codex cement discussion",land_northward|cement
+Helaman 4:5–8,Helaman,4,7,"Fortification line from west sea to east; Bountiful retained",sea-west|sea-east|bountiful-nw,high,"AAS",fortification|seas
+3 Nephi 3:23,3 Nephi,3,23,"Gather to Zarahemla and Bountiful; land southward defense",zarahemla|bountiful-nw,medium,"AAS",zarahemla|bountiful
+Mormon 1:6–7,Mormon,1,6,"Mormon taken to Zarahemla; land southward still occupied early",zarahemla,medium,"AAS",zarahemla
+Mormon 2:3–6,Mormon,2,3,"Nephite retreat northward; Angola; land of David; land of Joshua by west sea",joshua|sea-west|desolation,medium,"AAS retreat map",retreat|sea-west
+Mormon 2:16–17,Mormon,2,16,"Battle near borders of Desolation; Jashon",desolation,medium,"AAS",desolation|war
+Mormon 2:20–21,Mormon,2,20,"Gather to Shem; northward pressure",desolation,low,"AAS",war
+Mormon 2:28–29,Mormon,2,29,"Treaty: Nephites land northward, Lamanites land southward — neck as boundary",narrow-neck|desolation|bountiful-nw,high,"AAS",narrow_neck|treaty
+Mormon 3:5–7,Mormon,3,5,"Gather to Desolation; city by narrow pass into land southward",desolation|narrow-neck,high,"AAS",desolation|narrow_pass
+Mormon 4:1–3,Mormon,4,1,"Battles at Desolation / Teancum; coastal northward war",desolation,medium,"AAS",war
+Mormon 6:1–6,Mormon,6,2,"Gather to land of Cumorah; hill Cumorah; many waters / rivers / fountains region",cumorah,high,"AAS southern Cumorah",cumorah
+Ether 9:3,Ether,9,3,"Jaredite flee to Ablom by seashore east; hill east of Shim / Cumorah region",cumorah|sea-east,low,"AAS Jaredite north",jaredite|cumorah
+Ether 10:19–21,Ether,10,20,"Great city by narrow neck; sea east and west; animals in land southward",narrow-neck|sea-east|sea-west,high,"AAS Jaredite neck",narrow_neck|jaredite
+Ether 15:11,Ether,15,11,"Hill Ramah = same hill as Cumorah in Nephite record tradition",cumorah,high,"Text + AAS",cumorah|ramah

@@ -1,0 +1,28 @@
+id,bom_name,kind,real_world,confidence,notes,lat,lng
+nephi,"Land / city of Nephi",land,"Highland Guatemala (often Kaminaljuyu / Guatemala Valley region)",medium,"Higher elevation than Zarahemla; ‘up’ to Nephi",14.63,-90.51
+zarahemla,"Zarahemla",city,"Chiapas depression / upper–middle Grijalva basin (exact city debated)",medium,"Lower than Nephi; on/near Sidon",16.75,-93.1
+sidon,"River Sidon",river,"Río Grijalva (major Sorenson proposal); Usumacinta as alternate variant",medium,"Flows generally toward sea northward in many readings",17.4,-92.8
+manti,"Manti",city,"Near head of Sidon / southern highlands approach (upper Grijalva)",low,"",15.5,-92.5
+bountiful-nw,"Bountiful (New World)",land,"Northward approach to Isthmus of Tehuantepec (south side of neck)",medium,"",16.5,-94.5
+desolation,"Desolation",land,"North of Tehuantepec isthmus (Gulf / Isthmian north side)",medium,"",17.5,-94.8
+narrow-neck,"Narrow neck of land",pass,"Isthmus of Tehuantepec",high,"Day-and-a-half journey motif mapped to isthmus width in model tradition",16.9,-95
+sea-west,"Sea west",sea,"Pacific Ocean (west of Mesoamerican stage)",high,"",15.5,-96.5
+sea-east,"Sea east",sea,"Gulf of Mexico / Caribbean side (model-dependent exact coast)",high,"",18.5,-93
+jershon,"Jershon",land,"East-sea coastal plain in the land southward",low,"",17.8,-92
+cumorah,"Cumorah / Ramah",hill,"Southern Mexico (often Veracruz / Tuxtla region candidates, e.g. Cerro Vigía tradition)",low,"Final battle Cumorah ≠ New York repository hill in classic limited model",18.45,-95.1
+landing,"Lehi landing region",other,"Pacific coast of southern Mexico / Guatemala (specific beach debated)",low,"",14.5,-92.2
+wilderness,"Wilderness (southward corridors)",wilderness,"Strip of wilderness between Nephi highlands and Zarahemla lowlands; other wild tracts",medium,"",,
+ammonihah,"Ammonihah",city,"Northwest of Zarahemla in land southward (schematic; exact site open)",low,"",,
+gideon,"Gideon",city,"East of Sidon from Zarahemla (valley of Gideon)",medium,"",,
+melek,"Melek",land,"West of Sidon, west of Zarahemla region",medium,"",,
+minon,"Minon",land,"Above Zarahemla toward head of Sidon",low,"",,
+antionum,"Antionum",land,"East of Zarahemla / near Jershon–east sea approaches",low,"",,
+morianton,"Morianton",city,"East-sea cities northward toward Bountiful (coastal corridor)",low,"",,
+lehi-city,"City of Lehi",city,"East-sea city cluster (with Morianton narratives)",low,"",,
+mulek,"Mulek",city,"Northward coastal city (east sea) in Bountiful region narratives",low,"",,
+joshua,"Joshua (land)",land,"Borders by west sea (Mormon retreat narrative)",low,"",,
+angarosh,"Angola / land of Joshua region (late war)",land,"West-sea borderlands in final Nephite retreat (schematic)",low,"",,
+shemlon,"Shemlon",land,"Near land of Nephi (Lamanite possession cycle)",low,"",,
+shilom,"Shilom",land,"Near Nephi / Shemlon complex",low,"",,
+helam,"Helam",land,"Alma’s people — between Nephi and Zarahemla wilderness tract",low,"",,
+ripliancum,"Ripliancum (waters)",other,"Large waters northward (Jaredite); often Gulf-related in model talk",low,"",,

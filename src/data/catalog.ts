@@ -1,3 +1,12 @@
+import {
+  MESOAMERICA_META,
+  mesoamericaAssumptions,
+  mesoamericaConstraints,
+  mesoamericaPlaces,
+  mesoamericaVerseClaims,
+  mesoClaimStats,
+} from "@/data/models/mesoamerica-pack";
+
 /** Typed mirror of data/catalog + research frontmatter. Keep in sync when cataloging. */
 
 export type PlateSource =
@@ -67,6 +76,7 @@ export const models: ModelProfile[] = [
     id: "mesoamerica",
     name: "Limited Mesoamerica (Sorenson-style)",
     category: "mesoamerica",
+    // grade G3 — see mesoamerica-pack
     status: "active",
     summary:
       "Places events primarily in southern Mexico and Guatemala with a limited geography. Isthmus of Tehuantepec is a common narrow-neck candidate.",
@@ -486,6 +496,18 @@ export const places: PlaceNode[] = [
   { id: "climate-seasons", name: "Seasons / seasonal timing", kind: "other" },
   { id: "climate-agriculture", name: "Agriculture / grain / famine", kind: "other" },
   { id: "wilderness", name: "Wilderness (soft region / corridor)", kind: "wilderness" },
+  { id: "ammonihah", name: "Ammonihah", kind: "city" },
+  { id: "gideon", name: "Gideon", kind: "city" },
+  { id: "melek", name: "Melek", kind: "land" },
+  { id: "minon", name: "Minon", kind: "land" },
+  { id: "antionum", name: "Antionum", kind: "land" },
+  { id: "morianton", name: "Morianton", kind: "city" },
+  { id: "lehi-city", name: "City of Lehi", kind: "city" },
+  { id: "mulek", name: "Mulek", kind: "city" },
+  { id: "joshua", name: "Land of Joshua", kind: "land" },
+  { id: "helam", name: "Helam", kind: "land" },
+  { id: "shemlon", name: "Shemlon", kind: "land" },
+  { id: "shilom", name: "Shilom", kind: "land" },
 ];
 
 /** Seed constraints (internal). Conflicts intentionally possible when day-scale changes. */
@@ -501,10 +523,6 @@ export const constraints: GeoConstraint[] = [
   { id: "c9", from: "cumorah", to: "desolation", type: "same_region", value: "land of many waters / northward association (model-dependent)", sourceVerse: "Morm 6 / Ether 15", strength: "soft" },
   { id: "c10", from: "sea-west", to: "sea-east", type: "narrow_feature", value: "narrow neck between seas (Alma 22)", sourceVerse: "Alma 22:32", strength: "hard" },
 ];
-
-export function assumptionsForModel(modelId: string) {
-  return assumptions.filter((a) => a.modelId === modelId);
-}
 
 export const evidenceDomains = [
   { id: "textual_geography", label: "Textual geography", caution: "Relative vs absolute readings" },
@@ -529,13 +547,63 @@ export function getInsight(id: string) {
   return insights.find((i) => i.id === id);
 }
 
-export function versesForModel(modelId: string) {
-  return verses.filter((v) => v.modelClaims.some((c) => c.modelId === modelId));
-}
-
 export const stats = {
   verseCount: verses.length,
   modelCount: models.length,
   insightCount: insights.length,
-  claimCount: verses.reduce((n, v) => n + v.modelClaims.length, 0),
+  claimCount: verses.reduce((n, v) => n + v.modelClaims.length, 0) + mesoamericaVerseClaims.length,
 };
+
+
+/** Full Sorenson-style pack (G3) for model detail + Map Lab */
+export function getMesoamericaPack() {
+  return {
+    meta: MESOAMERICA_META,
+    places: mesoamericaPlaces,
+    verseClaims: mesoamericaVerseClaims,
+    assumptions: mesoamericaAssumptions,
+    constraints: mesoamericaConstraints,
+    stats: mesoClaimStats(),
+  };
+}
+
+export function versesForModel(modelId: string) {
+  if (modelId === "mesoamerica") {
+    // Synthesize verse records from pack for model page
+    return mesoamericaVerseClaims.map((c) => ({
+      id: `${c.book.toLowerCase().replace(/\s+/g, "")}-${c.chapter}-${c.verse}`.replace("1nephi", "1ne").replace("2nephi", "2ne").replace("3nephi", "3ne"),
+      book: c.book,
+      chapter: c.chapter,
+      verseStart: c.verse,
+      verseEnd: c.verse,
+      textExcerpt: c.claim.slice(0, 160),
+      tags: c.tags,
+      signal: c.confidence === "high" ? "high" : "medium",
+      modelClaims: [
+        {
+          modelId: "mesoamerica",
+          claim: c.claim,
+          why: c.source,
+          confidence: c.confidence,
+          sources: [c.source],
+        },
+      ],
+      insightIds: [] as string[],
+    }));
+  }
+  return verses.filter((v) => v.modelClaims.some((c) => c.modelId === modelId));
+}
+
+export function assumptionsForModel(modelId: string) {
+  if (modelId === "mesoamerica") {
+    return mesoamericaAssumptions.map((a) => ({
+      id: a.id,
+      modelId: "mesoamerica",
+      statement: a.statement,
+      category: a.category,
+      status: a.status,
+      impact: a.impact,
+    }));
+  }
+  return assumptions.filter((a) => a.modelId === modelId || (a as { models?: string[] }).models?.includes(modelId));
+}

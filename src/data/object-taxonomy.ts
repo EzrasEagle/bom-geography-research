@@ -104,6 +104,18 @@ export const placeTaxonomy: Record<
   "climate-seasons": { layer: "season", role: "seasonal" },
   "climate-agriculture": { layer: "season", role: "agriculture" },
   wilderness: { layer: "region", role: "wilderness", elevationBand: "unknown" },
+  ammonihah: { layer: "settlement", role: "city", elevationBand: "lowland" },
+  gideon: { layer: "settlement", role: "city", elevationBand: "lowland" },
+  melek: { layer: "region", role: "land", elevationBand: "lowland" },
+  minon: { layer: "region", role: "land", elevationBand: "unknown" },
+  antionum: { layer: "region", role: "land", elevationBand: "unknown" },
+  morianton: { layer: "settlement", role: "city", elevationBand: "coastal" },
+  "lehi-city": { layer: "settlement", role: "city", elevationBand: "coastal" },
+  mulek: { layer: "settlement", role: "city", elevationBand: "coastal" },
+  joshua: { layer: "region", role: "land", elevationBand: "coastal" },
+  helam: { layer: "region", role: "land", elevationBand: "unknown" },
+  shemlon: { layer: "region", role: "land", elevationBand: "highland" },
+  shilom: { layer: "region", role: "land", elevationBand: "highland" },
 };
 
 export function taxonomyFor(id: string) {

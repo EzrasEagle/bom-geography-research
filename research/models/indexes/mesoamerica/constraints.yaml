@@ -1,14 +1,111 @@
-constraints:
-  - id: meso-neck-seas
-    from: sea-west
-    to: sea-east
-    type: narrow_feature
-    value: Tehuantepec separates Pacific and Gulf systems
-    strength: hard
-    inherits_from: internal c-seas-neck
-  - id: meso-nephi-high
-    from: nephi
-    to: zarahemla
-    type: direction
-    value: Nephi highlands south/up relative to Zarahemla lowlands
-    strength: soft
+- id: mc1
+  from: nephi
+  to: zarahemla
+  type: direction_elevation
+  value: "down / northward-ish through wilderness (Omni)"
+  sourceVerse: "Omni 1:12–13"
+  strength: hard
+
+- id: mc2
+  from: zarahemla
+  to: sidon
+  type: adjacent
+  value: "city oriented to Sidon; battles on river"
+  sourceVerse: "Alma 2"
+  strength: hard
+
+- id: mc3
+  from: gideon
+  to: sidon
+  type: direction
+  value: "Gideon east of Sidon from Zarahemla"
+  sourceVerse: "Alma 6:7"
+  strength: hard
+
+- id: mc4
+  from: melek
+  to: sidon
+  type: direction
+  value: "Melek west of Sidon"
+  sourceVerse: "Alma 8:3"
+  strength: hard
+
+- id: mc5
+  from: manti
+  to: sidon
+  type: upstream
+  value: "near head of Sidon / south of Zarahemla theater"
+  sourceVerse: "Alma 16; 22; 43"
+  strength: hard
+
+- id: mc6
+  from: zarahemla
+  to: bountiful-nw
+  type: direction
+  value: "toward narrow neck / land northward"
+  sourceVerse: "Alma 22:29–33"
+  strength: soft
+
+- id: mc7
+  from: bountiful-nw
+  to: desolation
+  type: adjacent
+  value: "meet at narrow neck"
+  sourceVerse: "Alma 22:31–32"
+  strength: hard
+
+- id: mc8
+  from: narrow-neck
+  to: sea-east
+  type: days_travel
+  value: "day and a half east–west across neck region (model reading)"
+  sourceVerse: "Alma 22:32"
+  strength: hard
+
+- id: mc9
+  from: narrow-neck
+  to: sea-west
+  type: days_travel
+  value: "same neck spans to west sea"
+  sourceVerse: "Alma 22:32"
+  strength: hard
+
+- id: mc10
+  from: jershon
+  to: sea-east
+  type: adjacent
+  value: "by east sea; south of Bountiful"
+  sourceVerse: "Alma 27:22"
+  strength: hard
+
+- id: mc11
+  from: cumorah
+  to: desolation
+  type: same_region_north
+  value: "Cumorah in land northward / many waters association"
+  sourceVerse: "Morm 6; Ether 15"
+  strength: soft
+
+- id: mc12
+  from: landing
+  to: nephi
+  type: days_travel
+  value: "many days inland to highland Nephi"
+  sourceVerse: "2 Ne 5:7–8"
+  strength: soft
+
+- id: mc13
+  from: nephi
+  to: desolation
+  type: lost_party
+  value: "Limhi party intended Zarahemla, reached Desolation via wilderness"
+  sourceVerse: "Mosiah 8:7–11"
+  strength: hard
+
+- id: mc14
+  from: zarahemla
+  to: nephi
+  type: days_travel
+  value: "≈40 days wilderness (Mosiah 7) under model day-scale"
+  sourceVerse: "Mosiah 7:4"
+  strength: soft

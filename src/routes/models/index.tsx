@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { models, versesForModel } from "@/data/catalog";
+import { getMesoamericaPack, models, versesForModel } from "@/data/catalog";
 
 export const Route = createFileRoute("/models/")({ component: ModelsPage });
 
@@ -27,7 +27,7 @@ function ModelsPage() {
                 <Badge>{m.status}</Badge>
                 <Badge tone="claim">{versesForModel(m.id).length} verses in seed</Badge>
               </div>
-              <h2 className="font-semibold text-lg leading-snug">{m.name}</h2>
+              <h2 className="font-semibold text-lg leading-snug">{m.name}{m.id === "mesoamerica" ? ` (${getMesoamericaPack().meta.grade})` : ""}</h2>
               <p className="text-sm text-muted leading-relaxed">{m.summary}</p>
             </Card>
           </Link>

@@ -1,21 +1,53 @@
-assumptions:
-  - id: meso-limited
-    statement: Limited geography (~few hundred miles stage)
-    category: distance_scale
-    status: core
-  - id: meso-neck-tehuantepec
-    statement: Narrow neck ≈ Isthmus of Tehuantepec
-    category: narrow_neck
-    status: core
-  - id: meso-sidon-grijalva
-    statement: Sidon ≈ Grijalva (variant Usumacinta exists)
-    category: hydrology
-    status: core
-  - id: meso-cumorah-south
-    statement: Final battle Cumorah in southern Mexico region
-    category: cumorah
-    status: core
-  - id: meso-culture-parallel
-    statement: Mesoamerican complex societies are valid external correlation targets
-    category: archaeology
-    status: core
+- id: meso-limited
+  status: core
+  category: distance_scale
+  statement: "Primary narrative stage is limited (~few hundred miles), not hemispheric USA+SA"
+  impact: "All day-journey edges stay short-range"
+
+- id: meso-neck-tehuantepec
+  status: core
+  category: narrow_neck
+  statement: "Narrow neck ≈ Isthmus of Tehuantepec"
+  impact: "Bountiful/Desolation and Hagoth port lock to isthmus"
+
+- id: meso-sidon-grijalva
+  status: core
+  category: hydrology
+  statement: "River Sidon ≈ Grijalva (Usumacinta is a documented variant, not default here)"
+  impact: "Zarahemla/Manti/Gideon graph follows Grijalva orientation"
+
+- id: meso-nephi-highland
+  status: core
+  category: elevation
+  statement: "Land of Nephi is highland relative to Zarahemla (up/down language)"
+  impact: "Omni elevation sequence; Map Lab ↑↓ markers"
+
+- id: meso-seas-pacific-gulf
+  status: core
+  category: seas
+  statement: "Sea west ≈ Pacific; sea east ≈ Gulf/Caribbean side of the stage"
+  impact: "East-sea city chain vs west-sea Hagoth"
+
+- id: meso-cumorah-south
+  status: core
+  category: cumorah
+  statement: "Final-battle Cumorah is in southern Mexico region (not NY hill as battle site)"
+  impact: "Mormon 6 placement northward of neck"
+
+- id: meso-day-15-20
+  status: optional
+  category: distance_scale
+  statement: "Working day-march ~15–20 mi open (adjustable); day-and-a-half neck fits Tehuantepec scale"
+  impact: "Map Lab macro day-miles"
+
+- id: meso-direction-skew
+  status: contested
+  category: direction
+  statement: "Some directional language may use cultural ‘north’ not magnetic north (contested fix among authors)"
+  impact: "Map Lab rotation stress-test"
+
+- id: meso-culture-complex
+  status: optional
+  category: archaeology
+  statement: "Urban complexity, writing, warfare intensity fit Mesoamerican civilizations better than sparse northern Hopewell alone"
+  impact: "Evidence domain weighting — not a verse constraint"
