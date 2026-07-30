@@ -4,6 +4,8 @@
  */
 
 import type { AssociationKind, AssociationLeg, SpanQuality } from "@/data/suggested-associations";
+import type { ChronologySpan } from "@/data/chronology";
+import { chronologyForChapter, unknownChronology } from "@/data/chronology";
 
 export type SpanField = { quality: SpanQuality; value?: string; note?: string };
 
@@ -17,6 +19,8 @@ export type UserAssociation = {
   legs: AssociationLeg[];
   pathDistance: SpanField;
   pathTime: SpanField;
+  /** When this association holds historically (chapter heading default) */
+  chronology: ChronologySpan;
   relatedRefs: { ref: string; note: string }[];
   tags: string[];
   createdAt: string;
@@ -29,7 +33,14 @@ export function loadAssociations(): UserAssociation[] {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as UserAssociation[];
+    const rows = JSON.parse(raw) as UserAssociation[];
+    return rows.map((r) => ({
+      ...r,
+      chronology:
+        r.chronology ??
+        chronologyForChapter(r.book, r.chapter) ??
+        unknownChronology(),
+    }));
   } catch {
     return [];
   }
@@ -76,6 +87,7 @@ export function acceptSuggestion(
   overrides?: {
     pathDistance?: SpanField;
     pathTime?: SpanField;
+    chronology?: ChronologySpan;
     notes?: string;
   },
 ): UserAssociation {
@@ -110,6 +122,10 @@ export function acceptSuggestion(
     legs: sug.legs,
     pathDistance,
     pathTime,
+    chronology:
+      overrides?.chronology ??
+      chronologyForChapter(sug.book, sug.chapter) ??
+      unknownChronology(),
     relatedRefs: sug.relatedRefs,
     tags,
     createdAt: new Date().toISOString(),

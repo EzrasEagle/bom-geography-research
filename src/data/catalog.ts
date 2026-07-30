@@ -450,6 +450,20 @@ export type PlaceNode = {
   id: string;
   name: string;
   kind: "city" | "land" | "river" | "hill" | "sea" | "wilderness" | "other";
+  /** Optional explicit size tier (defaults from kind) */
+  sizeTier?:
+    | "point"
+    | "settlement_small"
+    | "settlement_city"
+    | "land_local"
+    | "land_region"
+    | "land_greater"
+    | "wilderness_band"
+    | "sea";
+  /** Parent land/region id for city-in-land grouping */
+  parentId?: string;
+  /** Text phrase variants (land of X / city of X) */
+  aliases?: string[];
 };
 
 export type GeoConstraint = {
@@ -484,14 +498,49 @@ export const assumptions: Assumption[] = [
 
 /** Minimal internal gazetteer for Map Lab v0 */
 export const places: PlaceNode[] = [
-  { id: "nephi", name: "Land/City of Nephi", kind: "land" },
-  { id: "zarahemla", name: "Zarahemla", kind: "city" },
-  { id: "sidon", name: "River Sidon", kind: "river" },
+  {
+    id: "nephi",
+    name: "Land of Nephi",
+    kind: "land",
+    sizeTier: "land_region",
+    aliases: ["land of Nephi", "land of Lehi-Nephi"],
+  },
+  {
+    id: "city-nephi",
+    name: "City of Nephi",
+    kind: "city",
+    sizeTier: "settlement_city",
+    parentId: "nephi",
+    aliases: ["city of Nephi", "Nephi"],
+  },
+  {
+    id: "zarahemla-land",
+    name: "Land of Zarahemla",
+    kind: "land",
+    sizeTier: "land_region",
+    aliases: ["land of Zarahemla"],
+  },
+  {
+    id: "zarahemla",
+    name: "City of Zarahemla",
+    kind: "city",
+    sizeTier: "settlement_city",
+    parentId: "zarahemla-land",
+    aliases: ["Zarahemla", "city of Zarahemla"],
+  },
+  {
+    id: "east-sea-cluster",
+    name: "East-sea cities (cluster)",
+    kind: "land",
+    sizeTier: "land_greater",
+    aliases: ["cities on the east sea", "east wilderness seashore"],
+  },
+  { id: "sidon", name: "River Sidon", kind: "river", sizeTier: "point", aliases: ["river Sidon", "waters of Sidon"] },
   { id: "bountiful-nw", name: "Bountiful (New World)", kind: "land" },
   { id: "desolation", name: "Desolation", kind: "land" },
   { id: "narrow-neck", name: "Narrow neck / pass", kind: "other" },
-  { id: "manti", name: "Manti", kind: "city" },
-  { id: "jershon", name: "Jershon", kind: "land" },
+  { id: "manti", name: "Manti", kind: "city", sizeTier: "settlement_city", aliases: ["land of Manti", "city of Manti"] },
+  { id: "jershon", name: "Jershon", kind: "land", sizeTier: "land_local", parentId: "east-sea-cluster" },
   { id: "cumorah", name: "Cumorah / Ramah", kind: "hill" },
   { id: "landing", name: "Landing region", kind: "other" },
   { id: "sea-east", name: "Sea east", kind: "sea" },
@@ -507,13 +556,13 @@ export const places: PlaceNode[] = [
   { id: "forests", name: "Forests (soft feature)", kind: "other" },
   { id: "promised-land", name: "Promised land / land of promise", kind: "land" },
   { id: "ammonihah", name: "Ammonihah", kind: "city" },
-  { id: "gideon", name: "Gideon", kind: "city" },
-  { id: "melek", name: "Melek", kind: "land" },
-  { id: "minon", name: "Minon", kind: "land" },
+  { id: "gideon", name: "Gideon", kind: "city", sizeTier: "settlement_city", parentId: "zarahemla-land", aliases: ["valley of Gideon", "land of Gideon"] },
+  { id: "melek", name: "Melek", kind: "land", sizeTier: "land_local", parentId: "zarahemla-land" },
+  { id: "minon", name: "Minon", kind: "land", sizeTier: "land_local", parentId: "zarahemla-land" },
   { id: "antionum", name: "Antionum", kind: "land" },
-  { id: "morianton", name: "Morianton", kind: "city" },
-  { id: "lehi-city", name: "City of Lehi", kind: "city" },
-  { id: "mulek", name: "Mulek", kind: "city" },
+  { id: "morianton", name: "Morianton", kind: "city", sizeTier: "settlement_city", parentId: "east-sea-cluster" },
+  { id: "lehi-city", name: "City of Lehi", kind: "city", sizeTier: "settlement_city", parentId: "east-sea-cluster" },
+  { id: "mulek", name: "Mulek", kind: "city", sizeTier: "settlement_city", parentId: "east-sea-cluster" },
   { id: "joshua", name: "Land of Joshua", kind: "land" },
   { id: "helam", name: "Helam", kind: "land" },
   { id: "shemlon", name: "Shemlon", kind: "land" },
@@ -522,6 +571,10 @@ export const places: PlaceNode[] = [
 
 /** Seed constraints (internal). Conflicts intentionally possible when day-scale changes. */
 export const constraints: GeoConstraint[] = [
+  { id: "c-east-sea-lehi-morianton", from: "lehi-city", to: "morianton", type: "same_region", value: "east-sea city chain", sourceVerse: "Alma 50–51", strength: "soft" },
+  { id: "c-east-sea-morianton-mulek", from: "morianton", to: "mulek", type: "same_region", value: "east-sea city chain", sourceVerse: "Alma 50–52", strength: "soft" },
+  { id: "c-city-land-nephi", from: "city-nephi", to: "nephi", type: "adjacent", value: "city within land of Nephi", sourceVerse: "Mosiah 7–22", strength: "soft" },
+
   { id: "c1", from: "nephi", to: "zarahemla", type: "direction", value: "northish (down from Nephi highlands in many readings)", sourceVerse: "Omni/Mosiah narrative", strength: "soft" },
   { id: "c2", from: "zarahemla", to: "sidon", type: "adjacent", value: "city by / oriented to Sidon", sourceVerse: "Alma 2+", strength: "hard" },
   { id: "c3", from: "manti", to: "sidon", type: "adjacent", value: "near head/upstream narratives", sourceVerse: "Alma 22/43 region", strength: "soft" },

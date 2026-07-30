@@ -5,6 +5,7 @@
 
 import type { CorpusVerse } from "./corpus-types";
 import { OMNI_1 } from "./chapters/omni-1";
+import { ALMA_SIDON } from "./chapters/alma-sidon";
 
 export type { CorpusVerse } from "./corpus-types";
 
@@ -16,6 +17,7 @@ function url(bookPath: string, chapter: number, verse?: number) {
 /** Seed corpus — expand continuously while indexing models */
 export const corpus: CorpusVerse[] = [
   ...OMNI_1,
+  ...ALMA_SIDON,
   // Landing / climate
   {
     id: "1ne-18-23",

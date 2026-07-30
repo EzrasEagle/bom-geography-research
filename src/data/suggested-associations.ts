@@ -7,7 +7,10 @@ export type SpanQuality = "unknown" | "approximate" | "stated";
 
 export type AssociationKind =
   | "proximity"
+  | "contains"
   | "path"
+  | "same_region"
+  | "river"
   | "distance"
   | "time"
   | "elevation"
@@ -274,6 +277,73 @@ export const associationSuggestions: AssociationSuggestion[] = [
         verse: 28,
       },
       { ref: "Omni 1:13", note: "Inverse corridor (down to Zarahemla)", book: "Omni", chapter: 1, verse: 13 },
+    ],
+  },
+
+  {
+    id: "sug-alma-50-east-sea-cluster",
+    book: "Alma",
+    chapter: 50,
+    verse: 13,
+    title: "East-sea cities: same region (not a path)",
+    summary:
+      "Cities built / contested on the east seashore (Lehi, Morianton, etc.) form a coastal cluster. Use same_region — peer places in one theater — not a journey path unless the text narrates travel between them.",
+    tags: ["same_region", "sea east", "east-sea-cluster"],
+    legs: [
+      {
+        fromFeatureId: "lehi-city",
+        toFeatureId: "morianton",
+        viaPhrase: "east seashore cities",
+        kind: "same_region",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+      },
+      {
+        fromFeatureId: "morianton",
+        toFeatureId: "mulek",
+        viaPhrase: "east sea theater",
+        kind: "same_region",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+      },
+    ],
+    relatedRefs: [
+      { ref: "Alma 50:13–15", note: "Cities by the east sea" },
+      { ref: "Alma 51:26", note: "Many cities on the east" },
+      { ref: "Alma 52:22–27", note: "Mulek / east operations" },
+    ],
+  },
+  {
+    id: "sug-alma-2-sidon-banks",
+    book: "Alma",
+    chapter: 2,
+    verse: 15,
+    title: "Sidon: Zarahemla / Gideon river relation",
+    summary:
+      "Hill Amnihu east of Sidon; river ran by land of Zarahemla. Model as river association (bank/placement), not a path.",
+    tags: ["river", "sidon", "zarahemla", "gideon"],
+    legs: [
+      {
+        fromFeatureId: "sidon",
+        toFeatureId: "zarahemla",
+        viaPhrase: "river Sidon, which ran by the land of Zarahemla",
+        kind: "river",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+      },
+      {
+        fromFeatureId: "sidon",
+        toFeatureId: "gideon",
+        viaPhrase: "east of the river Sidon",
+        kind: "river",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+      },
+    ],
+    relatedRefs: [
+      { ref: "Alma 2:15", note: "Amnihu east of Sidon" },
+      { ref: "Alma 2:34", note: "Cleared waters of Sidon" },
+      { ref: "Alma 6:7", note: "Valley of Gideon east of Sidon" },
     ],
   },
 ];

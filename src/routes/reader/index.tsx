@@ -39,6 +39,12 @@ import {
 } from "@/lib/user-associations";
 import { placeLabel } from "@/lib/place-connections";
 import {
+  chronologyForChapter,
+  formatChronologySpan,
+  type ChronologySpan,
+} from "@/data/chronology";
+import { linksForRiver, riverById } from "@/data/hydro-relations";
+import {
   classifyNode,
   guessFeaturesForPhrase,
   parseDistanceSpan,
@@ -92,7 +98,7 @@ export const Route = createFileRoute("/reader/")({
   component: ReaderPage,
 });
 
-type ConnMode = "path" | "contains" | "proximity";
+type ConnMode = "path" | "contains" | "proximity" | "same_region" | "river";
 
 function ReaderPage() {
   const search = Route.useSearch();
@@ -125,6 +131,8 @@ function ReaderPage() {
   const [manualTimeValue, setManualTimeValue] = useState("");
   const [manualDistQuality, setManualDistQuality] = useState<"auto" | "unknown" | "approximate" | "stated">("auto");
   const [manualDistValue, setManualDistValue] = useState("");
+  const [assocChronology, setAssocChronology] = useState<ChronologySpan | null>(null);
+  const [chronoLabel, setChronoLabel] = useState("");
   const [modelForked, setModelForked] = useState(false);
   const [showSeedInPanel, setShowSeedInPanel] = useState(true);
   const [showYoursInPanel, setShowYoursInPanel] = useState(true);
@@ -178,11 +186,14 @@ function ReaderPage() {
     if (search.feature) setActiveFeature(search.feature);
   }, [search.book, search.chapter, search.verse, search.q, search.feature]);
 
-  // When verse changes: clear in-progress path unless editing
+  // When verse changes: clear in-progress path unless editing; load chapter dates
   useEffect(() => {
     if (!editingAssocId) {
       setSteps([]);
     }
+    const ch = chronologyForChapter(book, chapter);
+    setAssocChronology(ch);
+    setChronoLabel(ch?.label ?? "");
   }, [book, chapter, selectedVerse]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chapterList = chaptersForBook(book);
@@ -654,6 +665,13 @@ function ReaderPage() {
 
     let legs: UserAssociation["legs"] = [];
     let title = "";
+    const kindMap = {
+      proximity: "proximity" as const,
+      path: "path" as const,
+      contains: "contains" as const,
+      same_region: "same_region" as const,
+      river: "river" as const,
+    };
 
     if (mode === "path") {
       // Ordered chain: step0 → step1 → step2 …
@@ -689,14 +707,54 @@ function ReaderPage() {
         });
       }
       title = `Path: ${chain.map((c) => c.label).join(" → ")}`;
-    } else {
-      // Hub → each related item
+    } else if (mode === "same_region") {
+      // Peer places in one region — chain or star from first step / hub
+      const nodes =
+        steps.length >= 2
+          ? steps
+          : [
+              {
+                id: "hub",
+                label: placeLabel(hubId),
+                featureId: hubId,
+                kind: "place" as const,
+              },
+              ...steps,
+            ];
+      for (let i = 0; i < nodes.length - 1; i++) {
+        const a = nodes[i]!;
+        const b = nodes[i + 1]!;
+        legs.push({
+          fromFeatureId: a.featureId ?? a.label.toLowerCase().replace(/\s+/g, "-"),
+          toFeatureId: b.featureId ?? b.label.toLowerCase().replace(/\s+/g, "-"),
+          viaPhrase: b.label,
+          kind: "same_region",
+          distance: { ...distance },
+          time: { ...time },
+        });
+      }
+      title = `Same region: ${nodes.map((n) => n.label).join(" · ")}`;
+    } else if (mode === "river") {
+      // Hub should be river (sidon); steps = places on it
       for (const s of steps) {
         legs.push({
           fromFeatureId: hubId,
           toFeatureId: s.featureId ?? s.label.toLowerCase().replace(/\s+/g, "-"),
           viaPhrase: s.label,
-          kind: "proximity",
+          kind: "river",
+          distance: { quality: "unknown" },
+          time: { quality: "unknown" },
+        });
+      }
+      title = `River ${placeLabel(hubId)}: ${steps.map((s) => s.label).join(", ")}`;
+    } else {
+      // Hub → each related item (contains / proximity)
+      for (const s of steps) {
+        legs.push({
+          fromFeatureId: hubId,
+          toFeatureId: s.featureId ?? s.label.toLowerCase().replace(/\s+/g, "-"),
+          viaPhrase: s.label,
+          kind: kindMap[mode],
           distance: { quality: "unknown" },
           time: { quality: "unknown" },
         });
@@ -704,7 +762,7 @@ function ReaderPage() {
       const hubLabel = placeLabel(hubId);
       title =
         mode === "contains"
-          ? `${hubLabel} contains / near: ${steps.map((s) => s.label).join(", ")}`
+          ? `${hubLabel} contains: ${steps.map((s) => s.label).join(", ")}`
           : `${hubLabel} near: ${steps.map((s) => s.label).join(", ")}`;
     }
 
@@ -727,6 +785,11 @@ function ReaderPage() {
       saveAssociations(next);
       setEditingAssocId(null);
     } else {
+      const chrono: ChronologySpan = assocChronology
+        ? { ...assocChronology, label: chronoLabel || assocChronology.label }
+        : chronologyForChapter(current.book, current.chapter) ?? {
+            quality: "unknown" as const,
+          };
       const assoc: UserAssociation = {
         id: `assoc-${Date.now()}`,
         book: current.book,
@@ -736,6 +799,7 @@ function ReaderPage() {
         legs,
         pathDistance: distance,
         pathTime: time,
+        chronology: chrono,
         relatedRefs: [],
         tags: [mode, ...steps.map((s) => s.label)],
         createdAt: new Date().toISOString(),
@@ -766,6 +830,10 @@ function ReaderPage() {
         : a.pathDistance.quality,
     );
     setManualDistValue(a.pathDistance.value ?? "");
+    if (a.chronology) {
+      setAssocChronology(a.chronology);
+      setChronoLabel(a.chronology.label ?? "");
+    }
     // Reconstruct ordered steps from legs
     const ids: ConnectionDraftNode[] = [];
     if (a.legs[0]) {
@@ -1333,12 +1401,12 @@ function ReaderPage() {
             </h2>
             <div className="text-[11px] text-muted space-y-1 leading-relaxed">
               <p>
-                <strong className="text-ink">Path</strong> = ordered travel (Nephi → wilderness →
-                came down → Zarahemla). Add steps via candidates or “Add to Builder”.
-              </p>
-              <p>
-                <strong className="text-ink">Contains / proximity</strong> = hub land + things
-                found near it (promised land + forests, ore…).
+                <strong className="text-ink">Path</strong> = journey.{" "}
+                <strong className="text-ink">Contains</strong> = inside a land.{" "}
+                <strong className="text-ink">Proximity</strong> = near.{" "}
+                <strong className="text-ink">Same region</strong> = peer places in one theater
+                (east-sea cities) without inventing a road.{" "}
+                <strong className="text-ink">River</strong> = bank / through / head of Sidon etc.
               </p>
             </div>
 
@@ -1346,36 +1414,32 @@ function ReaderPage() {
               <span className="text-muted">Type</span>
               <select
                 value={mode}
-                onChange={(e) => setMode(e.target.value as ConnMode)}
+                onChange={(e) => {
+                  const m = e.target.value as ConnMode;
+                  setMode(m);
+                  if (m === "river") setHubId("sidon");
+                  if (m === "same_region" && hubId === "sidon") setHubId("east-sea-cluster");
+                }}
                 className="w-full rounded border border-border bg-surface px-2 py-2 text-sm"
               >
-                <option value="path">Path (ordered travel)</option>
-                <option value="contains">Contains / found in land</option>
-                <option value="proximity">Proximity (near)</option>
+                <option value="path">Path (ordered travel / journey)</option>
+                <option value="contains">Contains (inside a land/place)</option>
+                <option value="proximity">Proximity (near, not contained)</option>
+                <option value="same_region">Same region (peer places, no path)</option>
+                <option value="river">River / watercourse link</option>
               </select>
             </label>
 
-            {mode !== "path" && (
-              <label className="block text-xs space-y-1">
-                <span className="text-muted">Hub place</span>
-                <select
-                  value={hubId}
-                  onChange={(e) => setHubId(e.target.value)}
-                  className="w-full rounded border border-border bg-surface px-2 py-2 text-sm"
-                >
-                  {placeOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            {mode === "path" && steps.length < 2 && (
+            {(mode !== "path" || steps.length < 2) && (
               <label className="block text-xs space-y-1">
                 <span className="text-muted">
-                  Starting place (used if you only add one step)
+                  {mode === "river"
+                    ? "River (hub)"
+                    : mode === "same_region"
+                      ? "Region anchor (optional hub)"
+                      : mode === "path"
+                        ? "Starting place (if only one step)"
+                        : "Hub place"}
                 </span>
                 <select
                   value={hubId}
@@ -1384,12 +1448,14 @@ function ReaderPage() {
                 >
                   {placeOptions.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {p.name} · {p.kind}
+                      {p.parentId ? ` ⊂ ${p.parentId}` : ""}
                     </option>
                   ))}
                 </select>
               </label>
             )}
+
 
             {/* Ordered steps */}
             <div>
@@ -1452,6 +1518,23 @@ function ReaderPage() {
                 </p>
               )}
             </div>
+
+            {mode === "river" && hubId === "sidon" && (
+              <button
+                type="button"
+                className="w-full rounded border border-border px-2 py-1.5 text-xs hover:bg-surface-2"
+                onClick={() => {
+                  const links = linksForRiver("sidon");
+                  for (const l of links) {
+                    addStep(placeLabel(l.placeId), l.placeId);
+                  }
+                  setFlash("Loaded Sidon-linked places (head → mouth order)");
+                  window.setTimeout(() => setFlash(null), 2000);
+                }}
+              >
+                Load Sidon places from seed hydro graph
+              </button>
+            )}
 
             {/* Candidates */}
             <div>
@@ -1592,6 +1675,42 @@ function ReaderPage() {
               </button>
             </div>
 
+
+            <div className="space-y-2 rounded border border-border p-2 text-xs">
+              <div className="font-medium">Historical date (time layer)</div>
+              <p className="text-[10px] text-muted leading-relaxed">
+                Defaults from chapter-heading estimates. Attach to every association so size/war
+                overlays can slice by year later.
+              </p>
+              {assocChronology ? (
+                <p className="text-ink-soft">
+                  Auto: {formatChronologySpan(assocChronology)}{" "}
+                  <span className="text-muted">({assocChronology.quality})</span>
+                </p>
+              ) : (
+                <p className="text-muted">No chapter heading date for this chapter yet.</p>
+              )}
+              <label className="block space-y-0.5">
+                <span className="text-muted">Label (editable)</span>
+                <input
+                  value={chronoLabel}
+                  onChange={(e) => {
+                    setChronoLabel(e.target.value);
+                    setAssocChronology((c) =>
+                      c
+                        ? { ...c, label: e.target.value, quality: c.quality === "unknown" ? "approximate" : c.quality }
+                        : {
+                            quality: "approximate",
+                            label: e.target.value,
+                          },
+                    );
+                  }}
+                  placeholder="e.g. ~74 BC"
+                  className="w-full rounded border border-border px-1.5 py-1"
+                />
+              </label>
+            </div>
+
             <button
               type="button"
               disabled={steps.length === 0}
@@ -1702,8 +1821,13 @@ function ReaderPage() {
                       Dist: {spanLabel(a.pathDistance)}
                     </Badge>
                     <Badge tone={a.pathTime.quality === "unknown" ? "claim" : "teal"}>
-                      Time: {spanLabel(a.pathTime)}
+                      Travel time: {spanLabel(a.pathTime)}
                     </Badge>
+                    {a.chronology && (
+                      <Badge tone="insight">
+                        Date: {formatChronologySpan(a.chronology)}
+                      </Badge>
+                    )}
                   </div>
                   {a.legs.map((leg, i) => (
                     <div key={i} className="flex justify-between gap-2 text-muted">
