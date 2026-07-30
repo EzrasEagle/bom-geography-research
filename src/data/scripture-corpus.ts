@@ -15,7 +15,18 @@ function url(bookPath: string, chapter: number, verse?: number) {
 }
 
 /** Seed corpus — expand continuously while indexing models */
-export const corpus: CorpusVerse[] = [
+function dedupeCorpus(rows: CorpusVerse[]): CorpusVerse[] {
+  const seen = new Set<string>();
+  const out: CorpusVerse[] = [];
+  for (const r of rows) {
+    if (seen.has(r.id)) continue;
+    seen.add(r.id);
+    out.push(r);
+  }
+  return out;
+}
+
+export const corpus: CorpusVerse[] = dedupeCorpus([
   ...OMNI_1,
   ...ALMA_SIDON,
   // Landing / climate
@@ -72,27 +83,7 @@ export const corpus: CorpusVerse[] = [
     domains: ["textual_geography"],
     studyUrl: url("mosiah", 7, 1),
   },
-  {
-    id: "alma-2-15",
-    book: "Alma",
-    chapter: 2,
-    verse: 15,
-    text: "And it came to pass that the Amlicites came upon the hill Amnihu, which was east of the river Sidon, which ran by the land of Zarahemla, and there they began to make war with the Nephites.",
-    featureIds: ["sidon", "zarahemla"],
-    domains: ["textual_geography"],
-    studyUrl: url("alma", 2, 15),
-  },
   // Alma 22 spine
-  {
-    id: "alma-22-27",
-    book: "Alma",
-    chapter: 22,
-    verse: 27,
-    text: "And it came to pass that the king sent a proclamation throughout all the land… and which was bordered by the wilderness which was full of the Lamanites… and which ran from the sea east even to the sea west…",
-    featureIds: ["sea-east", "sea-west", "nephi", "sidon"],
-    domains: ["textual_geography"],
-    studyUrl: url("alma", 22, 27),
-  },
   {
     id: "alma-22-32",
     book: "Alma",
@@ -287,7 +278,7 @@ export const corpus: CorpusVerse[] = [
     domains: ["climate_botany", "textual_geography"],
     studyUrl: url("hel", 3, 10),
   },
-];
+]);
 
 export function booksInCorpus(): string[] {
   return [...new Set(corpus.map((c) => c.book))];
