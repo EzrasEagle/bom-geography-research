@@ -39,6 +39,73 @@ export type AssociationSuggestion = {
 
 /** Seed suggestions — expand while indexing */
 export const associationSuggestions: AssociationSuggestion[] = [
+
+  {
+    id: "sug-1ne-18-23-voyage",
+    book: "1 Nephi",
+    chapter: 18,
+    verse: 23,
+    title: "Sailed many days → promised land",
+    summary:
+      "Voyage ends at the promised land after “the space of many days.” Time is stated as many days; absolute distance unknown.",
+    tags: ["sailed", "space of many days", "promised land", "path"],
+    legs: [
+      {
+        fromFeatureId: "voyage",
+        toFeatureId: "promised-land",
+        viaPhrase: "sailed for the space of many days … arrive at the promised land",
+        kind: "path",
+        distance: { quality: "unknown", note: "Ocean crossing — absolute distance not stated" },
+        time: { quality: "stated", value: "space of many days" },
+        elevation: "unknown",
+      },
+    ],
+    relatedRefs: [
+      { ref: "1 Nephi 18:22–23", note: "Sailing to promised land" },
+      { ref: "1 Nephi 18:25", note: "Wilderness, forests, beasts, ore in land of promise" },
+    ],
+  },
+  {
+    id: "sug-1ne-18-25-resources",
+    book: "1 Nephi",
+    chapter: 18,
+    verse: 25,
+    title: "Promised land → wilderness / forests / beasts / ore",
+    summary:
+      "In the land of promise, as they journeyed in the wilderness: beasts in forests of every kind; ore of gold, silver, copper. Model as hub (promised land) with contained/proximity resources — not separate cities.",
+    tags: ["promised land", "wilderness", "forests", "beasts", "ore", "proximity"],
+    legs: [
+      {
+        fromFeatureId: "promised-land",
+        toFeatureId: "wilderness",
+        viaPhrase: "journeyed in the wilderness",
+        kind: "proximity",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+      },
+      {
+        fromFeatureId: "promised-land",
+        toFeatureId: "forests",
+        viaPhrase: "beasts in the forests of every kind",
+        kind: "proximity",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+      },
+      {
+        fromFeatureId: "promised-land",
+        toFeatureId: "ore",
+        viaPhrase: "all manner of ore, both of gold, and of silver, and of copper",
+        kind: "proximity",
+        distance: { quality: "unknown" },
+        time: { quality: "unknown" },
+      },
+    ],
+    relatedRefs: [
+      { ref: "1 Nephi 18:23", note: "Landing / naming promised land" },
+      { ref: "1 Nephi 18:24", note: "Seeds grew exceedingly" },
+      { ref: "2 Nephi 5:15", note: "Later ore/metal working in Nephi" },
+    ],
+  },
   {
     id: "sug-limhi-lost",
     book: "Mosiah",
