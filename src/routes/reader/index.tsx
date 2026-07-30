@@ -2195,10 +2195,11 @@ function ReaderPage() {
           <Card className="p-3 space-y-2">
             <h2 className="font-semibold text-sm flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
-              Dictionary · KJV (in-app)
+              Dictionary · KJV · Hebrew/Semitic
             </h2>
             <p className="text-[11px] text-muted">
-              Definitions load here — no need to leave the app. Highlight a word or type below.
+              Webster/KJV senses plus Hebrew or Semitic roots when known. Proper names are often{" "}
+              <strong>speculative</strong> — confidence is always labeled.
             </p>
             <div className="flex gap-1.5">
               <input
@@ -2284,10 +2285,29 @@ function ReaderPage() {
                 {embeddedLex.senses.map((s, i) => (
                   <div
                     key={i}
-                    className="rounded border border-border bg-surface-2/40 p-2 text-xs space-y-1.5"
+                    className={`rounded border p-2 text-xs space-y-1.5 ${
+                      s.source === "semitic"
+                        ? "border-insight/40 bg-lime-50/50"
+                        : "border-border bg-surface-2/40"
+                    }`}
                   >
-                    <div className="font-semibold text-[11px] uppercase tracking-wide text-muted">
-                      {s.title}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="font-semibold text-[11px] uppercase tracking-wide text-muted">
+                        {s.title}
+                      </div>
+                      {s.confidence && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                            s.confidence.startsWith("Biblical")
+                              ? "bg-teal-soft/50 border-teal/30 text-teal-900"
+                              : s.confidence.startsWith("Plausible")
+                                ? "bg-orange-50 border-orange-200 text-accent"
+                                : "bg-chip border-border text-muted"
+                          }`}
+                        >
+                          {s.confidence}
+                        </span>
+                      )}
                     </div>
                     <p className="text-ink-soft leading-relaxed whitespace-pre-wrap">
                       {s.body}
@@ -2303,11 +2323,13 @@ function ReaderPage() {
                             kind:
                               s.source === "curated"
                                 ? "curated"
-                                : s.source === "kjv_api"
-                                  ? "kjv"
-                                  : s.source === "free_dictionary"
-                                    ? "free_dictionary"
-                                    : "other",
+                                : s.source === "semitic"
+                                  ? "other"
+                                  : s.source === "kjv_api"
+                                    ? "kjv"
+                                    : s.source === "free_dictionary"
+                                      ? "free_dictionary"
+                                      : "other",
                           },
                           ...embeddedLex.curated.external
                             .filter((ex) =>

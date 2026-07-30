@@ -34,6 +34,29 @@ export const PRIORITY_TERMS = [
 export const lexicon: LexiconEntry[] = [
 
   {
+    term: "Sidon",
+    aliases: ["river Sidon", "waters of Sidon"],
+    priority: 90,
+    webster1828: "In scripture geography, Sidon is a famous Phoenician city; in the BoM, Sidon is primarily a river name.",
+    kjvNotes: "KJV Sidon/Zidon = Phoenician Ṣīdōn (Genesis 10:15; Matthew 11:21). BoM usage is hydronym + battle geography.",
+    ambiguity: "Do not assume the BoM river is the Mediterranean city; use Alma constraints for course and banks.",
+    mapHints: ["hydro", "sidon"],
+    relatedTerms: ["Zarahemla", "Manti", "Amnihu"],
+    sources: [{ label: "Strong’s H6721 Sidon", url: "https://www.blueletterbible.org/lexicon/h6721/kjv/wlc/0-1/" }],
+  },
+  {
+    term: "Amnihu",
+    aliases: ["hill Amnihu"],
+    priority: 85,
+    webster1828: "Proper name; no English common-noun sense.",
+    kjvNotes: "Not a KJV place name. Geographic meaning comes from Alma 2 (east of Sidon, battle hill).",
+    ambiguity: "Etymology speculative; map from relations (east of Sidon, by Zarahemla theater).",
+    mapHints: ["topo", "hill"],
+    relatedTerms: ["Sidon", "Zarahemla"],
+    sources: [{ label: "BoM Onomasticon", url: "https://onoma.lib.byu.edu/" }],
+  },
+
+  {
     term: "land of promise",
     aliases: ["promised land", "the promised land", "land of promise"],
     priority: 82,

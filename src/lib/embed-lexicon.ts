@@ -6,11 +6,17 @@
  */
 
 import { dynamicLexiconLookup, type DynamicLexiconResult } from "@/data/lexicon";
+import {
+  confidenceLabel,
+  lookupSemitic,
+  type SemiticEtymology,
+} from "@/data/semitic-etymology";
 
 export type EmbeddedSense = {
-  source: "curated" | "free_dictionary" | "kjv_api";
+  source: "curated" | "semitic" | "free_dictionary" | "kjv_api";
   title: string;
   body: string;
+  confidence?: string;
 };
 
 export type EmbeddedLexicon = {
@@ -59,14 +65,38 @@ export async function fetchEmbeddedLexicon(raw: string): Promise<EmbeddedLexicon
     });
   }
 
+  const semitic = lookupSemitic(query);
+  if (semitic) {
+    senses.push(formatSemiticSense(semitic));
+  } else {
+    // Still offer a placeholder so users know we checked
+    senses.push({
+      source: "semitic",
+      title: "Hebrew / Semitic roots",
+      confidence: confidenceLabel("unknown"),
+      body: [
+        `No curated Hebrew/Semitic entry for “${query}” yet.`,
+        "",
+        "Proper names in the Book of Mormon often lack proven etymologies. Speculative onomastic proposals (if any) will be labeled clearly when added.",
+        "",
+        "Tip: try Sidon, Amnihu, Zarahemla, Nephi, Gideon, wilderness, came down.",
+      ].join("\n"),
+    });
+  }
+
   if (cache.has(key)) {
     const cached = cache.get(key)!;
-    // Merge curated on top if not already
-    const rest = cached.filter((s) => s.source !== "curated");
+    // Keep live curated + semitic; only cache external API senses
+    const rest = cached.filter(
+      (s) => s.source !== "curated" && s.source !== "semitic",
+    );
     return {
       query,
       curated,
-      senses: [...senses.filter((s) => s.source === "curated"), ...rest],
+      senses: [
+        ...senses.filter((s) => s.source === "curated" || s.source === "semitic"),
+        ...rest,
+      ],
       loading: false,
     };
   }
@@ -155,11 +185,42 @@ export async function fetchEmbeddedLexicon(raw: string): Promise<EmbeddedLexicon
     /* ignore */
   }
 
-  // Cache non-curated extras
+  // Cache only external API senses (not curated/semitic)
   cache.set(
     key,
-    senses.filter((s) => s.source !== "curated"),
+    senses.filter((s) => s.source === "free_dictionary" || s.source === "kjv_api"),
   );
 
   return { query, curated, senses, loading: false };
+}
+
+
+function formatSemiticSense(s: SemiticEtymology): EmbeddedSense {
+  const lines = [
+    `Confidence: ${confidenceLabel(s.confidence)}`,
+    "",
+    s.caveat,
+    "",
+    `Language focus: ${s.language}`,
+  ];
+  if (s.root) {
+    lines.push(`Proposed root / form: ${s.root}${s.rootGloss ? ` — ${s.rootGloss}` : ""}`);
+  }
+  lines.push("", s.meaning);
+  if (s.alternatives?.length) {
+    lines.push("", "Other possibilities:");
+    for (const a of s.alternatives) lines.push(`• ${a}`);
+  }
+  if (s.sources.length) {
+    lines.push("", "Sources / starting points:");
+    for (const src of s.sources) {
+      lines.push(src.url ? `• ${src.label} (${src.url})` : `• ${src.label}`);
+    }
+  }
+  return {
+    source: "semitic",
+    title: `Hebrew / Semitic · ${s.term}`,
+    confidence: confidenceLabel(s.confidence),
+    body: lines.join("\n"),
+  };
 }
