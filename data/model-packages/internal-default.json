@@ -1,0 +1,86 @@
+{
+  "modelId": "internal",
+  "layout": {
+    "sea-west": {
+      "x": 60,
+      "y": 200
+    },
+    "landing": {
+      "x": 100,
+      "y": 320
+    },
+    "nephi": {
+      "x": 180,
+      "y": 300
+    },
+    "manti": {
+      "x": 260,
+      "y": 240
+    },
+    "sidon": {
+      "x": 300,
+      "y": 200
+    },
+    "zarahemla": {
+      "x": 280,
+      "y": 160
+    },
+    "jershon": {
+      "x": 400,
+      "y": 180
+    },
+    "sea-east": {
+      "x": 480,
+      "y": 200
+    },
+    "bountiful-nw": {
+      "x": 300,
+      "y": 100
+    },
+    "narrow-neck": {
+      "x": 300,
+      "y": 70
+    },
+    "desolation": {
+      "x": 300,
+      "y": 40
+    },
+    "cumorah": {
+      "x": 360,
+      "y": 30
+    },
+    "climate-whirlwind": {
+      "x": 420,
+      "y": 280
+    },
+    "climate-storms": {
+      "x": 440,
+      "y": 250
+    },
+    "climate-seasons": {
+      "x": 400,
+      "y": 300
+    },
+    "climate-agriculture": {
+      "x": 380,
+      "y": 270
+    },
+    "wilderness": {
+      "x": 220,
+      "y": 220
+    }
+  },
+  "macro": {
+    "dayMilesOpen": 17,
+    "dayMilesMountain": 10,
+    "dayMilesJungle": 8,
+    "globalScale": 1,
+    "directionRotation": 0,
+    "roadsMode": "unknown",
+    "defaultTerrain": "mixed",
+    "breakNeck": false
+  },
+  "micro": {},
+  "updatedAt": "2026-07-30T01:07:55.285Z",
+  "note": "Git-backed default schematic package. Browser localStorage may hold user edits; re-seed from src/data/route-associations.ts and this file."
+}
