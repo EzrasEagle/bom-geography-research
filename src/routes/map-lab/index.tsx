@@ -59,6 +59,15 @@ import {
   elevFromEdgeNotes,
 } from "@/lib/map-edge-geometry";
 import {
+  MAP_OVERLAYS,
+  OVERLAY_GROUPS,
+  PLANNED_OVERLAYS,
+  CHRONO_WINDOWS,
+  defaultOverlayState,
+  type MapOverlayId,
+  type ChronoWindow,
+} from "@/data/map-layers";
+import {
   loadCampaigns,
   saveCampaigns,
   type Campaign,
@@ -132,8 +141,13 @@ function MapLabPage() {
   );
   const [showLabels, setShowLabels] = useState<"auto" | "all" | "hover">("auto");
   const [isPanning, setIsPanning] = useState(false);
+  const [panTool, setPanTool] = useState(false);
+  const [overlays, setOverlays] = useState(defaultOverlayState);
+  const [chronoWindow, setChronoWindow] = useState<ChronoWindow>("all");
+  const [layersOpen, setLayersOpen] = useState(true);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const dragMoved = useRef(false);
+  const spaceDown = useRef(false);
   const [connectMode, setConnectMode] = useState(false);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [newRouteForm, setNewRouteForm] = useState({
@@ -740,6 +754,64 @@ function MapLabPage() {
   }, [edges, hoverEdge, selectedEdge]);
 
 
+
+  function ov(id: MapOverlayId) {
+    return overlays[id] !== false;
+  }
+
+  function toggleOverlay(id: MapOverlayId) {
+    setOverlays((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      if (id === "campaigns") setShowCampaigns(next.campaigns);
+      if (id === "constraint_edges" || id === "user_associations") {
+        setShowConstraintEdges(next.constraint_edges || next.user_associations);
+      }
+      if (id === "soft_wilderness") setShowSoftRegions(next.soft_wilderness);
+      if (id === "paths_corridors") setShowPaths(next.paths_corridors);
+      if (id === "climate") setShowClimateLayer(next.climate);
+      return next;
+    });
+  }
+
+  function zoomAt(clientX: number, clientY: number, nextZoom: number) {
+    const svg = svgRef.current;
+    const z0 = mapZoom;
+    const z1 = Math.min(8, Math.max(0.5, nextZoom));
+    if (!svg || z1 === z0) {
+      setMapZoom(z1);
+      return;
+    }
+    const rect = svg.getBoundingClientRect();
+    const fx = (clientX - rect.left) / Math.max(1, rect.width);
+    const fy = (clientY - rect.top) / Math.max(1, rect.height);
+    const vbW0 = VB.w / z0;
+    const vbH0 = VB.h / z0;
+    const vbW1 = VB.w / z1;
+    const vbH1 = VB.h / z1;
+    const mx = mapPan.x + fx * vbW0;
+    const my = mapPan.y + fy * vbH0;
+    setMapZoom(z1);
+    setMapPan({ x: mx - fx * vbW1, y: my - fy * vbH1 });
+  }
+
+  function resetView() {
+    setMapZoom(1.25);
+    setMapPan({ x: 0, y: 0 });
+  }
+
+  function centerOnPlace(id: string) {
+    const pt = displayLayout[id] ?? layout[id];
+    if (!pt) return;
+    const z = Math.max(mapZoom, 2);
+    setMapZoom(z);
+    setMapPan({ x: pt.x - VB.w / z / 2, y: pt.y - VB.h / z / 2 });
+  }
+
+  function beginPan(clientX: number, clientY: number) {
+    setIsPanning(true);
+    panStart.current = { x: clientX, y: clientY, panX: mapPan.x, panY: mapPan.y };
+  }
+
   const onPointerDownPlace = useCallback(
     (id: string, e: React.PointerEvent) => {
       e.stopPropagation();
@@ -749,25 +821,28 @@ function MapLabPage() {
         handlePlaceClick(id);
         return;
       }
+      if (panTool || spaceDown.current) {
+        beginPan(e.clientX, e.clientY);
+        return;
+      }
       if (!editMode) return;
       dragMoved.current = false;
       setDragId(id);
       (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     },
-    [editMode, connectMode],
+    [editMode, connectMode, panTool, mapPan.x, mapPan.y],
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      // pan with middle button or alt+drag on background handled separately
-      if (isPanning && panStart.current && svgRef.current) {
-        const dx = (e.clientX - panStart.current.x) / mapZoom;
-        const dy = (e.clientY - panStart.current.y) / mapZoom;
-        // pan moves viewBox opposite to drag
-        const scale = VB.w / mapZoom / VB.w;
+      if (isPanning && panStart.current) {
+        const svg = svgRef.current;
+        const rect = svg?.getBoundingClientRect();
+        const unitX = rect ? VB.w / mapZoom / rect.width : 1 / mapZoom;
+        const unitY = rect ? VB.h / mapZoom / rect.height : 1 / mapZoom;
         setMapPan({
-          x: panStart.current.panX - (e.clientX - panStart.current.x) * (1 / mapZoom) * 0.85,
-          y: panStart.current.panY - (e.clientY - panStart.current.y) * (1 / mapZoom) * 0.85,
+          x: panStart.current.panX - (e.clientX - panStart.current.x) * unitX,
+          y: panStart.current.panY - (e.clientY - panStart.current.y) * unitY,
         });
         return;
       }
@@ -783,8 +858,8 @@ function MapLabPage() {
       const ux = (dx * Math.cos(rad) - dy * Math.sin(rad)) / scale;
       const uy = (dx * Math.sin(rad) + dy * Math.cos(rad)) / scale;
       setPlacePos(dragId, {
-        x: Math.min(VB.w, Math.max(0, cx + ux)),
-        y: Math.min(VB.h, Math.max(0, cy + uy)),
+        x: Math.min(VB.w + 80, Math.max(-40, cx + ux)),
+        y: Math.min(VB.h + 80, Math.max(-40, cy + uy)),
       });
     },
     [dragId, editMode, macro.globalScale, macro.directionRotation, isPanning, mapZoom],
@@ -975,8 +1050,102 @@ function MapLabPage() {
         </span>
       </div>
 
-      {/* Map full width — macro/micro below (not side columns that shrink the map) */}
-      <div className="space-y-4">
+      {/* Layers + Map */}
+      <div className="grid gap-3 lg:grid-cols-[minmax(220px,260px)_1fr] items-start">
+        <Card className="p-3 space-y-2 lg:sticky lg:top-2 max-h-[70vh] overflow-auto order-2 lg:order-1">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between text-sm font-semibold"
+            onClick={() => setLayersOpen((o) => !o)}
+          >
+            Layers
+            <span className="text-xs text-muted font-normal">{layersOpen ? "hide" : "show"}</span>
+          </button>
+          {layersOpen ? (
+            <div className="space-y-2">
+              <p className="text-[10px] text-muted leading-relaxed">
+                Show or hide map content by type. Date filter is under Time.
+              </p>
+              {OVERLAY_GROUPS.map((g) => (
+                <div key={g.id} className="space-y-0.5">
+                  <div className="text-[10px] uppercase tracking-wide text-muted font-semibold pt-1">
+                    {g.label}
+                  </div>
+                  {MAP_OVERLAYS.filter((d) => d.group === g.id).map((d) => (
+                    <label
+                      key={d.id}
+                      className="flex items-start gap-2 text-xs rounded px-1 py-0.5 hover:bg-surface-2 cursor-pointer"
+                      title={d.description}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={!!overlays[d.id]}
+                        onChange={() => toggleOverlay(d.id)}
+                      />
+                      <span>
+                        <span className="font-medium">{d.label}</span>
+                        <span className="block text-[10px] text-muted">{d.description}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ))}
+              {overlays.chrono_filter ? (
+                <label className="block text-xs space-y-1 pt-1 border-t border-border">
+                  <span className="text-muted">Date window</span>
+                  <select
+                    value={chronoWindow}
+                    onChange={(e) => setChronoWindow(e.target.value as ChronoWindow)}
+                    className="w-full rounded border border-border bg-surface px-1.5 py-1"
+                  >
+                    {CHRONO_WINDOWS.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <div className="pt-2 border-t border-border space-y-1">
+                <div className="text-[10px] uppercase tracking-wide text-muted font-semibold">
+                  Coming later
+                </div>
+                {PLANNED_OVERLAYS.map((pl) => (
+                  <div key={pl.label} className="text-[10px] text-muted leading-snug">
+                    <span className="font-medium text-ink-soft">{pl.label}</span> — {pl.description}
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  className="text-[10px] rounded border border-border px-1.5 py-0.5"
+                  onClick={() => setOverlays(defaultOverlayState())}
+                >
+                  Reset layers
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] rounded border border-border px-1.5 py-0.5"
+                  onClick={() => {
+                    const all = defaultOverlayState();
+                    (Object.keys(all) as MapOverlayId[]).forEach((k) => {
+                      all[k] = false;
+                    });
+                    all.places = true;
+                    all.labels = true;
+                    setOverlays(all);
+                  }}
+                >
+                  Places only
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </Card>
+
+      <div className="space-y-4 min-w-0 order-1 lg:order-2">
         <Card className="p-2 md:p-3 overflow-hidden flex flex-col min-h-[55vh] md:min-h-[65vh]">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-2">
             <span className="text-xs font-semibold text-muted uppercase tracking-wide">
@@ -986,7 +1155,12 @@ function MapLabPage() {
               <button
                 type="button"
                 className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
-                onClick={() => setMapZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
+                onClick={() => {
+                  const svg = svgRef.current;
+                  const rect = svg?.getBoundingClientRect();
+                  if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, mapZoom - 0.25);
+                  else setMapZoom((z) => Math.max(0.5, z - 0.25));
+                }}
                 title="Zoom out"
               >
                 <Minus className="h-3.5 w-3.5" />
@@ -995,21 +1169,42 @@ function MapLabPage() {
               <button
                 type="button"
                 className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
-                onClick={() => setMapZoom((z) => Math.min(6, Math.round((z + 0.25) * 100) / 100))}
+                onClick={() => {
+                  const svg = svgRef.current;
+                  const rect = svg?.getBoundingClientRect();
+                  if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, mapZoom + 0.25);
+                  else setMapZoom((z) => Math.min(8, z + 0.25));
+                }}
                 title="Zoom in"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
               <button
                 type="button"
+                className={`rounded border px-2 py-1 text-xs ${
+                  panTool ? "bg-teal text-white border-teal" : "border-border hover:bg-surface-2"
+                }`}
+                onClick={() => setPanTool((p) => !p)}
+                title="Pan tool (or hold Space)"
+              >
+                Pan
+              </button>
+              <button
+                type="button"
                 className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
-                onClick={() => {
-                  setMapZoom(1);
-                  setMapPan({ x: 0, y: 0 });
-                }}
+                onClick={resetView}
                 title="Reset view"
               >
                 <Maximize2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2 disabled:opacity-40"
+                disabled={!selectedPlace}
+                onClick={() => selectedPlace && centerOnPlace(selectedPlace)}
+                title="Center on selected"
+              >
+                Center
               </button>
               <button
                 type="button"
@@ -1034,27 +1229,45 @@ function MapLabPage() {
           <svg
             ref={svgRef}
             viewBox={`${mapPan.x} ${mapPan.y} ${VB.w / mapZoom} ${VB.h / mapZoom}`}
-            className="w-full flex-1 min-h-[420px] md:min-h-[520px] xl:min-h-[640px] h-auto bg-[#faf6ef] rounded-[var(--radius)] touch-none border border-border/60"
+            className={`w-full flex-1 min-h-[420px] md:min-h-[520px] xl:min-h-[640px] h-auto bg-[#faf6ef] rounded-[var(--radius)] touch-none border border-border/60 ${
+              panTool || isPanning ? "cursor-grab active:cursor-grabbing" : ""
+            }`}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
             onWheel={(e) => {
               e.preventDefault();
-              const delta = e.deltaY > 0 ? -0.15 : 0.15;
-              setMapZoom((z) => Math.min(6, Math.max(0.6, Math.round((z + delta) * 100) / 100)));
+              if (e.ctrlKey || e.metaKey) {
+                const delta = e.deltaY > 0 ? -0.12 : 0.12;
+                zoomAt(e.clientX, e.clientY, mapZoom + delta);
+                return;
+              }
+              // Two-finger trackpad pan (and mouse wheel pan)
+              const svg = svgRef.current;
+              const rect = svg?.getBoundingClientRect();
+              const unitX = rect ? VB.w / mapZoom / rect.width : 1 / mapZoom;
+              const unitY = rect ? VB.h / mapZoom / rect.height : 1 / mapZoom;
+              setMapPan((p) => ({
+                x: p.x + e.deltaX * unitX,
+                y: p.y + e.deltaY * unitY,
+              }));
             }}
             onPointerDown={(e) => {
-              // pan: middle button or hold Space not available — use Alt+drag or button 1 on empty
-              if (e.button === 1 || e.altKey || e.button === 2) {
+              const wantPan =
+                panTool ||
+                spaceDown.current ||
+                e.button === 1 ||
+                e.altKey ||
+                e.button === 2 ||
+                (e.button === 0 && e.target === e.currentTarget);
+              if (wantPan) {
                 e.preventDefault();
-                setIsPanning(true);
-                panStart.current = {
-                  x: e.clientX,
-                  y: e.clientY,
-                  panX: mapPan.x,
-                  panY: mapPan.y,
-                };
+                (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                beginPan(e.clientX, e.clientY);
               }
+            }}
+            onDoubleClick={(e) => {
+              if (e.target === e.currentTarget) resetView();
             }}
             onContextMenu={(e) => e.preventDefault()}
           >
@@ -1070,7 +1283,7 @@ function MapLabPage() {
 
 
             {/* Constraint / association edges (curved when multi) */}
-            {showConstraintEdges &&
+            {(ov("constraint_edges") || ov("user_associations")) &&
               edgeDrawList.map(({ e, a, b, ctrl, mid, elev, multi }) => {
                 const active = e.id === selected?.id;
                 const d = quadPath(a, b, ctrl);
@@ -1126,7 +1339,7 @@ function MapLabPage() {
               })}
 
             {/* Wilderness bands — one per enabled route; multi-endpoint stretches shape */}
-            {showSoftRegions &&
+            {ov("soft_wilderness") &&
               wildernessBandsDisplay.map((band) => (
                 <path
                   key={band.id}
@@ -1153,7 +1366,7 @@ function MapLabPage() {
               ))}
 
             {/* Route centerlines (editable associations) */}
-            {showPaths &&
+            {ov("paths_corridors") &&
               wildernessBandsDisplay.map((band) => {
                 const d = polylineToSvgD(band.spine);
                 const sel = editRouteId === band.id;
@@ -1217,7 +1430,7 @@ function MapLabPage() {
 
 
             {/* Path object beads on selected/edited route */}
-            {showPaths &&
+            {ov("paths_corridors") &&
               wildernessBandsDisplay
                 .filter((b) => b.id === editRouteId || b.route.pathObjects?.length)
                 .flatMap((band) => {
@@ -1262,7 +1475,7 @@ function MapLabPage() {
                 })}
 
             {/* Elevation signals along corridors */}
-            {showPaths &&
+            {ov("elevation") &&
               elevMarkersDisplay.map((m) => {
                 const color =
                   m.kind === "up" ? "#b45309" : m.kind === "down" ? "#1e3a5f" : "#57534e";
@@ -1311,7 +1524,7 @@ function MapLabPage() {
               })}
 
             {/* Campaign progressions (armies / lost parties) — flex routes */}
-            {showCampaigns &&
+            {ov("campaigns") &&
               campaignPaths.map(({ campaign: c, pts }) => {
                 const sel = selectedCampaignId === c.id;
                 // simple polyline; later: obstacle-aware flex
@@ -1352,7 +1565,7 @@ function MapLabPage() {
               })}
 
             {/* Day rings on wilderness endpoints */}
-            {showSoftRegions &&
+            {ov("day_rings") &&
               (selectedPlace === "wilderness" || hoverPlace === "wilderness") &&
               wildEndpoints.map((pid) => {
                 const c = displayLayout[pid];
@@ -1373,7 +1586,16 @@ function MapLabPage() {
                 );
               })}
 
-            {places.filter((p) => effectiveLayers.has(layerOf(p.id)) || objectId === p.id).map((p) => {
+            {ov("places") &&
+              places
+                .filter((p) => {
+                  if (!(effectiveLayers.has(layerOf(p.id)) || objectId === p.id)) return false;
+                  if (p.kind === "sea" && !ov("seas")) return false;
+                  const L = layerOf(p.id);
+                  if ((L === "climate" || L === "season") && !ov("climate")) return false;
+                  return true;
+                })
+                .map((p) => {
               const pos = displayLayout[p.id] ?? { x: 260, y: 180 };
               const isSea = p.kind === "sea";
               const isSoft = isSoftRegionFeature(p.id, p.kind);
@@ -1495,11 +1717,12 @@ function MapLabPage() {
               );
             })}
           </svg>
-          <p className="text-xs text-muted mt-2">
-            Scroll to zoom · Alt+drag (or right-drag) to pan · Click place/edge for dossier
-            {editMode ? " · Drag places to reposition" : " · enable Drag places to move pins"}.
-            Multiple links between the same pair fan out as curves. ↑/↓ on edges = relational elevation.
-            Campaigns (dashed) are army/party progressions that will flex on real terrain.
+          <p className="text-xs text-muted mt-2 leading-relaxed">
+            <strong>Pan:</strong> two-finger trackpad scroll/drag, mouse wheel, <strong>Pan</strong> tool,
+            hold Space+drag, Alt/right-drag, or drag empty canvas.{" "}
+            <strong>Zoom:</strong> pinch (Ctrl+scroll) or +/− (zooms under cursor).{" "}
+            <strong>Center</strong> on selected place · double-click empty canvas to reset view.
+            Use the <strong>Layers</strong> panel for connections, campaigns, elevation, date.
           </p>
           {(hoverPlace || hoverEdge) && (
             <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface-2/90 p-3 text-xs space-y-1">
@@ -1973,7 +2196,10 @@ function MapLabPage() {
         </Card>
       </div>
 
-      {/* Object connection box — every link to/from the selected geographic object */}
+      </div>
+      {/* end layers+map grid */}
+
+            {/* Object connection box — every link to/from the selected geographic object */}
       <Card className="p-4 md:p-5 space-y-3 border-accent/25">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
           <div>
