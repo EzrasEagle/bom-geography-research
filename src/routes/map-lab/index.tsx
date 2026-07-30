@@ -144,7 +144,13 @@ function MapLabPage() {
   const [panTool, setPanTool] = useState(false);
   const [overlays, setOverlays] = useState(defaultOverlayState);
   const [chronoWindow, setChronoWindow] = useState<ChronoWindow>("all");
-  const [layersOpen, setLayersOpen] = useState(true);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [panelCampaigns, setPanelCampaigns] = useState(false);
+  const [panelMacro, setPanelMacro] = useState(false);
+  const [panelMicro, setPanelMicro] = useState(false);
+  const [panelPlace, setPanelPlace] = useState(false);
+  const [panelAdd, setPanelAdd] = useState(false);
+  const [panelRoutes, setPanelRoutes] = useState(false);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const dragMoved = useRef(false);
   const spaceDown = useRef(false);
@@ -1050,103 +1056,10 @@ function MapLabPage() {
         </span>
       </div>
 
-      {/* Layers + Map */}
-      <div className="grid gap-3 lg:grid-cols-[minmax(220px,260px)_1fr] items-start">
-        <Card className="p-3 space-y-2 lg:sticky lg:top-2 max-h-[70vh] overflow-auto order-2 lg:order-1">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between text-sm font-semibold"
-            onClick={() => setLayersOpen((o) => !o)}
-          >
-            Layers
-            <span className="text-xs text-muted font-normal">{layersOpen ? "hide" : "show"}</span>
-          </button>
-          {layersOpen ? (
-            <div className="space-y-2">
-              <p className="text-[10px] text-muted leading-relaxed">
-                Show or hide map content by type. Date filter is under Time.
-              </p>
-              {OVERLAY_GROUPS.map((g) => (
-                <div key={g.id} className="space-y-0.5">
-                  <div className="text-[10px] uppercase tracking-wide text-muted font-semibold pt-1">
-                    {g.label}
-                  </div>
-                  {MAP_OVERLAYS.filter((d) => d.group === g.id).map((d) => (
-                    <label
-                      key={d.id}
-                      className="flex items-start gap-2 text-xs rounded px-1 py-0.5 hover:bg-surface-2 cursor-pointer"
-                      title={d.description}
-                    >
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={!!overlays[d.id]}
-                        onChange={() => toggleOverlay(d.id)}
-                      />
-                      <span>
-                        <span className="font-medium">{d.label}</span>
-                        <span className="block text-[10px] text-muted">{d.description}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              ))}
-              {overlays.chrono_filter ? (
-                <label className="block text-xs space-y-1 pt-1 border-t border-border">
-                  <span className="text-muted">Date window</span>
-                  <select
-                    value={chronoWindow}
-                    onChange={(e) => setChronoWindow(e.target.value as ChronoWindow)}
-                    className="w-full rounded border border-border bg-surface px-1.5 py-1"
-                  >
-                    {CHRONO_WINDOWS.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              <div className="pt-2 border-t border-border space-y-1">
-                <div className="text-[10px] uppercase tracking-wide text-muted font-semibold">
-                  Coming later
-                </div>
-                {PLANNED_OVERLAYS.map((pl) => (
-                  <div key={pl.label} className="text-[10px] text-muted leading-snug">
-                    <span className="font-medium text-ink-soft">{pl.label}</span> — {pl.description}
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                <button
-                  type="button"
-                  className="text-[10px] rounded border border-border px-1.5 py-0.5"
-                  onClick={() => setOverlays(defaultOverlayState())}
-                >
-                  Reset layers
-                </button>
-                <button
-                  type="button"
-                  className="text-[10px] rounded border border-border px-1.5 py-0.5"
-                  onClick={() => {
-                    const all = defaultOverlayState();
-                    (Object.keys(all) as MapOverlayId[]).forEach((k) => {
-                      all[k] = false;
-                    });
-                    all.places = true;
-                    all.labels = true;
-                    setOverlays(all);
-                  }}
-                >
-                  Places only
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </Card>
+      {/* Map (full width) + fixed inspector tray + collapsed controls */}
+      <div className="space-y-3">
+        <Card className="p-2 md:p-3 overflow-hidden flex flex-col">
 
-      <div className="space-y-4 min-w-0 order-1 lg:order-2">
-        <Card className="p-2 md:p-3 overflow-hidden flex flex-col min-h-[55vh] md:min-h-[65vh]">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-2">
             <span className="text-xs font-semibold text-muted uppercase tracking-wide">
               Map canvas
@@ -1229,7 +1142,7 @@ function MapLabPage() {
           <svg
             ref={svgRef}
             viewBox={`${mapPan.x} ${mapPan.y} ${VB.w / mapZoom} ${VB.h / mapZoom}`}
-            className={`w-full flex-1 min-h-[420px] md:min-h-[520px] xl:min-h-[640px] h-auto bg-[#faf6ef] rounded-[var(--radius)] touch-none border border-border/60 ${
+            className={`w-full h-[min(70vh,640px)] min-h-[420px] bg-[#faf6ef] rounded-[var(--radius)] touch-none border border-border/60 ${
               panTool || isPanning ? "cursor-grab active:cursor-grabbing" : ""
             }`}
             onPointerMove={onPointerMove}
@@ -1717,55 +1630,151 @@ function MapLabPage() {
               );
             })}
           </svg>
-          <p className="text-xs text-muted mt-2 leading-relaxed">
-            <strong>Pan:</strong> two-finger trackpad scroll/drag, mouse wheel, <strong>Pan</strong> tool,
-            hold Space+drag, Alt/right-drag, or drag empty canvas.{" "}
-            <strong>Zoom:</strong> pinch (Ctrl+scroll) or +/− (zooms under cursor).{" "}
-            <strong>Center</strong> on selected place · double-click empty canvas to reset view.
-            Use the <strong>Layers</strong> panel for connections, campaigns, elevation, date.
+          <p className="text-[11px] text-muted mt-2">
+            Pan: trackpad / wheel / Pan tool / Space+drag · Zoom: pinch or +/− · Center · double-click empty = reset
           </p>
-          {(hoverPlace || hoverEdge) && (
-            <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface-2/90 p-3 text-xs space-y-1">
-              {hoverPlace && getPlaceDossier(hoverPlace) && (
-                <>
-                  <div className="font-semibold text-sm text-ink">{getPlaceDossier(hoverPlace)!.name}</div>
-                  <div className="text-muted line-clamp-2">{getPlaceDossier(hoverPlace)!.summary}</div>
-                  <div className="text-accent font-medium">
-                    {getPlaceDossier(hoverPlace)!.scriptures.length} scriptures · click marker for full dossier
-                  </div>
-                  <ul className="list-disc pl-4 text-ink-soft">
-                    {getPlaceDossier(hoverPlace)!.scriptures.slice(0, 3).map((s) => (
-                      <li key={s.ref}>{s.ref}</li>
-                    ))}
-                    {getPlaceDossier(hoverPlace)!.scriptures.length > 3 && (
-                      <li>+{getPlaceDossier(hoverPlace)!.scriptures.length - 3} more…</li>
-                    )}
-                  </ul>
-                </>
-              )}
-              {hoverEdge && !hoverPlace && edgeDossier && (
-                <>
-                  <div className="font-semibold text-sm text-ink">
-                    Connection: {edgeDossier.from} → {edgeDossier.to}
-                  </div>
-                  <div className="text-muted">{edgeDossier.summary}</div>
-                  <div className="text-accent font-medium">
-                    {edgeDossier.scriptures.length} related refs · click edge to pin in panel
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </Card>
 
-        {/* MACRO + MICRO below map */}
-        <div className="grid gap-4 md:grid-cols-2">
-  
-      <Card className="p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold text-sm">Campaigns / progressions</h2>
-          <Badge tone="claim">{campaigns.filter((c) => c.enabled).length} active</Badge>
+        {/* Fixed-height inspector — never collapses, so the map does not jump */}
+        <div className="rounded-[var(--radius)] border border-border bg-surface-2/80 px-3 py-2 min-h-[5.5rem] h-[5.5rem] overflow-hidden text-xs">
+          {hoverPlace && getPlaceDossier(hoverPlace) ? (
+            <div className="space-y-0.5">
+              <div className="font-semibold text-sm text-ink truncate">
+                {getPlaceDossier(hoverPlace)!.name}
+                <span className="ml-2 font-normal text-muted">
+                  {getPlaceDossier(hoverPlace)!.scriptures.length} refs · click pin for full dossier
+                </span>
+              </div>
+              <div className="text-muted line-clamp-2">{getPlaceDossier(hoverPlace)!.summary}</div>
+            </div>
+          ) : hoverEdge && edgeDossier ? (
+            <div className="space-y-0.5">
+              <div className="font-semibold text-sm text-ink">
+                {edgeDossier.from} → {edgeDossier.to}
+              </div>
+              <div className="text-muted line-clamp-2">{edgeDossier.summary}</div>
+              <div className="text-accent">
+                {edgeDossier.scriptures.length} refs · click edge to select
+              </div>
+            </div>
+          ) : selectedPlace ? (
+            <div className="space-y-0.5">
+              <div className="font-semibold text-sm text-ink">
+                Selected: {placeLabel(selectedPlace)}
+              </div>
+              <div className="text-muted">
+                Hover a place or link for a quick preview. Open <strong>Place</strong> below for full connections.
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted pt-1">
+              Hover a place or connection for preview (this box stays fixed so the map does not move).
+            </div>
+          )}
         </div>
+
+        {/* Collapsible control panels under map */}
+        <div className="space-y-2">
+          <Card className="p-0 overflow-hidden">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold hover:bg-surface-2"
+              onClick={() => setLayersOpen((o) => !o)}
+            >
+              Layers
+              <span className="text-xs font-normal text-muted">{layersOpen ? "hide" : "show"}</span>
+            </button>
+            {layersOpen ? (
+              <div className="border-t border-border px-3 py-2 space-y-2 max-h-72 overflow-auto">
+                <p className="text-[10px] text-muted">
+                  Toggle what the map draws (connections, campaigns, elevation, date…).
+                </p>
+                {OVERLAY_GROUPS.map((g) => (
+                  <div key={g.id} className="space-y-0.5">
+                    <div className="text-[10px] uppercase tracking-wide text-muted font-semibold pt-0.5">
+                      {g.label}
+                    </div>
+                    {MAP_OVERLAYS.filter((d) => d.group === g.id).map((d) => (
+                      <label
+                        key={d.id}
+                        className="flex items-start gap-2 text-xs rounded px-1 py-0.5 hover:bg-surface-2 cursor-pointer"
+                        title={d.description}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={!!overlays[d.id]}
+                          onChange={() => toggleOverlay(d.id)}
+                        />
+                        <span>
+                          <span className="font-medium">{d.label}</span>
+                          <span className="block text-[10px] text-muted">{d.description}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ))}
+                {overlays.chrono_filter ? (
+                  <label className="block text-xs space-y-1 pt-1 border-t border-border">
+                    <span className="text-muted">Date window</span>
+                    <select
+                      value={chronoWindow}
+                      onChange={(e) => setChronoWindow(e.target.value as ChronoWindow)}
+                      className="w-full rounded border border-border bg-surface px-1.5 py-1"
+                    >
+                      {CHRONO_WINDOWS.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <div className="flex flex-wrap gap-1 pt-1">
+                  <button
+                    type="button"
+                    className="text-[10px] rounded border border-border px-1.5 py-0.5"
+                    onClick={() => setOverlays(defaultOverlayState())}
+                  >
+                    Reset layers
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[10px] rounded border border-border px-1.5 py-0.5"
+                    onClick={() => {
+                      const all = defaultOverlayState();
+                      (Object.keys(all) as MapOverlayId[]).forEach((k) => {
+                        all[k] = false;
+                      });
+                      all.places = true;
+                      all.labels = true;
+                      setOverlays(all);
+                    }}
+                  >
+                    Places only
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </Card>
+
+        {/* MACRO + MICRO below map */}
+        {/* MACRO + MICRO below map */}
+        <div className="grid gap-2 md:grid-cols-2">
+      <Card className="p-0 overflow-hidden">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold hover:bg-surface-2"
+          onClick={() => setPanelCampaigns((o) => !o)}
+        >
+          <span className="flex items-center gap-2">
+            Campaigns / progressions
+            <Badge tone="claim">{campaigns.filter((c) => c.enabled).length}</Badge>
+          </span>
+          <span className="text-xs font-normal text-muted">{panelCampaigns ? "hide" : "show"}</span>
+        </button>
+        {panelCampaigns ? (
+        <div className="border-t border-border p-3 space-y-3">
         <p className="text-xs text-muted leading-relaxed">
           Named actors (armies, lost parties) with ordered waypoints. These routes can{" "}
           <strong>flex</strong> around obstacles on real terrain (e.g. Amlicites reaching Minon
@@ -1816,10 +1825,21 @@ function MapLabPage() {
             </li>
           ))}
         </ul>
+        </div>
+        ) : null}
       </Card>
 
-      <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-sm">Macro (whole model)</h2>
+      <Card className="p-0 overflow-hidden">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold hover:bg-surface-2"
+          onClick={() => setPanelMacro((o) => !o)}
+        >
+          Macro (whole model)
+          <span className="text-xs font-normal text-muted">{panelMacro ? "hide" : "show"}</span>
+        </button>
+        {panelMacro ? (
+        <div className="border-t border-border p-3 space-y-3">
           <label className="block text-xs space-y-1">
             <span className="text-muted">Day mi · open</span>
             <input
@@ -1904,11 +1924,22 @@ function MapLabPage() {
             />
             Stress-test narrow-neck edges
           </label>
-        </Card>
+        </div>
+        ) : null}
+      </Card>
 
         {/* MICRO + place coords */}
-        <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-sm">Micro + place</h2>
+        <Card className="p-0 overflow-hidden">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold hover:bg-surface-2"
+            onClick={() => setPanelMicro((o) => !o)}
+          >
+            Micro + place
+            <span className="text-xs font-normal text-muted">{panelMicro ? "hide" : "show"}</span>
+          </button>
+          {panelMicro ? (
+          <div className="border-t border-border p-3 space-y-3">
           {selectedPlace && layout[selectedPlace] && (
             <div className="rounded bg-surface-2 p-2 text-xs space-y-1">
               <div className="font-medium">{places.find((p) => p.id === selectedPlace)?.name}</div>
@@ -2018,12 +2049,23 @@ function MapLabPage() {
               </label>
             </>
           )}
+          </div>
+          ) : null}
         </Card>
         </div>
 
         {/* Add association (form) */}
-        <Card className="p-4 space-y-3 border-teal/30">
-          <h2 className="font-semibold text-sm">Add association / connection</h2>
+        <Card className="p-0 overflow-hidden border-teal/30">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold hover:bg-surface-2"
+            onClick={() => setPanelAdd((o) => !o)}
+          >
+            Add association / connection
+            <span className="text-xs font-normal text-muted">{panelAdd ? "hide" : "show"}</span>
+          </button>
+          {panelAdd ? (
+          <div className="border-t border-border p-3 space-y-3">
           <p className="text-xs text-muted">
             Or use <strong>Add connection</strong> on the map: click start place, then end place.
             New routes get unknown distance/time; fill stated vs estimate below.
@@ -2193,17 +2235,31 @@ function MapLabPage() {
               Create association
             </button>
           </div>
+          </div>
+          ) : null}
         </Card>
       </div>
-
       </div>
-      {/* end layers+map grid */}
 
-            {/* Object connection box — every link to/from the selected geographic object */}
-      <Card className="p-4 md:p-5 space-y-3 border-accent/25">
+      {/* Object / place connections */}
+      <Card className="p-0 overflow-hidden border-accent/25">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold hover:bg-surface-2"
+          onClick={() => setPanelPlace((o) => !o)}
+        >
+          <span>
+            Place · connections
+            {selectedPlace ? (
+              <span className="ml-2 font-normal text-muted">{placeLabel(selectedPlace)}</span>
+            ) : null}
+          </span>
+          <span className="text-xs font-normal text-muted">{panelPlace ? "hide" : "show"}</span>
+        </button>
+        {panelPlace ? (
+        <div className="border-t border-border p-4 md:p-5 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
           <div>
-            <h2 className="font-semibold text-base">Object · connections</h2>
             <p className="text-xs text-muted mt-0.5">
               Each place is a first-class object. This box lists every map edge, related feature,
               scripture, and assumption tied to it.
@@ -2541,6 +2597,8 @@ function MapLabPage() {
             </div>
           </div>
         )}
+        </div>
+        ) : null}
       </Card>
 
 
