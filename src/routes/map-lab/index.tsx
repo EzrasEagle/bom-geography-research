@@ -52,6 +52,18 @@ import {
 } from "@/data/route-associations";
 import { Plus, Minus, Maximize2 } from "lucide-react";
 import {
+  multiEdgeControl,
+  midOfQuad,
+  placeMarkerRadius,
+  quadPath,
+  elevFromEdgeNotes,
+} from "@/lib/map-edge-geometry";
+import {
+  loadCampaigns,
+  saveCampaigns,
+  type Campaign,
+} from "@/data/campaigns";
+import {
   ACTIVE_MAP_MODEL_KEY,
   type EdgeOverride,
   type Macro,
@@ -80,11 +92,8 @@ function clientToSvg(
   const ctm = svg.getScreenCTM();
   if (!ctm) return { x: 0, y: 0 };
   const p = pt.matrixTransform(ctm.inverse());
-  // p is already in current viewBox user units
-  return {
-    x: Math.min(VB.w, Math.max(0, p.x)),
-    y: Math.min(VB.h, Math.max(0, p.y)),
-  };
+  // p is already in current viewBox user units (includes pan/zoom)
+  return { x: p.x, y: p.y };
 }
 
 function MapLabPage() {
@@ -114,8 +123,17 @@ function MapLabPage() {
   const [editMode, setEditMode] = useState(true);
   const [savedFlash, setSavedFlash] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [mapZoom, setMapZoom] = useState(1);
+  const [mapZoom, setMapZoom] = useState(1.25);
   const [mapPan, setMapPan] = useState({ x: 0, y: 0 });
+  const [showCampaigns, setShowCampaigns] = useState(true);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
+    "camp-amlicite-amnihu-minon",
+  );
+  const [showLabels, setShowLabels] = useState<"auto" | "all" | "hover">("auto");
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const dragMoved = useRef(false);
   const [connectMode, setConnectMode] = useState(false);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [newRouteForm, setNewRouteForm] = useState({
@@ -154,6 +172,7 @@ function MapLabPage() {
     setPack(p);
     setLoaded(true);
     setRouteAssocs(loadRouteAssociations());
+    setCampaigns(loadCampaigns());
   }, []);
 
   function patchRoute(id: string, patch: Partial<RouteAssociation>) {
@@ -723,20 +742,37 @@ function MapLabPage() {
 
   const onPointerDownPlace = useCallback(
     (id: string, e: React.PointerEvent) => {
-      if (!editMode) return;
-      e.preventDefault();
       e.stopPropagation();
       setSelectedPlace(id);
+      setDossierOpen(true);
+      if (connectMode) {
+        handlePlaceClick(id);
+        return;
+      }
+      if (!editMode) return;
+      dragMoved.current = false;
       setDragId(id);
-      (e.target as Element).setPointerCapture?.(e.pointerId);
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     },
-    [editMode],
+    [editMode, connectMode],
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
+      // pan with middle button or alt+drag on background handled separately
+      if (isPanning && panStart.current && svgRef.current) {
+        const dx = (e.clientX - panStart.current.x) / mapZoom;
+        const dy = (e.clientY - panStart.current.y) / mapZoom;
+        // pan moves viewBox opposite to drag
+        const scale = VB.w / mapZoom / VB.w;
+        setMapPan({
+          x: panStart.current.panX - (e.clientX - panStart.current.x) * (1 / mapZoom) * 0.85,
+          y: panStart.current.panY - (e.clientY - panStart.current.y) * (1 / mapZoom) * 0.85,
+        });
+        return;
+      }
       if (!dragId || !svgRef.current || !editMode) return;
-      // Convert display coords back to model space (inverse of macro transform)
+      dragMoved.current = true;
       const displayPt = clientToSvg(svgRef.current, e.clientX, e.clientY);
       const cx = 260;
       const cy = 180;
@@ -751,17 +787,68 @@ function MapLabPage() {
         y: Math.min(VB.h, Math.max(0, cy + uy)),
       });
     },
-    [dragId, editMode, macro.globalScale, macro.directionRotation],
+    [dragId, editMode, macro.globalScale, macro.directionRotation, isPanning, mapZoom],
   );
 
   const onPointerUp = useCallback(() => {
     setDragId(null);
+    setIsPanning(false);
+    panStart.current = null;
   }, []);
 
   const modelLabel =
     userModels.find((u) => u.id === modelId)?.name ??
     models.find((m) => m.id === modelId)?.name ??
     modelId;
+
+  /** Fan out multiple edges between the same place pair */
+  const edgeDrawList = useMemo(() => {
+    const groups = new Map<string, typeof edges>();
+    for (const e of edges) {
+      if (!e.enabled) continue;
+      const key = [e.from, e.to].sort().join("|");
+      const g = groups.get(key) ?? [];
+      g.push(e);
+      groups.set(key, g);
+    }
+    const out: {
+      e: (typeof edges)[0];
+      a: Point;
+      b: Point;
+      ctrl: Point;
+      mid: Point;
+      elev: ReturnType<typeof elevFromEdgeNotes>;
+      multi: number;
+    }[] = [];
+    for (const g of groups.values()) {
+      g.forEach((e, i) => {
+        const a = displayLayout[e.from];
+        const b = displayLayout[e.to];
+        if (!a || !b) return;
+        const ctrl = multiEdgeControl(a, b, i, g.length, 16 + Math.min(12, g.length * 2));
+        const mid = midOfQuad(a, b, ctrl);
+        const elev = elevFromEdgeNotes(
+          String(e.value ?? ""),
+          (e as { note?: string }).note,
+          (e as { placement?: string }).placement,
+        );
+        out.push({ e, a, b, ctrl, mid, elev, multi: g.length });
+      });
+    }
+    return out;
+  }, [edges, displayLayout]);
+
+  const campaignPaths = useMemo(() => {
+    return campaigns
+      .filter((c) => c.enabled)
+      .map((c) => {
+        const pts = c.waypoints
+          .map((w) => (w.placeId ? displayLayout[w.placeId] : null))
+          .filter(Boolean) as Point[];
+        return { campaign: c, pts };
+      })
+      .filter((x) => x.pts.length >= 2);
+  }, [campaigns, displayLayout]);
 
   if (!loaded) {
     return <p className="text-sm text-muted">Loading map package…</p>;
@@ -831,6 +918,26 @@ function MapLabPage() {
             />
             Constraint links
           </label>
+          <label className="inline-flex items-center gap-2 text-sm px-2">
+            <input
+              type="checkbox"
+              checked={showCampaigns}
+              onChange={(e) => setShowCampaigns(e.target.checked)}
+            />
+            Campaigns / armies
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm px-2">
+            Labels
+            <select
+              value={showLabels}
+              onChange={(e) => setShowLabels(e.target.value as typeof showLabels)}
+              className="rounded border border-border px-1 py-0.5 text-xs bg-surface"
+            >
+              <option value="auto">auto (zoom/hover)</option>
+              <option value="hover">hover only</option>
+              <option value="all">all</option>
+            </select>
+          </label>
           <button
             type="button"
             onClick={saveToModel}
@@ -888,7 +995,7 @@ function MapLabPage() {
               <button
                 type="button"
                 className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-2"
-                onClick={() => setMapZoom((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
+                onClick={() => setMapZoom((z) => Math.min(6, Math.round((z + 0.25) * 100) / 100))}
                 title="Zoom in"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -933,47 +1040,88 @@ function MapLabPage() {
             onPointerLeave={onPointerUp}
             onWheel={(e) => {
               e.preventDefault();
-              const delta = e.deltaY > 0 ? -0.1 : 0.1;
-              setMapZoom((z) => Math.min(3, Math.max(0.5, Math.round((z + delta) * 100) / 100)));
+              const delta = e.deltaY > 0 ? -0.15 : 0.15;
+              setMapZoom((z) => Math.min(6, Math.max(0.6, Math.round((z + delta) * 100) / 100)));
             }}
+            onPointerDown={(e) => {
+              // pan: middle button or hold Space not available — use Alt+drag or button 1 on empty
+              if (e.button === 1 || e.altKey || e.button === 2) {
+                e.preventDefault();
+                setIsPanning(true);
+                panStart.current = {
+                  x: e.clientX,
+                  y: e.clientY,
+                  panX: mapPan.x,
+                  panY: mapPan.y,
+                };
+              }
+            }}
+            onContextMenu={(e) => e.preventDefault()}
           >
+            <defs>
+              <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" fill="#b91c1c" />
+              </marker>
+            </defs>
             <rect x="0" y="0" width="56" height={VB.h} fill="#ccfbf1" opacity="0.55" />
             <rect x={VB.w - 56} y="0" width="56" height={VB.h} fill="#ccfbf1" opacity="0.55" />
             
             
 
 
-            {/* Constraint graph edges (city–city links) */}
+            {/* Constraint / association edges (curved when multi) */}
             {showConstraintEdges &&
-              edges.map((e) => {
-                if (!e.enabled) return null;
-                const a = displayLayout[e.from];
-                const b = displayLayout[e.to];
-                if (!a || !b) return null;
+              edgeDrawList.map(({ e, a, b, ctrl, mid, elev, multi }) => {
                 const active = e.id === selected?.id;
+                const d = quadPath(a, b, ctrl);
                 return (
-                  <line
-                    key={e.id}
-                    x1={a.x}
-                    y1={a.y}
-                    x2={b.x}
-                    y2={b.y}
-                    stroke={e.color}
-                    strokeWidth={active || hoverEdge === e.id ? 4 : e.strength === "hard" ? 2.5 : 1.5}
-                    strokeDasharray={e.strength === "soft" ? "4 3" : undefined}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setSelectedEdge(e.id);
-                      setSelectedPlace(null);
-                    }}
-                    onPointerEnter={() => setHoverEdge(e.id)}
-                    onPointerLeave={() => setHoverEdge((h) => (h === e.id ? null : h))}
-                  >
+                  <g key={e.id}>
+                    {/* wide invisible hit target */}
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={14}
+                      className="cursor-pointer"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setSelectedEdge(e.id);
+                        setSelectedPlace(null);
+                      }}
+                      onPointerEnter={() => setHoverEdge(e.id)}
+                      onPointerLeave={() => setHoverEdge((h) => (h === e.id ? null : h))}
+                    />
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke={e.color}
+                      strokeWidth={active || hoverEdge === e.id ? 3.25 : e.strength === "hard" ? 1.75 : 1.15}
+                      strokeDasharray={e.strength === "soft" ? "4 3" : undefined}
+                      opacity={0.92}
+                      className="pointer-events-none"
+                    />
+                    {multi > 1 && (
+                      <circle cx={mid.x} cy={mid.y} r={3} fill={e.color} opacity={0.85} className="pointer-events-none" />
+                    )}
+                    {elev !== "none" && (
+                      <text
+                        x={mid.x}
+                        y={mid.y - 6}
+                        textAnchor="middle"
+                        fontSize="10"
+                        fontWeight="700"
+                        fill={elev === "up" ? "#b45309" : elev === "down" ? "#1e3a5f" : "#57534e"}
+                        className="pointer-events-none select-none"
+                      >
+                        {elev === "up" ? "↑" : elev === "down" ? "↓" : "≈"}
+                      </text>
+                    )}
                     <title>
                       {e.from} → {e.to}: {String(e.value)}
                       {e.sourceVerse ? ` · ${e.sourceVerse}` : ""}
+                      {multi > 1 ? ` · ${multi} links this pair` : ""}
                     </title>
-                  </line>
+                  </g>
                 );
               })}
 
@@ -1162,6 +1310,47 @@ function MapLabPage() {
                 );
               })}
 
+            {/* Campaign progressions (armies / lost parties) — flex routes */}
+            {showCampaigns &&
+              campaignPaths.map(({ campaign: c, pts }) => {
+                const sel = selectedCampaignId === c.id;
+                // simple polyline; later: obstacle-aware flex
+                const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+                return (
+                  <g key={c.id} className="cursor-pointer" onClick={() => setSelectedCampaignId(c.id)}>
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke={c.color}
+                      strokeWidth={sel ? 4 : 2.5}
+                      strokeDasharray={
+                        c.style === "dashed" ? "7 4" : c.style === "dotted" ? "2 4" : undefined
+                      }
+                      opacity={0.95}
+                      markerEnd="url(#arrowhead)"
+                    />
+                    {/* actor label at midpoint */}
+                    {pts.length >= 2 && (
+                      <text
+                        x={(pts[0]!.x + pts[pts.length - 1]!.x) / 2}
+                        y={(pts[0]!.y + pts[pts.length - 1]!.y) / 2 - 8}
+                        textAnchor="middle"
+                        fontSize="9"
+                        fontWeight="600"
+                        fill={c.color}
+                        className="select-none pointer-events-none"
+                      >
+                        {c.actor}
+                        {c.flexAroundObstacles ? " · flex" : ""}
+                      </text>
+                    )}
+                    <title>
+                      {c.name}: {c.summary}
+                    </title>
+                  </g>
+                );
+              })}
+
             {/* Day rings on wilderness endpoints */}
             {showSoftRegions &&
               (selectedPlace === "wilderness" || hoverPlace === "wilderness") &&
@@ -1239,10 +1428,6 @@ function MapLabPage() {
                   key={p.id}
                   className={editMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
                   onPointerDown={(e) => onPointerDownPlace(p.id, e)}
-                  onClick={() => {
-                    setSelectedPlace(p.id);
-                    setDossierOpen(true);
-                  }}
                   onPointerEnter={() => setHoverPlace(p.id)}
                   onPointerLeave={() => setHoverPlace((h) => (h === p.id ? null : h))}
                 >
@@ -1266,51 +1451,55 @@ function MapLabPage() {
                     <circle
                       cx={pos.x}
                       cy={pos.y}
-                      r={p.kind === "river" ? 8 : 10}
-                      fill={p.kind === "river" ? "#1e3a5f" : "#9a3412"}
+                      r={placeMarkerRadius(p.kind, p.sizeTier) * (selected || hovered ? 1.25 : 1)}
+                      fill={
+                        p.kind === "river"
+                          ? "#1e3a5f"
+                          : p.kind === "hill"
+                            ? "#78716c"
+                            : p.kind === "land"
+                              ? "#b45309"
+                              : "#9a3412"
+                      }
                       stroke={selected || hovered ? "#f59e0b" : inSphere ? "#0369a1" : isNeighbor ? "#0f766e" : "white"}
-                      strokeWidth={selected || hovered ? 3 : inSphere ? 2.5 : isNeighbor ? 2 : 1}
+                      strokeWidth={selected || hovered ? 2 : 1}
                     />
                   )}
-                  {nRefs > 0 && (
-                    <circle
-                      cx={pos.x + (isSea ? 12 : 8)}
-                      cy={pos.y - (isSea ? 8 : 8)}
-                      r={7}
-                      fill="#fffdf8"
-                      stroke="#9a3412"
-                      strokeWidth={1}
-                    />
-                  )}
-                  {nRefs > 0 && (
+                  {nRefs > 0 && (selected || hovered || mapZoom >= 1.8) && (
                     <text
-                      x={pos.x + (isSea ? 12 : 8)}
-                      y={pos.y - (isSea ? 8 : 8) + 3}
-                      textAnchor="middle"
-                      fontSize="8"
+                      x={pos.x + 5}
+                      y={pos.y - 5}
+                      fontSize="7"
                       fill="#9a3412"
                       className="select-none pointer-events-none font-semibold"
                     >
                       {nRefs}
                     </text>
                   )}
-                  <text
-                    x={pos.x + 12}
-                    y={pos.y + 4}
-                    fontSize="10"
-                    fill="#1c1917"
-                    className="select-none pointer-events-none"
-                  >
-                    {p.name}
-                  </text>
+                  {(showLabels === "all" ||
+                    selected ||
+                    hovered ||
+                    (showLabels === "auto" && mapZoom >= 1.6)) && (
+                    <text
+                      x={pos.x + 7}
+                      y={pos.y + 3}
+                      fontSize={mapZoom >= 2 ? 9 : 8}
+                      fill="#1c1917"
+                      className="select-none pointer-events-none"
+                      style={{ paintOrder: "stroke", stroke: "#faf6ef", strokeWidth: 2.5 }}
+                    >
+                      {p.name.length > 18 && mapZoom < 2 ? p.name.slice(0, 16) + "…" : p.name}
+                    </text>
+                  )}
                 </g>
               );
             })}
           </svg>
           <p className="text-xs text-muted mt-2">
-            {editMode
-              ? "Drag places to move them. Hover for scripture counts; click a place or edge for the dossier panel."
-              : "Drag disabled — enable “Drag places” to move features. Hover/click still opens scripture dossiers."}
+            Scroll to zoom · Alt+drag (or right-drag) to pan · Click place/edge for dossier
+            {editMode ? " · Drag places to reposition" : " · enable Drag places to move pins"}.
+            Multiple links between the same pair fan out as curves. ↑/↓ on edges = relational elevation.
+            Campaigns (dashed) are army/party progressions that will flex on real terrain.
           </p>
           {(hoverPlace || hoverEdge) && (
             <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface-2/90 p-3 text-xs space-y-1">
@@ -1348,7 +1537,65 @@ function MapLabPage() {
 
         {/* MACRO + MICRO below map */}
         <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-4 space-y-3">
+  
+      <Card className="p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold text-sm">Campaigns / progressions</h2>
+          <Badge tone="claim">{campaigns.filter((c) => c.enabled).length} active</Badge>
+        </div>
+        <p className="text-xs text-muted leading-relaxed">
+          Named actors (armies, lost parties) with ordered waypoints. These routes can{" "}
+          <strong>flex</strong> around obstacles on real terrain (e.g. Amlicites reaching Minon
+          above Zarahemla without treating the path as a straight static edge).
+        </p>
+        <ul className="space-y-2">
+          {campaigns.map((c) => (
+            <li
+              key={c.id}
+              className={`rounded border px-3 py-2 text-xs ${
+                selectedCampaignId === c.id ? "border-accent bg-orange-50/50" : "border-border"
+              }`}
+            >
+              <button
+                type="button"
+                className="w-full text-left"
+                onClick={() => {
+                  setSelectedCampaignId(c.id);
+                  setShowCampaigns(true);
+                  const first = c.waypoints.find((w) => w.placeId)?.placeId;
+                  if (first) setSelectedPlace(first);
+                }}
+              >
+                <div className="font-medium" style={{ color: c.color }}>
+                  {c.actor}
+                </div>
+                <div className="text-ink">{c.name}</div>
+                <div className="text-muted mt-0.5">
+                  {c.waypoints.map((w) => w.label).join(" → ")}
+                  {c.flexAroundObstacles ? " · flex route" : ""}
+                </div>
+                <div className="text-muted">{c.sourceRefs.join("; ")}</div>
+              </button>
+              <label className="inline-flex items-center gap-1.5 mt-1">
+                <input
+                  type="checkbox"
+                  checked={c.enabled}
+                  onChange={() => {
+                    const next = campaigns.map((x) =>
+                      x.id === c.id ? { ...x, enabled: !x.enabled } : x,
+                    );
+                    setCampaigns(next);
+                    saveCampaigns(next);
+                  }}
+                />
+                Show on map
+              </label>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card className="p-4 space-y-3">
           <h2 className="font-semibold text-sm">Macro (whole model)</h2>
           <label className="block text-xs space-y-1">
             <span className="text-muted">Day mi · open</span>
