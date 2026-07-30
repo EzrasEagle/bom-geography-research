@@ -192,6 +192,41 @@ export function transformPoints(
   return pts.map((_, i) => out[`p${i}`]!);
 }
 
+export type ElevMarker = {
+  routeId: string;
+  segmentId: string;
+  kind: "level" | "up" | "down" | "unknown";
+  phrase?: string;
+  note?: string;
+  /** Point on spine */
+  at: Point;
+  /** Mid of level stretch for a subtle bar */
+  tMid: number;
+};
+
+export function elevationMarkersForRoute(
+  routeId: string,
+  spine: Point[],
+  segments: { id: string; t0: number; t1: number; kind: "level" | "up" | "down" | "unknown"; phrase?: string; note?: string }[],
+): ElevMarker[] {
+  if (spine.length < 2) return [];
+  const out: ElevMarker[] = [];
+  for (const seg of segments) {
+    // Marker at transition (t1 for up/down, mid for level)
+    const t = seg.kind === "level" ? (seg.t0 + seg.t1) / 2 : seg.t0 + (seg.t1 - seg.t0) * 0.7;
+    out.push({
+      routeId,
+      segmentId: seg.id,
+      kind: seg.kind,
+      phrase: seg.phrase,
+      note: seg.note,
+      at: pointAlongPolyline(spine, t),
+      tMid: t,
+    });
+  }
+  return out;
+}
+
 export function dayRingRadius(days: number, dayPixels: number): number {
   return Math.max(6, days * dayPixels);
 }

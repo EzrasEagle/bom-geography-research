@@ -35,6 +35,7 @@ import {
   transformPoints,
   wildernessBandsFromRoutes,
   wildernessEndpoints,
+  elevationMarkersForRoute,
 } from "@/lib/soft-region-geometry";
 import {
   loadRouteAssociations,
@@ -58,7 +59,7 @@ import {
 
 export const Route = createFileRoute("/map-lab/")({ component: MapLabPage });
 
-const VB = { w: 520, h: 360 };
+const VB = { w: 720, h: 480 };
 
 function clientToSvg(
   svg: SVGSVGElement,
@@ -269,6 +270,37 @@ function MapLabPage() {
     () => wildernessEndpoints(routeAssocs),
     [routeAssocs],
   );
+
+  const elevMarkersDisplay = useMemo(() => {
+    const out: {
+      routeId: string;
+      segmentId: string;
+      kind: string;
+      phrase?: string;
+      note?: string;
+      x: number;
+      y: number;
+    }[] = [];
+    for (const band of wildernessBandsDisplay) {
+      const segs = band.route.elevation ?? [];
+      if (!segs.length) continue;
+      // spine is already display-transformed
+      const marks = elevationMarkersForRoute(band.id, band.spine, segs);
+      for (const m of marks) {
+        out.push({
+          routeId: m.routeId,
+          segmentId: m.segmentId,
+          kind: m.kind,
+          phrase: m.phrase,
+          note: m.note,
+          x: m.at.x,
+          y: m.at.y,
+        });
+      }
+    }
+    return out;
+  }, [wildernessBandsDisplay]);
+
 
   const dayPxWild = useMemo(
     () =>
@@ -535,6 +567,596 @@ function MapLabPage() {
         <span className="text-muted self-center">
           Updated {new Date(pack.updatedAt).toLocaleString()}
         </span>
+      </div>
+
+      {/* Map is the focus — full width, large canvas; controls below / side on wide screens */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_16rem_16rem]">
+        <Card className="p-2 md:p-3 overflow-x-auto order-first xl:row-span-2 min-h-[50vh] xl:min-h-[70vh] flex flex-col">
+          <div className="flex items-center justify-between gap-2 px-1 pb-2">
+            <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+              Map canvas
+            </span>
+            <span className="text-[11px] text-muted">
+              Drag places · toggle links/paths/regions above
+            </span>
+          </div>
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${VB.w} ${VB.h}`}
+            className="w-full flex-1 min-h-[420px] md:min-h-[520px] xl:min-h-[640px] h-auto bg-[#faf6ef] rounded-[var(--radius)] touch-none border border-border/60"
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerLeave={onPointerUp}
+          >
+            <rect x="0" y="0" width="56" height={VB.h} fill="#ccfbf1" opacity="0.55" />
+            <rect x={VB.w - 56} y="0" width="56" height={VB.h} fill="#ccfbf1" opacity="0.55" />
+            
+            
+
+
+            {/* Constraint graph edges (city–city links) */}
+            {showConstraintEdges &&
+              edges.map((e) => {
+                if (!e.enabled) return null;
+                const a = displayLayout[e.from];
+                const b = displayLayout[e.to];
+                if (!a || !b) return null;
+                const active = e.id === selected?.id;
+                return (
+                  <line
+                    key={e.id}
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    stroke={e.color}
+                    strokeWidth={active || hoverEdge === e.id ? 4 : e.strength === "hard" ? 2.5 : 1.5}
+                    strokeDasharray={e.strength === "soft" ? "4 3" : undefined}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedEdge(e.id);
+                      setSelectedPlace(null);
+                    }}
+                    onPointerEnter={() => setHoverEdge(e.id)}
+                    onPointerLeave={() => setHoverEdge((h) => (h === e.id ? null : h))}
+                  >
+                    <title>
+                      {e.from} → {e.to}: {String(e.value)}
+                      {e.sourceVerse ? ` · ${e.sourceVerse}` : ""}
+                    </title>
+                  </line>
+                );
+              })}
+
+            {/* Wilderness bands — one per enabled route; multi-endpoint stretches shape */}
+            {showSoftRegions &&
+              wildernessBandsDisplay.map((band) => (
+                <path
+                  key={band.id}
+                  d={polyToSvgPath(band.points)}
+                  fill="#3f6212"
+                  fillOpacity={
+                    editRouteId === band.id || selectedPlace === "wilderness" ? 0.36 : 0.18
+                  }
+                  stroke="#14532d"
+                  strokeWidth={editRouteId === band.id ? 2 : 1.25}
+                  strokeDasharray="6 3"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedPlace("wilderness");
+                    setEditRouteId(band.id);
+                  }}
+                >
+                  <title>
+                    {band.route.name} · dist {band.route.distance.quality} · time{" "}
+                    {band.route.time.quality}
+                    {band.route.lost ? " · LOST" : ""}
+                  </title>
+                </path>
+              ))}
+
+            {/* Route centerlines (editable associations) */}
+            {showPaths &&
+              wildernessBandsDisplay.map((band) => {
+                const d = polylineToSvgD(band.spine);
+                const sel = editRouteId === band.id;
+                const dash =
+                  band.route.style === "dashed"
+                    ? "8 5"
+                    : band.route.style === "dotted"
+                      ? "2 5"
+                      : undefined;
+                return (
+                  <g key={`line-${band.id}`}>
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke={band.route.color}
+                      strokeWidth={sel ? 4 : 2.5}
+                      strokeDasharray={dash}
+                      opacity={0.9}
+                      className="cursor-pointer"
+                      onClick={() => setEditRouteId(band.id)}
+                    />
+                    {/* Branch split marker INSIDE wilderness */}
+                    {band.branchPt && (
+                      <g>
+                        <circle
+                          cx={band.branchPt.x}
+                          cy={band.branchPt.y}
+                          r={7}
+                          fill="#fffdf8"
+                          stroke={band.route.color}
+                          strokeWidth={2.5}
+                        />
+                        <text
+                          x={band.branchPt.x + 10}
+                          y={band.branchPt.y - 6}
+                          fontSize="9"
+                          fill={band.route.color}
+                          className="select-none pointer-events-none font-semibold"
+                        >
+                          split / lost
+                        </text>
+                      </g>
+                    )}
+                    {/* Ghost intended destination */}
+                    {band.route.lost &&
+                      band.route.intendedDestinationId &&
+                      displayLayout[band.route.intendedDestinationId] &&
+                      band.branchPt && (
+                        <path
+                          d={`M ${band.branchPt.x} ${band.branchPt.y} L ${displayLayout[band.route.intendedDestinationId]!.x} ${displayLayout[band.route.intendedDestinationId]!.y}`}
+                          fill="none"
+                          stroke={band.route.color}
+                          strokeWidth={1.5}
+                          strokeDasharray="4 4"
+                          opacity={0.4}
+                        />
+                      )}
+                  </g>
+                );
+              })}
+
+
+            {/* Elevation signals along corridors */}
+            {showPaths &&
+              elevMarkersDisplay.map((m) => {
+                const color =
+                  m.kind === "up" ? "#b45309" : m.kind === "down" ? "#1e3a5f" : "#57534e";
+                const label =
+                  m.kind === "up" ? "↑ up" : m.kind === "down" ? "↓ down" : "≈ level";
+                return (
+                  <g key={`${m.routeId}-${m.segmentId}`} className="pointer-events-none">
+                    {m.kind === "level" ? (
+                      <rect
+                        x={m.x - 14}
+                        y={m.y - 5}
+                        width={28}
+                        height={10}
+                        rx={3}
+                        fill="#faf6ef"
+                        stroke={color}
+                        strokeWidth={1.5}
+                        opacity={0.9}
+                      />
+                    ) : (
+                      <circle
+                        cx={m.x}
+                        cy={m.y}
+                        r={11}
+                        fill="#faf6ef"
+                        stroke={color}
+                        strokeWidth={2}
+                      />
+                    )}
+                    <text
+                      x={m.x}
+                      y={m.y + 3.5}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fontWeight="700"
+                      fill={color}
+                    >
+                      {label}
+                    </text>
+                    <title>
+                      {m.phrase ?? m.kind}
+                      {m.note ? ` — ${m.note}` : ""}
+                    </title>
+                  </g>
+                );
+              })}
+
+            {/* Day rings on wilderness endpoints */}
+            {showSoftRegions &&
+              (selectedPlace === "wilderness" || hoverPlace === "wilderness") &&
+              wildEndpoints.map((pid) => {
+                const c = displayLayout[pid];
+                if (!c) return null;
+                const r = dayRingRadius(1, dayPxWild) * macro.globalScale;
+                return (
+                  <circle
+                    key={`ring-${pid}`}
+                    cx={c.x}
+                    cy={c.y}
+                    r={r}
+                    fill="none"
+                    stroke="#3f6212"
+                    strokeWidth={1}
+                    strokeDasharray="4 3"
+                    opacity={0.45}
+                  />
+                );
+              })}
+
+            {places.filter((p) => effectiveLayers.has(layerOf(p.id)) || objectId === p.id).map((p) => {
+              const pos = displayLayout[p.id] ?? { x: 260, y: 180 };
+              const isSea = p.kind === "sea";
+              const isSoft = isSoftRegionFeature(p.id, p.kind);
+              const selected = selectedPlace === p.id || objectId === p.id;
+              const hovered = hoverPlace === p.id;
+              const isNeighbor = objectBundle?.neighborIds.includes(p.id) ?? false;
+              const inSphere = objectBundle?.sphereMemberIds.includes(p.id) ?? false;
+              const dossier = getPlaceDossier(p.id);
+              const nRefs = dossier?.scriptures.length ?? 0;
+              // Soft regions: centroid handle only (blob drawn separately)
+              if (isSoft && p.id === "wilderness") {
+                const mids = wildernessBandsDisplay.map((b) => b.mid);
+                const cx =
+                  mids.length > 0
+                    ? mids.reduce((s, m) => s + m.x, 0) / mids.length
+                    : pos.x;
+                const cy =
+                  mids.length > 0
+                    ? mids.reduce((s, m) => s + m.y, 0) / mids.length
+                    : pos.y;
+                return (
+                  <g
+                    key={p.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedPlace(p.id);
+                      setDossierOpen(true);
+                    }}
+                    onPointerEnter={() => setHoverPlace(p.id)}
+                    onPointerLeave={() => setHoverPlace((h) => (h === p.id ? null : h))}
+                  >
+                    <title>
+                      Wilderness corridor(s) — along routes only; does not encompass cities
+                    </title>
+                    <polygon
+                      points={`${cx},${cy - 8} ${cx + 7},${cy} ${cx},${cy + 8} ${cx - 7},${cy}`}
+                      fill="#3f6212"
+                      stroke={selected || hovered ? "#f59e0b" : "#14532d"}
+                      strokeWidth={2}
+                    />
+                    <text
+                      x={cx + 10}
+                      y={cy + 3}
+                      fontSize="9"
+                      fill="#14532d"
+                      className="select-none pointer-events-none font-semibold"
+                    >
+                      wilderness corridor
+                    </text>
+                  </g>
+                );
+              }
+              return (
+                <g
+                  key={p.id}
+                  className={editMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
+                  onPointerDown={(e) => onPointerDownPlace(p.id, e)}
+                  onClick={() => {
+                    setSelectedPlace(p.id);
+                    setDossierOpen(true);
+                  }}
+                  onPointerEnter={() => setHoverPlace(p.id)}
+                  onPointerLeave={() => setHoverPlace((h) => (h === p.id ? null : h))}
+                >
+                  <title>
+                    {p.name}
+                    {nRefs ? ` · ${nRefs} scripture refs — click for dossier` : " · click for details"}
+                  </title>
+                  {isSea ? (
+                    <rect
+                      x={pos.x - 14}
+                      y={pos.y - 10}
+                      width={28}
+                      height={20}
+                      rx={4}
+                      fill="#0f766e"
+                      opacity={0.85}
+                      stroke={selected || hovered ? "#9a3412" : "transparent"}
+                      strokeWidth={selected || hovered ? 2.5 : 2}
+                    />
+                  ) : (
+                    <circle
+                      cx={pos.x}
+                      cy={pos.y}
+                      r={p.kind === "river" ? 8 : 10}
+                      fill={p.kind === "river" ? "#1e3a5f" : "#9a3412"}
+                      stroke={selected || hovered ? "#f59e0b" : inSphere ? "#0369a1" : isNeighbor ? "#0f766e" : "white"}
+                      strokeWidth={selected || hovered ? 3 : inSphere ? 2.5 : isNeighbor ? 2 : 1}
+                    />
+                  )}
+                  {nRefs > 0 && (
+                    <circle
+                      cx={pos.x + (isSea ? 12 : 8)}
+                      cy={pos.y - (isSea ? 8 : 8)}
+                      r={7}
+                      fill="#fffdf8"
+                      stroke="#9a3412"
+                      strokeWidth={1}
+                    />
+                  )}
+                  {nRefs > 0 && (
+                    <text
+                      x={pos.x + (isSea ? 12 : 8)}
+                      y={pos.y - (isSea ? 8 : 8) + 3}
+                      textAnchor="middle"
+                      fontSize="8"
+                      fill="#9a3412"
+                      className="select-none pointer-events-none font-semibold"
+                    >
+                      {nRefs}
+                    </text>
+                  )}
+                  <text
+                    x={pos.x + 12}
+                    y={pos.y + 4}
+                    fontSize="10"
+                    fill="#1c1917"
+                    className="select-none pointer-events-none"
+                  >
+                    {p.name}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+          <p className="text-xs text-muted mt-2">
+            {editMode
+              ? "Drag places to move them. Hover for scripture counts; click a place or edge for the dossier panel."
+              : "Drag disabled — enable “Drag places” to move features. Hover/click still opens scripture dossiers."}
+          </p>
+          {(hoverPlace || hoverEdge) && (
+            <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface-2/90 p-3 text-xs space-y-1">
+              {hoverPlace && getPlaceDossier(hoverPlace) && (
+                <>
+                  <div className="font-semibold text-sm text-ink">{getPlaceDossier(hoverPlace)!.name}</div>
+                  <div className="text-muted line-clamp-2">{getPlaceDossier(hoverPlace)!.summary}</div>
+                  <div className="text-accent font-medium">
+                    {getPlaceDossier(hoverPlace)!.scriptures.length} scriptures · click marker for full dossier
+                  </div>
+                  <ul className="list-disc pl-4 text-ink-soft">
+                    {getPlaceDossier(hoverPlace)!.scriptures.slice(0, 3).map((s) => (
+                      <li key={s.ref}>{s.ref}</li>
+                    ))}
+                    {getPlaceDossier(hoverPlace)!.scriptures.length > 3 && (
+                      <li>+{getPlaceDossier(hoverPlace)!.scriptures.length - 3} more…</li>
+                    )}
+                  </ul>
+                </>
+              )}
+              {hoverEdge && !hoverPlace && edgeDossier && (
+                <>
+                  <div className="font-semibold text-sm text-ink">
+                    Connection: {edgeDossier.from} → {edgeDossier.to}
+                  </div>
+                  <div className="text-muted">{edgeDossier.summary}</div>
+                  <div className="text-accent font-medium">
+                    {edgeDossier.scriptures.length} related refs · click edge to pin in panel
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* MACRO */}
+        <Card className="p-4 space-y-3">
+          <h2 className="font-semibold text-sm">Macro (whole model)</h2>
+          <label className="block text-xs space-y-1">
+            <span className="text-muted">Day mi · open</span>
+            <input
+              type="range"
+              min={5}
+              max={30}
+              value={macro.dayMilesOpen}
+              onChange={(e) => patchMacro({ dayMilesOpen: Number(e.target.value) })}
+              className="w-full"
+            />
+            <span className="font-medium tabular-nums">{macro.dayMilesOpen}</span>
+          </label>
+          <label className="block text-xs space-y-1">
+            <span className="text-muted">Day mi · mountain</span>
+            <input
+              type="range"
+              min={3}
+              max={20}
+              value={macro.dayMilesMountain}
+              onChange={(e) => patchMacro({ dayMilesMountain: Number(e.target.value) })}
+              className="w-full"
+            />
+            <span className="font-medium tabular-nums">{macro.dayMilesMountain}</span>
+          </label>
+          <label className="block text-xs space-y-1">
+            <span className="text-muted">Day mi · jungle</span>
+            <input
+              type="range"
+              min={3}
+              max={20}
+              value={macro.dayMilesJungle}
+              onChange={(e) => patchMacro({ dayMilesJungle: Number(e.target.value) })}
+              className="w-full"
+            />
+            <span className="font-medium tabular-nums">{macro.dayMilesJungle}</span>
+          </label>
+          <label className="block text-xs space-y-1">
+            <span className="text-muted">View scale</span>
+            <input
+              type="range"
+              min={50}
+              max={150}
+              value={Math.round(macro.globalScale * 100)}
+              onChange={(e) => patchMacro({ globalScale: Number(e.target.value) / 100 })}
+              className="w-full"
+            />
+            <span className="font-medium tabular-nums">{macro.globalScale.toFixed(2)}×</span>
+          </label>
+          <label className="block text-xs space-y-1">
+            <span className="text-muted">View rotation °</span>
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              value={macro.directionRotation}
+              onChange={(e) => patchMacro({ directionRotation: Number(e.target.value) })}
+              className="w-full"
+            />
+            <span className="font-medium tabular-nums">{macro.directionRotation}°</span>
+          </label>
+          <label className="block text-xs space-y-1">
+            <span className="text-muted">Default terrain</span>
+            <select
+              value={macro.defaultTerrain}
+              onChange={(e) =>
+                patchMacro({ defaultTerrain: e.target.value as Macro["defaultTerrain"] })
+              }
+              className="w-full rounded border border-border bg-surface px-2 py-1.5"
+            >
+              <option value="open">Open</option>
+              <option value="mountain">Mountain</option>
+              <option value="jungle">Jungle</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+          <label className="flex items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={macro.breakNeck}
+              onChange={(e) => patchMacro({ breakNeck: e.target.checked })}
+              className="mt-0.5"
+            />
+            Stress-test narrow-neck edges
+          </label>
+        </Card>
+
+        {/* MICRO + place coords */}
+        <Card className="p-4 space-y-3">
+          <h2 className="font-semibold text-sm">Micro + place</h2>
+          {selectedPlace && layout[selectedPlace] && (
+            <div className="rounded bg-surface-2 p-2 text-xs space-y-1">
+              <div className="font-medium">{places.find((p) => p.id === selectedPlace)?.name}</div>
+              <div className="text-muted tabular-nums">
+                x {layout[selectedPlace].x.toFixed(0)} · y {layout[selectedPlace].y.toFixed(0)}
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                <label>
+                  x
+                  <input
+                    type="number"
+                    className="w-full border border-border rounded px-1 py-0.5"
+                    value={Math.round(layout[selectedPlace].x)}
+                    onChange={(e) =>
+                      setPlacePos(selectedPlace, {
+                        ...layout[selectedPlace],
+                        x: Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  y
+                  <input
+                    type="number"
+                    className="w-full border border-border rounded px-1 py-0.5"
+                    value={Math.round(layout[selectedPlace].y)}
+                    onChange={(e) =>
+                      setPlacePos(selectedPlace, {
+                        ...layout[selectedPlace],
+                        y: Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+          <label className="block text-xs space-y-1">
+            <span className="text-muted">Edge</span>
+            <select
+              value={selected?.id}
+              onChange={(e) => setSelectedEdge(e.target.value)}
+              className="w-full rounded border border-border bg-surface px-2 py-1.5"
+            >
+              {edges.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.from} → {e.to}
+                </option>
+              ))}
+            </select>
+          </label>
+          {selected && (
+            <>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={selected.enabled}
+                  onChange={(e) => patchMicro(selected.id, { enabled: e.target.checked })}
+                />
+                Enabled
+              </label>
+              <label className="block text-xs space-y-1">
+                <span className="text-muted">Strength</span>
+                <select
+                  value={selected.strength}
+                  onChange={(e) =>
+                    patchMicro(selected.id, { strength: e.target.value as "soft" | "hard" })
+                  }
+                  className="w-full rounded border border-border bg-surface px-2 py-1.5"
+                >
+                  <option value="hard">Hard</option>
+                  <option value="soft">Soft</option>
+                </select>
+              </label>
+              <label className="block text-xs space-y-1">
+                <span className="text-muted">Terrain</span>
+                <select
+                  value={selected.terrain}
+                  onChange={(e) =>
+                    patchMicro(selected.id, { terrain: e.target.value as EdgeOverride["terrain"] })
+                  }
+                  className="w-full rounded border border-border bg-surface px-2 py-1.5"
+                >
+                  <option value="open">Open</option>
+                  <option value="mountain">Mountain</option>
+                  <option value="jungle">Jungle</option>
+                  <option value="mixed">Mixed</option>
+                  <option value="coast">Coast</option>
+                  <option value="river">River</option>
+                </select>
+              </label>
+              <label className="block text-xs space-y-1">
+                <span className="text-muted">Days override</span>
+                <input
+                  type="number"
+                  step={0.5}
+                  min={0}
+                  className="w-full rounded border border-border px-2 py-1.5"
+                  value={selected.days ?? ""}
+                  onChange={(e) =>
+                    patchMicro(selected.id, {
+                      days: e.target.value === "" ? undefined : Number(e.target.value),
+                    })
+                  }
+                />
+              </label>
+            </>
+          )}
+        </Card>
       </div>
 
       {/* Object connection box — every link to/from the selected geographic object */}
@@ -1024,6 +1646,48 @@ function MapLabPage() {
                         <span className="tabular-nums">{((route.branchT ?? 0.5) * 100).toFixed(0)}% along trunk</span>
                       </label>
                     )}
+
+                    {route.elevation && route.elevation.length > 0 && (
+                      <div className="sm:col-span-2 space-y-1.5 border-t border-border pt-2">
+                        <div className="text-xs font-semibold text-muted uppercase tracking-wide">
+                          Elevation sequence (along route)
+                        </div>
+                        {route.elevation.map((seg) => (
+                          <div
+                            key={seg.id}
+                            className="flex flex-wrap items-center gap-2 text-xs rounded bg-surface-2/80 px-2 py-1.5"
+                          >
+                            <Badge
+                              tone={
+                                seg.kind === "down"
+                                  ? "claim"
+                                  : seg.kind === "up"
+                                    ? "accent"
+                                    : "default"
+                              }
+                            >
+                              {seg.kind === "up"
+                                ? "↑ up"
+                                : seg.kind === "down"
+                                  ? "↓ down"
+                                  : "≈ level"}
+                            </Badge>
+                            <span className="text-muted tabular-nums">
+                              {(seg.t0 * 100).toFixed(0)}–{(seg.t1 * 100).toFixed(0)}%
+                            </span>
+                            {seg.phrase && (
+                              <span className="italic text-ink-soft">“{seg.phrase}”</span>
+                            )}
+                            {seg.note && <span className="text-muted">{seg.note}</span>}
+                          </div>
+                        ))}
+                        <p className="text-[10px] text-muted">
+                          Markers show on the map in sequence. Level through wilderness, then down
+                          into Zarahemla (Omni). Reverse route: up out of Zarahemla.
+                        </p>
+                      </div>
+                    )}
+
                     <p className="text-[11px] text-muted sm:col-span-2">{route.summary}</p>
                     <p className="text-[10px] text-muted sm:col-span-2">
                       {route.sourceRefs.join(" · ")}
@@ -1040,536 +1704,6 @@ function MapLabPage() {
       
 
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_18rem_18rem]">
-        <Card className="p-3 md:p-4 overflow-x-auto">
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${VB.w} ${VB.h}`}
-            className="w-full min-w-[320px] h-auto bg-[#faf6ef] rounded-[var(--radius)] touch-none"
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerLeave={onPointerUp}
-          >
-            <rect x="0" y="0" width="50" height="360" fill="#ccfbf1" opacity="0.55" />
-            <rect x="470" y="0" width="50" height="360" fill="#ccfbf1" opacity="0.55" />
-            
-            
-
-
-            {/* Constraint graph edges (city–city links) */}
-            {showConstraintEdges &&
-              edges.map((e) => {
-                if (!e.enabled) return null;
-                const a = displayLayout[e.from];
-                const b = displayLayout[e.to];
-                if (!a || !b) return null;
-                const active = e.id === selected?.id;
-                return (
-                  <line
-                    key={e.id}
-                    x1={a.x}
-                    y1={a.y}
-                    x2={b.x}
-                    y2={b.y}
-                    stroke={e.color}
-                    strokeWidth={active || hoverEdge === e.id ? 4 : e.strength === "hard" ? 2.5 : 1.5}
-                    strokeDasharray={e.strength === "soft" ? "4 3" : undefined}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setSelectedEdge(e.id);
-                      setSelectedPlace(null);
-                    }}
-                    onPointerEnter={() => setHoverEdge(e.id)}
-                    onPointerLeave={() => setHoverEdge((h) => (h === e.id ? null : h))}
-                  >
-                    <title>
-                      {e.from} → {e.to}: {String(e.value)}
-                      {e.sourceVerse ? ` · ${e.sourceVerse}` : ""}
-                    </title>
-                  </line>
-                );
-              })}
-
-            {/* Wilderness bands — one per enabled route; multi-endpoint stretches shape */}
-            {showSoftRegions &&
-              wildernessBandsDisplay.map((band) => (
-                <path
-                  key={band.id}
-                  d={polyToSvgPath(band.points)}
-                  fill="#3f6212"
-                  fillOpacity={
-                    editRouteId === band.id || selectedPlace === "wilderness" ? 0.36 : 0.18
-                  }
-                  stroke="#14532d"
-                  strokeWidth={editRouteId === band.id ? 2 : 1.25}
-                  strokeDasharray="6 3"
-                  className="cursor-pointer"
-                  onClick={() => {
-                    setSelectedPlace("wilderness");
-                    setEditRouteId(band.id);
-                  }}
-                >
-                  <title>
-                    {band.route.name} · dist {band.route.distance.quality} · time{" "}
-                    {band.route.time.quality}
-                    {band.route.lost ? " · LOST" : ""}
-                  </title>
-                </path>
-              ))}
-
-            {/* Route centerlines (editable associations) */}
-            {showPaths &&
-              wildernessBandsDisplay.map((band) => {
-                const d = polylineToSvgD(band.spine);
-                const sel = editRouteId === band.id;
-                const dash =
-                  band.route.style === "dashed"
-                    ? "8 5"
-                    : band.route.style === "dotted"
-                      ? "2 5"
-                      : undefined;
-                return (
-                  <g key={`line-${band.id}`}>
-                    <path
-                      d={d}
-                      fill="none"
-                      stroke={band.route.color}
-                      strokeWidth={sel ? 4 : 2.5}
-                      strokeDasharray={dash}
-                      opacity={0.9}
-                      className="cursor-pointer"
-                      onClick={() => setEditRouteId(band.id)}
-                    />
-                    {/* Branch split marker INSIDE wilderness */}
-                    {band.branchPt && (
-                      <g>
-                        <circle
-                          cx={band.branchPt.x}
-                          cy={band.branchPt.y}
-                          r={7}
-                          fill="#fffdf8"
-                          stroke={band.route.color}
-                          strokeWidth={2.5}
-                        />
-                        <text
-                          x={band.branchPt.x + 10}
-                          y={band.branchPt.y - 6}
-                          fontSize="9"
-                          fill={band.route.color}
-                          className="select-none pointer-events-none font-semibold"
-                        >
-                          split / lost
-                        </text>
-                      </g>
-                    )}
-                    {/* Ghost intended destination */}
-                    {band.route.lost &&
-                      band.route.intendedDestinationId &&
-                      displayLayout[band.route.intendedDestinationId] &&
-                      band.branchPt && (
-                        <path
-                          d={`M ${band.branchPt.x} ${band.branchPt.y} L ${displayLayout[band.route.intendedDestinationId]!.x} ${displayLayout[band.route.intendedDestinationId]!.y}`}
-                          fill="none"
-                          stroke={band.route.color}
-                          strokeWidth={1.5}
-                          strokeDasharray="4 4"
-                          opacity={0.4}
-                        />
-                      )}
-                  </g>
-                );
-              })}
-
-            {/* Day rings on wilderness endpoints */}
-            {showSoftRegions &&
-              (selectedPlace === "wilderness" || hoverPlace === "wilderness") &&
-              wildEndpoints.map((pid) => {
-                const c = displayLayout[pid];
-                if (!c) return null;
-                const r = dayRingRadius(1, dayPxWild) * macro.globalScale;
-                return (
-                  <circle
-                    key={`ring-${pid}`}
-                    cx={c.x}
-                    cy={c.y}
-                    r={r}
-                    fill="none"
-                    stroke="#3f6212"
-                    strokeWidth={1}
-                    strokeDasharray="4 3"
-                    opacity={0.45}
-                  />
-                );
-              })}
-
-            {places.filter((p) => effectiveLayers.has(layerOf(p.id)) || objectId === p.id).map((p) => {
-              const pos = displayLayout[p.id] ?? { x: 260, y: 180 };
-              const isSea = p.kind === "sea";
-              const isSoft = isSoftRegionFeature(p.id, p.kind);
-              const selected = selectedPlace === p.id || objectId === p.id;
-              const hovered = hoverPlace === p.id;
-              const isNeighbor = objectBundle?.neighborIds.includes(p.id) ?? false;
-              const inSphere = objectBundle?.sphereMemberIds.includes(p.id) ?? false;
-              const dossier = getPlaceDossier(p.id);
-              const nRefs = dossier?.scriptures.length ?? 0;
-              // Soft regions: centroid handle only (blob drawn separately)
-              if (isSoft && p.id === "wilderness") {
-                const mids = wildernessBandsDisplay.map((b) => b.mid);
-                const cx =
-                  mids.length > 0
-                    ? mids.reduce((s, m) => s + m.x, 0) / mids.length
-                    : pos.x;
-                const cy =
-                  mids.length > 0
-                    ? mids.reduce((s, m) => s + m.y, 0) / mids.length
-                    : pos.y;
-                return (
-                  <g
-                    key={p.id}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setSelectedPlace(p.id);
-                      setDossierOpen(true);
-                    }}
-                    onPointerEnter={() => setHoverPlace(p.id)}
-                    onPointerLeave={() => setHoverPlace((h) => (h === p.id ? null : h))}
-                  >
-                    <title>
-                      Wilderness corridor(s) — along routes only; does not encompass cities
-                    </title>
-                    <polygon
-                      points={`${cx},${cy - 8} ${cx + 7},${cy} ${cx},${cy + 8} ${cx - 7},${cy}`}
-                      fill="#3f6212"
-                      stroke={selected || hovered ? "#f59e0b" : "#14532d"}
-                      strokeWidth={2}
-                    />
-                    <text
-                      x={cx + 10}
-                      y={cy + 3}
-                      fontSize="9"
-                      fill="#14532d"
-                      className="select-none pointer-events-none font-semibold"
-                    >
-                      wilderness corridor
-                    </text>
-                  </g>
-                );
-              }
-              return (
-                <g
-                  key={p.id}
-                  className={editMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
-                  onPointerDown={(e) => onPointerDownPlace(p.id, e)}
-                  onClick={() => {
-                    setSelectedPlace(p.id);
-                    setDossierOpen(true);
-                  }}
-                  onPointerEnter={() => setHoverPlace(p.id)}
-                  onPointerLeave={() => setHoverPlace((h) => (h === p.id ? null : h))}
-                >
-                  <title>
-                    {p.name}
-                    {nRefs ? ` · ${nRefs} scripture refs — click for dossier` : " · click for details"}
-                  </title>
-                  {isSea ? (
-                    <rect
-                      x={pos.x - 14}
-                      y={pos.y - 10}
-                      width={28}
-                      height={20}
-                      rx={4}
-                      fill="#0f766e"
-                      opacity={0.85}
-                      stroke={selected || hovered ? "#9a3412" : "transparent"}
-                      strokeWidth={selected || hovered ? 2.5 : 2}
-                    />
-                  ) : (
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={p.kind === "river" ? 8 : 10}
-                      fill={p.kind === "river" ? "#1e3a5f" : "#9a3412"}
-                      stroke={selected || hovered ? "#f59e0b" : inSphere ? "#0369a1" : isNeighbor ? "#0f766e" : "white"}
-                      strokeWidth={selected || hovered ? 3 : inSphere ? 2.5 : isNeighbor ? 2 : 1}
-                    />
-                  )}
-                  {nRefs > 0 && (
-                    <circle
-                      cx={pos.x + (isSea ? 12 : 8)}
-                      cy={pos.y - (isSea ? 8 : 8)}
-                      r={7}
-                      fill="#fffdf8"
-                      stroke="#9a3412"
-                      strokeWidth={1}
-                    />
-                  )}
-                  {nRefs > 0 && (
-                    <text
-                      x={pos.x + (isSea ? 12 : 8)}
-                      y={pos.y - (isSea ? 8 : 8) + 3}
-                      textAnchor="middle"
-                      fontSize="8"
-                      fill="#9a3412"
-                      className="select-none pointer-events-none font-semibold"
-                    >
-                      {nRefs}
-                    </text>
-                  )}
-                  <text
-                    x={pos.x + 12}
-                    y={pos.y + 4}
-                    fontSize="10"
-                    fill="#1c1917"
-                    className="select-none pointer-events-none"
-                  >
-                    {p.name}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-          <p className="text-xs text-muted mt-2">
-            {editMode
-              ? "Drag places to move them. Hover for scripture counts; click a place or edge for the dossier panel."
-              : "Drag disabled — enable “Drag places” to move features. Hover/click still opens scripture dossiers."}
-          </p>
-          {(hoverPlace || hoverEdge) && (
-            <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface-2/90 p-3 text-xs space-y-1">
-              {hoverPlace && getPlaceDossier(hoverPlace) && (
-                <>
-                  <div className="font-semibold text-sm text-ink">{getPlaceDossier(hoverPlace)!.name}</div>
-                  <div className="text-muted line-clamp-2">{getPlaceDossier(hoverPlace)!.summary}</div>
-                  <div className="text-accent font-medium">
-                    {getPlaceDossier(hoverPlace)!.scriptures.length} scriptures · click marker for full dossier
-                  </div>
-                  <ul className="list-disc pl-4 text-ink-soft">
-                    {getPlaceDossier(hoverPlace)!.scriptures.slice(0, 3).map((s) => (
-                      <li key={s.ref}>{s.ref}</li>
-                    ))}
-                    {getPlaceDossier(hoverPlace)!.scriptures.length > 3 && (
-                      <li>+{getPlaceDossier(hoverPlace)!.scriptures.length - 3} more…</li>
-                    )}
-                  </ul>
-                </>
-              )}
-              {hoverEdge && !hoverPlace && edgeDossier && (
-                <>
-                  <div className="font-semibold text-sm text-ink">
-                    Connection: {edgeDossier.from} → {edgeDossier.to}
-                  </div>
-                  <div className="text-muted">{edgeDossier.summary}</div>
-                  <div className="text-accent font-medium">
-                    {edgeDossier.scriptures.length} related refs · click edge to pin in panel
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* MACRO */}
-        <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-sm">Macro (whole model)</h2>
-          <label className="block text-xs space-y-1">
-            <span className="text-muted">Day mi · open</span>
-            <input
-              type="range"
-              min={5}
-              max={30}
-              value={macro.dayMilesOpen}
-              onChange={(e) => patchMacro({ dayMilesOpen: Number(e.target.value) })}
-              className="w-full"
-            />
-            <span className="font-medium tabular-nums">{macro.dayMilesOpen}</span>
-          </label>
-          <label className="block text-xs space-y-1">
-            <span className="text-muted">Day mi · mountain</span>
-            <input
-              type="range"
-              min={3}
-              max={20}
-              value={macro.dayMilesMountain}
-              onChange={(e) => patchMacro({ dayMilesMountain: Number(e.target.value) })}
-              className="w-full"
-            />
-            <span className="font-medium tabular-nums">{macro.dayMilesMountain}</span>
-          </label>
-          <label className="block text-xs space-y-1">
-            <span className="text-muted">Day mi · jungle</span>
-            <input
-              type="range"
-              min={3}
-              max={20}
-              value={macro.dayMilesJungle}
-              onChange={(e) => patchMacro({ dayMilesJungle: Number(e.target.value) })}
-              className="w-full"
-            />
-            <span className="font-medium tabular-nums">{macro.dayMilesJungle}</span>
-          </label>
-          <label className="block text-xs space-y-1">
-            <span className="text-muted">View scale</span>
-            <input
-              type="range"
-              min={50}
-              max={150}
-              value={Math.round(macro.globalScale * 100)}
-              onChange={(e) => patchMacro({ globalScale: Number(e.target.value) / 100 })}
-              className="w-full"
-            />
-            <span className="font-medium tabular-nums">{macro.globalScale.toFixed(2)}×</span>
-          </label>
-          <label className="block text-xs space-y-1">
-            <span className="text-muted">View rotation °</span>
-            <input
-              type="range"
-              min={-180}
-              max={180}
-              value={macro.directionRotation}
-              onChange={(e) => patchMacro({ directionRotation: Number(e.target.value) })}
-              className="w-full"
-            />
-            <span className="font-medium tabular-nums">{macro.directionRotation}°</span>
-          </label>
-          <label className="block text-xs space-y-1">
-            <span className="text-muted">Default terrain</span>
-            <select
-              value={macro.defaultTerrain}
-              onChange={(e) =>
-                patchMacro({ defaultTerrain: e.target.value as Macro["defaultTerrain"] })
-              }
-              className="w-full rounded border border-border bg-surface px-2 py-1.5"
-            >
-              <option value="open">Open</option>
-              <option value="mountain">Mountain</option>
-              <option value="jungle">Jungle</option>
-              <option value="mixed">Mixed</option>
-            </select>
-          </label>
-          <label className="flex items-start gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={macro.breakNeck}
-              onChange={(e) => patchMacro({ breakNeck: e.target.checked })}
-              className="mt-0.5"
-            />
-            Stress-test narrow-neck edges
-          </label>
-        </Card>
-
-        {/* MICRO + place coords */}
-        <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-sm">Micro + place</h2>
-          {selectedPlace && layout[selectedPlace] && (
-            <div className="rounded bg-surface-2 p-2 text-xs space-y-1">
-              <div className="font-medium">{places.find((p) => p.id === selectedPlace)?.name}</div>
-              <div className="text-muted tabular-nums">
-                x {layout[selectedPlace].x.toFixed(0)} · y {layout[selectedPlace].y.toFixed(0)}
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <label>
-                  x
-                  <input
-                    type="number"
-                    className="w-full border border-border rounded px-1 py-0.5"
-                    value={Math.round(layout[selectedPlace].x)}
-                    onChange={(e) =>
-                      setPlacePos(selectedPlace, {
-                        ...layout[selectedPlace],
-                        x: Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  y
-                  <input
-                    type="number"
-                    className="w-full border border-border rounded px-1 py-0.5"
-                    value={Math.round(layout[selectedPlace].y)}
-                    onChange={(e) =>
-                      setPlacePos(selectedPlace, {
-                        ...layout[selectedPlace],
-                        y: Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-          <label className="block text-xs space-y-1">
-            <span className="text-muted">Edge</span>
-            <select
-              value={selected?.id}
-              onChange={(e) => setSelectedEdge(e.target.value)}
-              className="w-full rounded border border-border bg-surface px-2 py-1.5"
-            >
-              {edges.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.from} → {e.to}
-                </option>
-              ))}
-            </select>
-          </label>
-          {selected && (
-            <>
-              <label className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={selected.enabled}
-                  onChange={(e) => patchMicro(selected.id, { enabled: e.target.checked })}
-                />
-                Enabled
-              </label>
-              <label className="block text-xs space-y-1">
-                <span className="text-muted">Strength</span>
-                <select
-                  value={selected.strength}
-                  onChange={(e) =>
-                    patchMicro(selected.id, { strength: e.target.value as "soft" | "hard" })
-                  }
-                  className="w-full rounded border border-border bg-surface px-2 py-1.5"
-                >
-                  <option value="hard">Hard</option>
-                  <option value="soft">Soft</option>
-                </select>
-              </label>
-              <label className="block text-xs space-y-1">
-                <span className="text-muted">Terrain</span>
-                <select
-                  value={selected.terrain}
-                  onChange={(e) =>
-                    patchMicro(selected.id, { terrain: e.target.value as EdgeOverride["terrain"] })
-                  }
-                  className="w-full rounded border border-border bg-surface px-2 py-1.5"
-                >
-                  <option value="open">Open</option>
-                  <option value="mountain">Mountain</option>
-                  <option value="jungle">Jungle</option>
-                  <option value="mixed">Mixed</option>
-                  <option value="coast">Coast</option>
-                  <option value="river">River</option>
-                </select>
-              </label>
-              <label className="block text-xs space-y-1">
-                <span className="text-muted">Days override</span>
-                <input
-                  type="number"
-                  step={0.5}
-                  min={0}
-                  className="w-full rounded border border-border px-2 py-1.5"
-                  value={selected.days ?? ""}
-                  onChange={(e) =>
-                    patchMicro(selected.id, {
-                      days: e.target.value === "" ? undefined : Number(e.target.value),
-                    })
-                  }
-                />
-              </label>
-            </>
-          )}
-        </Card>
-      </div>
 
       {/* Scripture dossier for selected place or edge */}
       <Card className="p-5 space-y-4">

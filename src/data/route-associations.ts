@@ -3,6 +3,21 @@
  * Wilderness soft-region shape is derived from enabled routes' endpoints.
  */
 
+export type ElevationKind = "level" | "up" | "down" | "unknown";
+
+/** Ordered elevation along the route (0–1 along spine). */
+export type ElevationSegment = {
+  id: string;
+  /** Start of segment along spine (0–1) */
+  t0: number;
+  /** End of segment along spine (0–1) */
+  t1: number;
+  kind: ElevationKind;
+  /** Text phrase if any */
+  phrase?: string;
+  note?: string;
+};
+
 export type SpanField = {
   quality: "unknown" | "approximate" | "stated";
   value?: string;
@@ -32,7 +47,10 @@ export type RouteAssociation = {
   enabled: boolean;
   color: string;
   style: "solid" | "dashed" | "dotted";
+  /** Elevation profile along the route (sequence) */
+  elevation?: ElevationSegment[];
 };
+
 
 export const defaultRouteAssociations: RouteAssociation[] = [
   {
@@ -51,6 +69,24 @@ export const defaultRouteAssociations: RouteAssociation[] = [
     enabled: true,
     color: "#9a3412",
     style: "solid",
+    elevation: [
+      {
+        id: "elev-nephi-wild-level",
+        t0: 0,
+        t1: 0.82,
+        kind: "level",
+        phrase: "through the wilderness",
+        note: "No elevation change stated until arrival at Zarahemla",
+      },
+      {
+        id: "elev-down-zara",
+        t0: 0.82,
+        t1: 1,
+        kind: "down",
+        phrase: "came down into the land of Zarahemla",
+        note: "Down signal at approach/entry to Zarahemla (Omni 1:13)",
+      },
+    ],
   },
   {
     id: "route-limhi-lost-desolation",
@@ -87,6 +123,24 @@ export const defaultRouteAssociations: RouteAssociation[] = [
     enabled: false,
     color: "#b45309",
     style: "dashed",
+    elevation: [
+      {
+        id: "elev-up-from-zara",
+        t0: 0,
+        t1: 0.2,
+        kind: "up",
+        phrase: "went up into the wilderness",
+        note: "Up leaving Zarahemla toward Nephi (Omni 1:27–28)",
+      },
+      {
+        id: "elev-wild-level-return",
+        t0: 0.2,
+        t1: 1,
+        kind: "level",
+        phrase: "into the wilderness … land of Nephi",
+        note: "Thereafter wilderness toward Nephi; no further elev stated here",
+      },
+    ],
   },
 ];
 
@@ -100,7 +154,15 @@ export function loadRouteAssociations(): RouteAssociation[] {
     // merge new defaults by id
     const byId = new Map(parsed.map((r) => [r.id, r]));
     for (const d of defaultRouteAssociations) {
-      if (!byId.has(d.id)) byId.set(d.id, d);
+      if (!byId.has(d.id)) {
+        byId.set(d.id, d);
+      } else {
+        const cur = byId.get(d.id)!;
+        // fill new fields (e.g. elevation profile) if missing on saved copy
+        if (!cur.elevation && d.elevation) {
+          byId.set(d.id, { ...d, ...cur, elevation: d.elevation });
+        }
+      }
     }
     return [...byId.values()];
   } catch {
