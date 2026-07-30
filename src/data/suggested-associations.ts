@@ -371,7 +371,7 @@ export const associationSuggestions: AssociationSuggestion[] = [
       { ref: "Alma 2:24", note: "Minon above Zarahemla, course of Nephi" },
     ],
   },
-
+  {
     id: "sug-alma-2-amnihu",
     book: "Alma",
     chapter: 2,
